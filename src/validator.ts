@@ -66,7 +66,7 @@ export interface RelationValidationResult {
 
 /**
  * Validate relations for a single content item.
- * 
+ *
  * @param meta - The metadata object
  * @param filePath - Path to the content file
  * @param relations - Relations mapping (field → target collection)

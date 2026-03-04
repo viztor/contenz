@@ -19,7 +19,7 @@ const NON_I18N_PATTERN = /^(.+)\.(mdx|md)$/;
 
 /**
  * Parse filename to extract slug and optional locale.
- * 
+ *
  * When i18n is enabled: expects {slug}.{locale}.{ext} (e.g., "moq.en.mdx")
  * When i18n is disabled: expects {slug}.{ext} (e.g., "hello-world.mdx")
  */
@@ -60,7 +60,7 @@ export function parseFileName(
 
 /**
  * Parse a content file and extract metadata.
- * 
+ *
  * For .mdx files: expects `export const meta = { ... }`
  * For .md files: uses remark plugins to convert frontmatter to meta export
  */
@@ -75,9 +75,7 @@ export async function parseContentFile(
     const expectedFormat = config.i18n
       ? "{slug}.{locale}.mdx or {slug}.{locale}.md"
       : "{slug}.mdx or {slug}.md";
-    throw new Error(
-      `Invalid file name format: ${fileName}. Expected ${expectedFormat}`
-    );
+    throw new Error(`Invalid file name format: ${fileName}. Expected ${expectedFormat}`);
   }
 
   const source = await fs.readFile(filePath, "utf-8");
@@ -85,9 +83,7 @@ export async function parseContentFile(
 
   const mdxModule = await evaluate(source, {
     ...runtime,
-    remarkPlugins: isMdx
-      ? []
-      : [remarkFrontmatter, [remarkMdxFrontmatter, { name: "meta" }]],
+    remarkPlugins: isMdx ? [] : [remarkFrontmatter, [remarkMdxFrontmatter, { name: "meta" }]],
     development: false,
   });
 

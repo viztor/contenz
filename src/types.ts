@@ -14,7 +14,7 @@ export interface ContentType {
 /**
  * Relations mapping: field name → target collection name.
  * Validates that slugs in the field exist in the target collection.
- * 
+ *
  * @example
  * ```ts
  * export const relations = {

@@ -1,5 +1,6 @@
 import path from "node:path";
 import fs from "node:fs/promises";
+import { pathToFileURL } from "node:url";
 import type {
   ProjectConfig,
   CollectionConfig,
@@ -9,7 +10,10 @@ import type {
   Relations,
 } from "./types.js";
 
-const BUILT_IN_DEFAULTS: Required<Omit<ProjectConfig, "coveragePath" | "outputDir">> & { coveragePath: string; outputDir: string } = {
+const BUILT_IN_DEFAULTS: Required<Omit<ProjectConfig, "coveragePath" | "outputDir">> & {
+  coveragePath: string;
+  outputDir: string;
+} = {
   contentDir: "content",
   outputDir: "generated/content",
   coveragePath: "content.coverage.md",
@@ -19,18 +23,24 @@ const BUILT_IN_DEFAULTS: Required<Omit<ProjectConfig, "coveragePath" | "outputDi
   ignore: ["README.md", "_*"],
 };
 
+const CONFIG_FILENAMES = ["content.config.ts", "content.config.mjs", "content.config.js"] as const;
+
 /**
- * Load project config from /content.config.ts
+ * Load project config from content.config.ts (or .mjs / .js if not found).
+ * Tries in order: content.config.ts → content.config.mjs → content.config.js.
  */
 export async function loadProjectConfig(cwd: string): Promise<ProjectConfig> {
-  const configPath = path.join(cwd, "content.config.ts");
-  try {
-    await fs.access(configPath);
-    const imported = await import(configPath);
-    return imported.config ?? {};
-  } catch {
-    return {};
+  for (const filename of CONFIG_FILENAMES) {
+    const configPath = path.join(cwd, filename);
+    try {
+      await fs.access(configPath);
+      const imported = await import(pathToFileURL(configPath).href);
+      return imported.config ?? {};
+    } catch {
+      continue;
+    }
   }
+  return {};
 }
 
 /**
@@ -42,7 +52,7 @@ export async function loadCollectionConfig(
   const configPath = path.join(collectionPath, "config.ts");
   try {
     await fs.access(configPath);
-    const imported: ConfigModule = await import(configPath);
+    const imported: ConfigModule = await import(pathToFileURL(configPath).href);
     return imported.config;
   } catch {
     return undefined;
@@ -52,13 +62,11 @@ export async function loadCollectionConfig(
 /**
  * Load schema module from content/{collection}/schema.ts
  */
-export async function loadSchemaModule(
-  collectionPath: string
-): Promise<SchemaModule | null> {
+export async function loadSchemaModule(collectionPath: string): Promise<SchemaModule | null> {
   const schemaPath = path.join(collectionPath, "schema.ts");
   try {
     await fs.access(schemaPath);
-    const imported = await import(schemaPath);
+    const imported = await import(pathToFileURL(schemaPath).href);
     return imported;
   } catch {
     return null;
@@ -93,21 +101,14 @@ export function resolveConfig(
     outputDir,
     coveragePath: project.coveragePath ?? BUILT_IN_DEFAULTS.coveragePath,
     strict: project.strict ?? BUILT_IN_DEFAULTS.strict,
-    i18n:
-      collection?.i18n ??
-      contentDefault?.i18n ??
-      project.i18n ??
-      BUILT_IN_DEFAULTS.i18n,
+    i18n: collection?.i18n ?? contentDefault?.i18n ?? project.i18n ?? BUILT_IN_DEFAULTS.i18n,
     extensions:
       collection?.extensions ??
       contentDefault?.extensions ??
       project.extensions ??
       BUILT_IN_DEFAULTS.extensions,
     ignore:
-      collection?.ignore ??
-      contentDefault?.ignore ??
-      project.ignore ??
-      BUILT_IN_DEFAULTS.ignore,
+      collection?.ignore ?? contentDefault?.ignore ?? project.ignore ?? BUILT_IN_DEFAULTS.ignore,
     types: collection?.types ?? contentDefault?.types,
     slugPattern: collection?.slugPattern ?? contentDefault?.slugPattern,
   };
@@ -170,10 +171,7 @@ export function getSchemaForType(
 /**
  * Determine content type from filename using config.types patterns.
  */
-export function getContentType(
-  fileName: string,
-  config: ResolvedConfig
-): string | undefined {
+export function getContentType(fileName: string, config: ResolvedConfig): string | undefined {
   if (!config.types || config.types.length === 0) {
     return undefined;
   }

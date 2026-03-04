@@ -9,7 +9,7 @@ A CLI tool for validating and generating TypeScript data files from MDX/Markdown
 - **Relation validation** - Validate cross-collection references
 - **Multi-type collections** - Support multiple content types in one collection
 - **Cascading configuration** - Project → Content → Collection level overrides
-- **Coverage reports** - Generate translation coverage reports
+- **Coverage reports** - Translation coverage summary in the console on every lint; use `--coverage` to write a markdown report file (e.g. `content.coverage.md`).
 
 ## Installation
 
@@ -21,18 +21,77 @@ npm install
 
 ```bash
 # Validate all content
-npm run content:lint
+content-tools lint
 
 # Validate specific collection
-npm run content:lint -- --collection faq
+content-tools lint --collection faq
+
+# Write coverage report file (content.coverage.md)
+content-tools lint --coverage
 
 # Generate data files
-npm run content:build
+content-tools build
+```
+
+If you add scripts to your app’s `package.json`:
+
+```json
+{
+  "scripts": {
+    "content:lint": "content-tools lint",
+    "content:build": "content-tools build"
+  }
+}
+```
+
+Then: `npm run content:lint`, `npm run content:build`.
+
+**Running without installing** (from project root):
+
+- `npx content-tools lint` / `npx content-tools build`
+- `pnpm exec content-tools lint`
+- `yarn dlx content-tools lint` (or `yarn content-tools lint` if installed)
+- `bunx content-tools lint`
+
+**Monorepos / custom root:** use `--cwd` to set the project root (where `content.config.ts` lives):
+
+```bash
+content-tools lint --cwd ../other-package
+content-tools build --cwd .
+```
+
+### Programmatic usage
+
+You can run lint and build from Node scripts or build pipelines by importing from `content-tools/api`:
+
+```typescript
+import { runBuild, runLint, loadProjectConfig } from "content-tools/api";
+
+// Load project config (content.config.ts or .mjs / .js)
+const config = await loadProjectConfig(process.cwd());
+
+// Run build; get report string and list of generated files
+const buildResult = await runBuild({ cwd: process.cwd(), dir: "content" });
+console.log(buildResult.report);
+if (buildResult.success) {
+  console.log("Generated:", buildResult.generated);
+}
+
+// Run lint; optionally write coverage report
+const lintResult = await runLint({
+  cwd: process.cwd(),
+  dir: "content",
+  coverage: true,
+});
+console.log(lintResult.report);
+if (!lintResult.success) process.exit(1);
 ```
 
 ## Configuration
 
-### Project Config (`/content.config.ts`)
+### Project Config (`content.config.ts` or `.mjs` / `.js`)
+
+The CLI looks for project config in this order: `content.config.ts` → `content.config.mjs` → `content.config.js`. Use `.mjs` or `.js` if you want to avoid loading TypeScript for the config (e.g. in minimal CI).
 
 ```typescript
 import type { ProjectConfig } from "content-tools";
@@ -43,7 +102,7 @@ export const config: ProjectConfig = {
   ignore: ["README.md", "_*"],                 // Patterns to ignore
   // contentDir: "content",                    // Default
   // outputDir: "generated/content",           // Default
-  // coveragePath: "content.coverage.md",      // Default (in project root)
+  // coveragePath: "content.coverage.md",      // Default (used when running lint --coverage)
   // extensions: ["md", "mdx"],                // Default
 };
 ```
@@ -131,7 +190,7 @@ You can still export `meta` / `metaSchema` and `relations` manually; the CLI acc
 ```
 project-root/
 ├── content.config.ts          # Project config
-├── content.coverage.md        # Coverage report (generated)
+├── content.coverage.md        # Coverage report (generated when running lint --coverage)
 ├── content/                   # Source content
 │   ├── faq/
 │   │   ├── schema.ts          # Zod schema

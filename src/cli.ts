@@ -1,13 +1,17 @@
 #!/usr/bin/env node
 
+import { createRequire } from "node:module";
 import { defineCommand, runMain } from "citty";
 import { lintCommand } from "./commands/lint.js";
 import { buildCommand } from "./commands/build.js";
 
+const require = createRequire(import.meta.url);
+const pkg = require("../package.json") as { version: string };
+
 const main = defineCommand({
   meta: {
     name: "content-tools",
-    version: "1.0.0",
+    version: pkg.version,
     description: "Content validation and generation tools",
   },
   subCommands: {

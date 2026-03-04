@@ -43,10 +43,11 @@ export function defineCollection(
 
 export function defineCollection(
   options: DefineCollectionSingleOptions | DefineCollectionMultiOptions
-): SchemaModule & (
-  | { meta: ZodSchema; metaSchema: ZodSchema; relations?: Relations }
-  | Record<string, ZodSchema | Relations | undefined>
-) {
+): SchemaModule &
+  (
+    | { meta: ZodSchema; metaSchema: ZodSchema; relations?: Relations }
+    | Record<string, ZodSchema | Relations | undefined>
+  ) {
   if ("schema" in options) {
     const { schema, relations } = options;
     const out: SchemaModule & Record<string, unknown> = {
@@ -56,7 +57,11 @@ export function defineCollection(
     if (relations && Object.keys(relations).length > 0) {
       out.relations = relations;
     }
-    return out as unknown as SchemaModule & { meta: ZodSchema; metaSchema: ZodSchema; relations?: Relations };
+    return out as unknown as SchemaModule & {
+      meta: ZodSchema;
+      metaSchema: ZodSchema;
+      relations?: Relations;
+    };
   }
 
   const { schemas, relations } = options;
