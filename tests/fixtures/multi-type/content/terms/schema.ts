@@ -1,5 +1,5 @@
-import { z } from "zod";
 import { defineMultiTypeCollection } from "content-tools";
+import { z } from "zod";
 
 const termSchema = z.object({
   term: z.string(),

@@ -2,8 +2,8 @@
 
 import { createRequire } from "node:module";
 import { defineCommand, runMain } from "citty";
-import { lintCommand } from "./commands/lint.js";
 import { buildCommand } from "./commands/build.js";
+import { lintCommand } from "./commands/lint.js";
 
 const require = createRequire(import.meta.url);
 const pkg = require("../package.json") as { version: string };

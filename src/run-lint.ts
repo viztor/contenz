@@ -2,29 +2,30 @@
  * Programmatic lint: validate content files and optionally write coverage report.
  * Used by the CLI and by content-tools/api.
  */
-import path from "node:path";
+
 import fs from "node:fs/promises";
+import path from "node:path";
+import { globby } from "globby";
 import pMap from "p-map";
 import pc from "picocolors";
-import { globby } from "globby";
-import { parseContentFile, parseFileName } from "./parser.js";
 import {
-  validateMeta,
-  validateRelations,
+  extractRelations,
+  getContentType,
+  getSchemaForType,
+  loadCollectionConfig,
+  loadProjectConfig,
+  loadSchemaModule,
+  resolveConfig,
+} from "./config.js";
+import { parseContentFile, parseFileName } from "./parser.js";
+import type { Relations } from "./types.js";
+import {
   detectCircularReferences,
   formatValidationResults,
   type ValidationResult,
+  validateMeta,
+  validateRelations,
 } from "./validator.js";
-import {
-  loadProjectConfig,
-  loadCollectionConfig,
-  loadSchemaModule,
-  resolveConfig,
-  getSchemaForType,
-  getContentType,
-  extractRelations,
-} from "./config.js";
-import type { Relations } from "./types.js";
 
 const LINT_CONCURRENCY = 4;
 
@@ -139,7 +140,7 @@ async function firstPassOneCollection(
       validationResults.push(validation);
       if (config.i18n && parsed.locale) {
         if (!slugLocales.has(parsed.slug)) slugLocales.set(parsed.slug, new Set());
-        slugLocales.get(parsed.slug)!.add(parsed.locale);
+        slugLocales.get(parsed.slug)?.add(parsed.locale);
       }
       const relatedSlugs: string[] = [];
       for (const field of Object.keys(relations)) {
@@ -324,7 +325,7 @@ Generated: ${timestamp}
     for (const ref of missingRefs) {
       const key = `${ref.target}:${ref.slug}`;
       if (!groupedBySlug.has(key)) groupedBySlug.set(key, []);
-      groupedBySlug.get(key)!.push(ref);
+      groupedBySlug.get(key)?.push(ref);
     }
     for (const key of [...groupedBySlug.keys()].sort()) {
       const refs = groupedBySlug.get(key)!;

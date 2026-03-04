@@ -29,16 +29,18 @@
     "bin"
   ],
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
-    "prepare": "npm run build",
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "prepare": "husky",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src tests",
-    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
-    "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\""
+    "lint": "biome check src tests",
+    "lint:fix": "biome check src tests --write",
+    "format": "biome format --write src tests",
+    "check": "biome check src tests",
+    "knip": "knip"
   },
   "dependencies": {
     "zod": "^3.23.0",
@@ -58,10 +60,9 @@
     "@types/react": "^19.0.0",
     "vitest": "^2.0.0",
     "@vitest/coverage-istanbul": "^2.0.0",
-    "eslint": "^9.0.0",
-    "@eslint/js": "^9.0.0",
-    "typescript-eslint": "^8.0.0",
-    "eslint-config-prettier": "^9.0.0",
-    "prettier": "^3.0.0"
+    "@biomejs/biome": "^2.0.0",
+    "tsup": "^8.0.0",
+    "knip": "^5.0.0",
+    "husky": "^9.0.0"
   }
 }

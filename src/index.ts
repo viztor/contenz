@@ -5,22 +5,21 @@
  * Use in schema files: `import { defineCollection } from "content-tools"`
  */
 
-export type {
-  ProjectConfig,
-  CollectionConfig,
-  ResolvedConfig,
-  ContentType,
-  Relations,
-  SchemaModule,
-  ConfigModule,
-  ParsedContent,
-  CollectionItem,
-  CollectionStats,
-} from "./types.js";
-
 export {
+  type DefineCollectionMultiOptions,
+  type DefineCollectionSingleOptions,
   defineCollection,
   defineMultiTypeCollection,
-  type DefineCollectionSingleOptions,
-  type DefineCollectionMultiOptions,
 } from "./define-collection.js";
+export type {
+  CollectionConfig,
+  CollectionItem,
+  CollectionStats,
+  ConfigModule,
+  ContentType,
+  ParsedContent,
+  ProjectConfig,
+  Relations,
+  ResolvedConfig,
+  SchemaModule,
+} from "./types.js";

@@ -1,6 +1,6 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { validateMeta, validateRelations, detectCircularReferences } from "./validator.js";
+import { detectCircularReferences, validateMeta, validateRelations } from "./validator.js";
 
 describe("validateMeta", () => {
   it("returns valid when meta matches schema", () => {

@@ -1,5 +1,5 @@
-import { z } from "zod";
 import { defineCollection } from "content-tools";
+import { z } from "zod";
 
 const schema = z.object({
   question: z.string(),

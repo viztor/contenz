@@ -1,9 +1,9 @@
+import fs from "node:fs/promises";
+import path from "node:path";
 import { evaluate } from "@mdx-js/mdx";
 import * as runtime from "react/jsx-runtime";
 import remarkFrontmatter from "remark-frontmatter";
 import remarkMdxFrontmatter from "remark-mdx-frontmatter";
-import fs from "node:fs/promises";
-import path from "node:path";
 import type { ParsedContent, ResolvedConfig } from "./types.js";
 
 export interface ParseFileNameResult {

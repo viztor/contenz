@@ -1,5 +1,5 @@
-import { ZodSchema } from "zod";
 import pc from "picocolors";
+import type { ZodSchema } from "zod";
 import type { Relations } from "./types.js";
 
 export interface ValidationResult {

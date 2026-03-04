@@ -45,7 +45,7 @@ function zodToTypeString(schema: ZodTypeAny, indent = 0): string {
   // Handle optional wrapper (new Zod uses "optional", old uses "ZodOptional")
   if (typeName === "optional" || typeName === "ZodOptional") {
     const inner = def.innerType;
-    return zodToTypeString(inner, indent) + " | undefined";
+    return `${zodToTypeString(inner, indent)} | undefined`;
   }
 
   // Handle default wrapper (new Zod uses "default", old uses "ZodDefault")
@@ -106,7 +106,7 @@ function zodToTypeString(schema: ZodTypeAny, indent = 0): string {
   }
 
   // Handle objects (new Zod uses "object", old uses "ZodObject")
-  if (typeName === "object" || typeName === "ZodObject" || (def && def.shape)) {
+  if (typeName === "object" || typeName === "ZodObject" || def?.shape) {
     // New Zod stores shape directly, old Zod uses a getter function
     const shapeGetter = def.shape;
     const shape = typeof shapeGetter === "function" ? shapeGetter() : shapeGetter;

@@ -2,30 +2,31 @@
  * Programmatic build: generate content data files.
  * Used by the CLI and by content-tools/api.
  */
-import path from "node:path";
+
 import fs from "node:fs/promises";
+import path from "node:path";
+import { globby } from "globby";
 import pMap from "p-map";
 import pc from "picocolors";
-import { globby } from "globby";
-import { parseContentFile, parseFileName } from "./parser.js";
-import { validateMeta } from "./validator.js";
 import {
-  I18nCollectionData,
-  FlatCollectionData,
-  calculateI18nStats,
-  generateI18nCollectionFile,
-  generateFlatCollectionFile,
-  generateIndexFile,
-  generateTypeFromZod,
-} from "./generator.js";
-import {
-  loadProjectConfig,
+  getContentType,
+  getSchemaForType,
   loadCollectionConfig,
+  loadProjectConfig,
   loadSchemaModule,
   resolveConfig,
-  getSchemaForType,
-  getContentType,
 } from "./config.js";
+import {
+  calculateI18nStats,
+  type FlatCollectionData,
+  generateFlatCollectionFile,
+  generateI18nCollectionFile,
+  generateIndexFile,
+  generateTypeFromZod,
+  type I18nCollectionData,
+} from "./generator.js";
+import { parseContentFile, parseFileName } from "./parser.js";
+import { validateMeta } from "./validator.js";
 
 const BUILD_CONCURRENCY = 4;
 
@@ -51,7 +52,7 @@ interface IndexMeta {
 
 async function generateMultiTypeCollectionFile(
   outputPath: string,
-  collectionName: string,
+  _collectionName: string,
   typeGroups: Map<string, Map<string, I18nCollectionData | FlatCollectionData>>,
   i18n: boolean,
   locales: string[],

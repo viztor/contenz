@@ -1,6 +1,6 @@
-import { describe, it, expect } from "vitest";
-import { resolveConfig, getContentType, getSchemaForType, extractRelations } from "./config.js";
-import type { ProjectConfig, CollectionConfig, ResolvedConfig } from "./types.js";
+import { describe, expect, it } from "vitest";
+import { extractRelations, getContentType, getSchemaForType, resolveConfig } from "./config.js";
+import type { CollectionConfig, ProjectConfig, ResolvedConfig } from "./types.js";
 
 describe("resolveConfig", () => {
   it("returns built-in defaults when project config empty", () => {

@@ -9,16 +9,21 @@ npm install
 npm run build
 ```
 
+Before committing, the pre-commit hook runs `npm run typecheck` and `npm run lint`. Before pushing (or in CI), run the full suite: `npm run build && npm run lint && npm run knip && npm test`.
+
 ## Commands
 
-- **`npm run build`** – Compile TypeScript to `dist/`
+- **`npm run build`** – Build with tsup (ESM + dts)
+- **`npm run dev`** – Build in watch mode (tsup)
 - **`npm run test`** – Run unit and e2e tests (Vitest)
 - **`npm run test:coverage`** – Run tests with Istanbul coverage
 - **`npm run test:watch`** – Run tests in watch mode
 - **`npm run typecheck`** – Type-check without emitting
-- **`npm run lint`** – Lint `src` and `tests` with ESLint
-- **`npm run format`** – Format code with Prettier
-- **`npm run format:check`** – Check formatting without writing
+- **`npm run lint`** – Lint and format-check `src` and `tests` with Biome
+- **`npm run lint:fix`** – Lint and format (write) with Biome
+- **`npm run format`** – Format code with Biome
+- **`npm run check`** – Same as `lint` (Biome check)
+- **`npm run knip`** – Find dead code and unused dependencies
 
 ## Adding a fixture
 
@@ -34,4 +39,4 @@ Generated output (`generated/content/`, `content.coverage.md`) in fixtures is gi
 ## Code style
 
 - TypeScript strict mode; use types from `./types.js` and the main package exports.
-- Format with Prettier (`npm run format`). ESLint runs with `eslint-config-prettier` so it does not conflict with Prettier.
+- Lint and format with Biome (`npm run lint:fix` or `npm run format`).

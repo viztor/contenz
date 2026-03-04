@@ -1,13 +1,13 @@
-import path from "node:path";
 import fs from "node:fs/promises";
+import path from "node:path";
 import { pathToFileURL } from "node:url";
 import type {
-  ProjectConfig,
   CollectionConfig,
+  ConfigModule,
+  ProjectConfig,
+  Relations,
   ResolvedConfig,
   SchemaModule,
-  ConfigModule,
-  Relations,
 } from "./types.js";
 
 const BUILT_IN_DEFAULTS: Required<Omit<ProjectConfig, "coveragePath" | "outputDir">> & {
@@ -36,9 +36,7 @@ export async function loadProjectConfig(cwd: string): Promise<ProjectConfig> {
       await fs.access(configPath);
       const imported = await import(pathToFileURL(configPath).href);
       return imported.config ?? {};
-    } catch {
-      continue;
-    }
+    } catch {}
   }
   return {};
 }

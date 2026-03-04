@@ -3,11 +3,12 @@
  * Fixtures are in tests/fixtures/*. Each fixture that has schema.ts files needs
  * node_modules/content-tools so that dynamic imports resolve; we create a symlink in beforeAll.
  */
-import { describe, it, expect, beforeAll } from "vitest";
+
 import { spawnSync } from "node:child_process";
-import path from "node:path";
 import fs from "node:fs";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { beforeAll, describe, expect, it } from "vitest";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, "..");
