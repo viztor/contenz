@@ -6,7 +6,7 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "content-tools": "./dist/cli.js"
+    "content-tools": "./bin/run.mjs"
   },
   "scripts": {
     "build": "tsc",
@@ -21,7 +21,8 @@
     "@mdx-js/mdx": "^3.1.0",
     "remark-frontmatter": "^5.0.0",
     "remark-mdx-frontmatter": "^5.0.0",
-    "react": "^19.0.0"
+    "react": "^19.0.0",
+    "tsx": "^4.21.0"
   },
   "devDependencies": {
     "typescript": "^5.0.0",
