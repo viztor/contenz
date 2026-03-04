@@ -1,0 +1,5 @@
+# Build output
+dist/
+
+# Node modules (if installed locally)
+node_modules/
