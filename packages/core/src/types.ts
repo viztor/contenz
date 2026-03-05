@@ -27,15 +27,15 @@ export interface ContentType {
 export type Relations = Record<string, string>;
 
 /**
- * Project-level configuration at /content.config.ts
+ * Root-level contenz configuration at /contenz.config.ts
  * These settings apply globally to all content collections.
  */
-export interface ProjectConfig {
+export interface ContenzConfig {
   /** Root directory for content (default: "content") */
   contentDir?: string;
   /** Output directory for generated files (default: "generated/content") */
   outputDir?: string;
-  /** Coverage report output path (default: "content.coverage.md" in project root) */
+  /** Coverage report output path (default: "contenz.coverage.md" in project root) */
   coveragePath?: string;
   /** Fail build on warnings like missing translations (default: false) */
   strict?: boolean;
@@ -48,7 +48,7 @@ export interface ProjectConfig {
 }
 
 /**
- * Collection-level configuration at content/{collection}/config.ts
+ * Collection-level configuration at contenz/{collection}/config.ts
  * These settings override project defaults for a specific collection.
  */
 export interface CollectionConfig {

@@ -13,4 +13,4 @@ These projects are used by `packages/e2e/e2e.test.ts` to run the CLI end-to-end.
 
 Before running the CLI in a fixture that has schema files, the test runner creates `node_modules/@contenz/core` as a symlink to the core package so that `import "@contenz/core"` in schema files resolves.
 
-Generated output (`generated/content/`, `content.coverage.md`) is gitignored.
+Generated output (`generated/content/`, `contenz.coverage.md`) is gitignored. Fixtures themselves should prefer `contenz.config.ts` while still using `content/` as the source directory.

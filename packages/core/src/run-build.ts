@@ -138,7 +138,7 @@ async function processOneCollection(
   schemaFile: string,
   contentDir: string,
   outputDir: string,
-  projectConfig: import("./types.js").ProjectConfig
+  projectConfig: import("./types.js").ContenzConfig
 ): Promise<
   | { ok: true; indexMeta: IndexMeta; outputName: string; lines: string[] }
   | { ok: false; lines: string[] }
@@ -297,11 +297,11 @@ async function processOneCollection(
 export async function runBuild(options: BuildOptions): Promise<BuildResult> {
   const lines: string[] = [];
   const cwd = path.resolve(process.cwd(), options.cwd ?? ".");
-  const dir = options.dir ?? "content";
 
   const projectConfig = await loadProjectConfig(cwd);
-  const contentDir = path.resolve(cwd, dir);
   const baseConfig = resolveConfig(projectConfig);
+  const dir = options.dir ?? baseConfig.contentDir;
+  const contentDir = path.resolve(cwd, dir);
   const outputDir = path.resolve(cwd, baseConfig.outputDir);
 
   await fs.mkdir(outputDir, { recursive: true });
@@ -315,7 +315,7 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
   });
 
   if (schemaFiles.length === 0) {
-    lines.push(pc.yellow("No schema.ts files found in content directories."));
+    lines.push(pc.yellow("No schema.ts files found in the configured source directories."));
     return {
       success: true,
       errors: 0,

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Wrapper that runs the CLI with tsx so that the consumer's TypeScript
- * config and schema files (content.config.ts, content/.../schema.ts) can be loaded.
+ * config and schema files (contenz.config.ts, content/.../schema.ts) can be loaded.
  */
 import { spawnSync } from "child_process";
 import { join, dirname } from "path";

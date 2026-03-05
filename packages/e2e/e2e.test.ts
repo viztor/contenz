@@ -146,7 +146,7 @@ describe("e2e: empty (no schema)", () => {
   it("lint exits 0 and reports no schema", () => {
     const { status, stdout } = runCli(["lint"], cwd);
     expect(status).toBe(0);
-    expect(stdout).toMatch(/No schema|found/i);
+    expect(stdout).toMatch(/No schema|configured source directories/i);
   });
 
   it("build exits 0 and does not create collection files", () => {
@@ -164,7 +164,7 @@ describe("e2e: --coverage and --cwd", () => {
   const minimalCwd = path.join(__dirname, "fixtures", "minimal");
 
   it("lint --coverage writes coverage report file", () => {
-    const reportPath = path.join(minimalCwd, "content.coverage.md");
+    const reportPath = path.join(minimalCwd, "contenz.coverage.md");
     if (fs.existsSync(reportPath)) fs.unlinkSync(reportPath);
     const { status } = runCli(["lint", "--coverage"], minimalCwd);
     expect(status).toBe(0);

@@ -4,32 +4,39 @@ import { pathToFileURL } from "node:url";
 import type {
   CollectionConfig,
   ConfigModule,
-  ProjectConfig,
+  ContenzConfig,
   Relations,
   ResolvedConfig,
   SchemaModule,
 } from "./types.js";
 
-const BUILT_IN_DEFAULTS: Required<Omit<ProjectConfig, "coveragePath" | "outputDir">> & {
+const BUILT_IN_DEFAULTS: Required<Omit<ContenzConfig, "coveragePath" | "outputDir">> & {
   coveragePath: string;
   outputDir: string;
 } = {
   contentDir: "content",
   outputDir: "generated/content",
-  coveragePath: "content.coverage.md",
+  coveragePath: "contenz.coverage.md",
   strict: false,
   i18n: false,
   extensions: ["md", "mdx"],
   ignore: ["README.md", "_*"],
 };
 
-const CONFIG_FILENAMES = ["content.config.ts", "content.config.mjs", "content.config.js"] as const;
+const CONFIG_FILENAMES = [
+  "contenz.config.ts",
+  "contenz.config.mjs",
+  "contenz.config.js",
+  "content.config.ts",
+  "content.config.mjs",
+  "content.config.js",
+] as const;
 
 /**
- * Load project config from content.config.ts (or .mjs / .js if not found).
- * Tries in order: content.config.ts → content.config.mjs → content.config.js.
+ * Load contenz config from contenz.config.ts (or .mjs / .js if not found).
+ * Legacy content.config.* files are also supported as a fallback.
  */
-export async function loadProjectConfig(cwd: string): Promise<ProjectConfig> {
+export async function loadProjectConfig(cwd: string): Promise<ContenzConfig> {
   for (const filename of CONFIG_FILENAMES) {
     const configPath = path.join(cwd, filename);
     try {
@@ -42,7 +49,7 @@ export async function loadProjectConfig(cwd: string): Promise<ProjectConfig> {
 }
 
 /**
- * Load collection config from content/{collection}/config.ts
+ * Load collection config from the configured content directory.
  */
 export async function loadCollectionConfig(
   collectionPath: string
@@ -58,7 +65,7 @@ export async function loadCollectionConfig(
 }
 
 /**
- * Load schema module from content/{collection}/schema.ts
+ * Load schema module from the configured content directory.
  */
 export async function loadSchemaModule(collectionPath: string): Promise<SchemaModule | null> {
   const schemaPath = path.join(collectionPath, "schema.ts");
@@ -72,7 +79,7 @@ export async function loadSchemaModule(collectionPath: string): Promise<SchemaMo
 }
 
 /**
- * Load content-level defaults from content/schema.ts and content/config.ts
+ * Load source-level defaults from the configured content directory.
  */
 export async function loadContentDefaults(
   contentDir: string
@@ -84,10 +91,10 @@ export async function loadContentDefaults(
 
 /**
  * Resolve configuration by merging all levels:
- * Built-in defaults → Project config → Content defaults → Collection config
+ * Built-in defaults → contenz config → Content defaults → Collection config
  */
 export function resolveConfig(
-  project: ProjectConfig,
+  project: ContenzConfig,
   contentDefault?: CollectionConfig,
   collection?: CollectionConfig
 ): ResolvedConfig {

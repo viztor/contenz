@@ -9,7 +9,7 @@ export const lintCommand = defineCommand({
   args: {
     dir: {
       type: "string",
-      description: "Content directory to lint",
+      description: "Contenz source directory to lint",
       default: "content",
     },
     collection: {
@@ -19,12 +19,12 @@ export const lintCommand = defineCommand({
     },
     cwd: {
       type: "string",
-      description: "Project root (where content.config.ts lives)",
+      description: "Project root (where contenz.config.ts lives)",
       default: ".",
     },
     coverage: {
       type: "boolean",
-      description: "Write coverage report file (e.g. content.coverage.md)",
+      description: "Write coverage report file (e.g. contenz.coverage.md)",
       default: false,
     },
   },

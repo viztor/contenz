@@ -65,7 +65,7 @@ interface FirstPassResult {
 async function firstPassOneCollection(
   schemaFile: string,
   contentDir: string,
-  projectConfig: import("./types.js").ProjectConfig,
+  projectConfig: import("./types.js").ContenzConfig,
   availableCollections: string[]
 ): Promise<FirstPassResult> {
   const collectionName = path.dirname(schemaFile);
@@ -215,7 +215,7 @@ interface SecondPassResult {
 async function secondPassOneCollection(
   schemaFile: string,
   contentDir: string,
-  projectConfig: import("./types.js").ProjectConfig,
+  projectConfig: import("./types.js").ContenzConfig,
   collectionSlugs: Map<string, Set<string>>,
   availableCollections: string[]
 ): Promise<SecondPassResult> {
@@ -362,9 +362,10 @@ Generated: ${timestamp}
 export async function runLint(options: LintOptions): Promise<LintResult> {
   const lines: string[] = [];
   const cwd = path.resolve(process.cwd(), options.cwd ?? ".");
-  const dir = options.dir ?? "content";
 
   const projectConfig = await loadProjectConfig(cwd);
+  const baseConfig = resolveConfig(projectConfig);
+  const dir = options.dir ?? baseConfig.contentDir;
   const contentDir = path.resolve(cwd, dir);
 
   lines.push(pc.bold("\nContent Lint Report"));
@@ -376,7 +377,7 @@ export async function runLint(options: LintOptions): Promise<LintResult> {
     : schemaFiles;
 
   if (schemaFiles.length === 0) {
-    lines.push(pc.yellow("No schema.ts files found in content directories."));
+    lines.push(pc.yellow("No schema.ts files found in the configured source directories."));
     return { success: true, errors: 0, report: lines.join("\n") };
   }
   if (collections.length === 0) {
@@ -450,7 +451,6 @@ export async function runLint(options: LintOptions): Promise<LintResult> {
 
   let coveragePath: string | undefined;
   if (options.coverage) {
-    const baseConfig = resolveConfig(projectConfig);
     coveragePath = path.resolve(cwd, baseConfig.coveragePath);
     await generateCoverageReportFile(
       coveragePath,

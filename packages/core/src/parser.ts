@@ -107,7 +107,7 @@ export async function parseContentFileLegacy(
   const result = await parseContentFile(filePath, {
     contentDir: "content",
     outputDir: "generated/content",
-    coveragePath: "content.coverage.md",
+    coveragePath: "contenz.coverage.md",
     strict: false,
     i18n: true,
     extensions: ["md", "mdx"],

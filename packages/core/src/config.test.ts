@@ -1,20 +1,20 @@
 import { describe, expect, it } from "vitest";
 import { extractRelations, getContentType, getSchemaForType, resolveConfig } from "./config.js";
-import type { CollectionConfig, ProjectConfig, ResolvedConfig } from "./types.js";
+import type { CollectionConfig, ContenzConfig, ResolvedConfig } from "./types.js";
 
 describe("resolveConfig", () => {
   it("returns built-in defaults when project config empty", () => {
     const resolved = resolveConfig({});
     expect(resolved.contentDir).toBe("content");
     expect(resolved.outputDir).toBe("generated/content");
-    expect(resolved.coveragePath).toBe("content.coverage.md");
+    expect(resolved.coveragePath).toBe("contenz.coverage.md");
     expect(resolved.i18n).toBe(false);
     expect(resolved.extensions).toEqual(["md", "mdx"]);
     expect(resolved.ignore).toEqual(["README.md", "_*"]);
   });
 
   it("merges project overrides", () => {
-    const project: ProjectConfig = {
+    const project: ContenzConfig = {
       contentDir: "src/content",
       i18n: true,
       extensions: ["md"],
@@ -26,7 +26,7 @@ describe("resolveConfig", () => {
   });
 
   it("collection overrides project", () => {
-    const project: ProjectConfig = { i18n: true };
+    const project: ContenzConfig = { i18n: true };
     const collection: CollectionConfig = { i18n: false, extensions: ["mdx"] };
     const resolved = resolveConfig(project, undefined, collection);
     expect(resolved.i18n).toBe(false);
@@ -44,7 +44,7 @@ describe("getContentType", () => {
     const config: ResolvedConfig = {
       contentDir: "content",
       outputDir: "generated/content",
-      coveragePath: "content.coverage.md",
+      coveragePath: "contenz.coverage.md",
       strict: false,
       i18n: true,
       extensions: ["md", "mdx"],

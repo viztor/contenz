@@ -9,12 +9,12 @@ export const buildCommand = defineCommand({
   args: {
     dir: {
       type: "string",
-      description: "Content directory to build",
+      description: "Contenz source directory to build",
       default: "content",
     },
     cwd: {
       type: "string",
-      description: "Project root (where content.config.ts lives)",
+      description: "Project root (where contenz.config.ts lives)",
       default: ".",
     },
   },

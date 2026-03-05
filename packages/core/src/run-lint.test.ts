@@ -24,11 +24,11 @@ describe("runLint", () => {
 
     expect(result.success).toBe(true);
     expect(result.errors).toBe(0);
-    expect(result.coveragePath).toBe(path.join(cwd, "content.coverage.md"));
+    expect(result.coveragePath).toBe(path.join(cwd, "contenz.coverage.md"));
     expect(result.report).toContain("Lint passed.");
     expect(result.report).toContain("faq: 1 items (EN: 1, ZH: 1)");
 
-    const coverageOutput = await fs.readFile(path.join(cwd, "content.coverage.md"), "utf-8");
+    const coverageOutput = await fs.readFile(path.join(cwd, "contenz.coverage.md"), "utf-8");
     expect(coverageOutput).toContain("# Content Coverage Report");
     expect(coverageOutput).toContain("| faq | 1 | 1 | 1 | 1 | 100% |");
     expect(coverageOutput).toContain("All translations complete.");
