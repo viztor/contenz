@@ -1,0 +1,43 @@
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(__dirname, "..", "..", "..");
+const e2eFixturesDir = path.join(repoRoot, "packages", "e2e", "fixtures");
+const coreSourceImport = pathToFileURL(
+  path.join(repoRoot, "packages", "core", "src", "index.ts")
+).href;
+
+async function rewriteFixtureImports(dir: string): Promise<void> {
+  const entries = await fs.readdir(dir, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const entryPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      await rewriteFixtureImports(entryPath);
+      continue;
+    }
+
+    if (!entry.isFile() || !entry.name.endsWith(".ts")) {
+      continue;
+    }
+
+    const source = await fs.readFile(entryPath, "utf-8");
+    if (!source.includes("@contenz/core")) {
+      continue;
+    }
+
+    const rewritten = source.replaceAll('"@contenz/core"', `"${coreSourceImport}"`);
+    await fs.writeFile(entryPath, rewritten, "utf-8");
+  }
+}
+
+export async function prepareFixture(name: string): Promise<string> {
+  const fixtureSource = path.join(e2eFixturesDir, name);
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), `contenz-core-${name}-`));
+  await fs.cp(fixtureSource, tempDir, { recursive: true });
+  await rewriteFixtureImports(tempDir);
+  return tempDir;
+}
