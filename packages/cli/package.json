@@ -1,0 +1,31 @@
+{
+  "name": "@contenz/cli",
+  "version": "0.1.0",
+  "description": "CLI for contenz (content validation and codegen)",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "contenz": "./bin/run.mjs"
+  },
+  "files": [
+    "dist",
+    "bin"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@contenz/core": "*",
+    "citty": "^0.2.1",
+    "tsx": "^4.21.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0",
+    "tsup": "^8.0.0"
+  }
+}

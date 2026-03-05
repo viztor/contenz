@@ -1,0 +1,61 @@
+{
+  "name": "@contenz/core",
+  "version": "0.1.0",
+  "description": "Content validation and codegen from MDX/Markdown with Zod",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./api": {
+      "types": "./dist/api.d.ts",
+      "import": "./dist/api.js",
+      "default": "./dist/api.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check src",
+    "lint:fix": "biome check src --write",
+    "format": "biome format --write src",
+    "check": "biome check src",
+    "knip": "knip"
+  },
+  "dependencies": {
+    "zod": "^3.23.0",
+    "globby": "^14.0.0",
+    "picocolors": "^1.1.0",
+    "@mdx-js/mdx": "^3.1.0",
+    "remark-frontmatter": "^5.0.0",
+    "remark-mdx-frontmatter": "^5.0.0",
+    "react": "^19.0.0",
+    "tsx": "^4.21.0",
+    "p-map": "^5.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0",
+    "@types/react": "^19.0.0",
+    "vitest": "^2.0.0",
+    "@vitest/coverage-istanbul": "^2.0.0",
+    "@biomejs/biome": "^2.0.0",
+    "tsup": "^8.0.0",
+    "knip": "^5.0.0"
+  }
+}

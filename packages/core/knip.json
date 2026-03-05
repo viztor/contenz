@@ -1,0 +1,12 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "project": ["src/**/*.ts"],
+  "ignoreDependencies": ["tsx", "@biomejs/biome"],
+  "ignoreBinaries": ["tsup", "vitest", "tsc", "biome", "knip"],
+  "ignoreIssues": {
+    "src/config.ts": ["exports"],
+    "src/generator.ts": ["exports", "types"],
+    "src/parser.ts": ["exports", "types"],
+    "src/validator.ts": ["exports", "types"]
+  }
+}

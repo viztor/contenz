@@ -1,68 +1,27 @@
 {
-  "name": "content-tools",
-  "version": "0.1.0",
-  "description": "Content validation and codegen from MDX/Markdown with Zod",
+  "name": "contenz-workspace",
   "private": true,
-  "type": "module",
-  "engines": {
-    "node": ">=18"
-  },
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "default": "./dist/index.js"
-    },
-    "./api": {
-      "types": "./dist/api.d.ts",
-      "import": "./dist/api.js",
-      "default": "./dist/api.js"
-    }
-  },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "bin": {
-    "content-tools": "./bin/run.mjs"
-  },
-  "files": [
-    "dist",
-    "bin"
+  "packageManager": "npm@10.9.2",
+  "workspaces": [
+    "packages/*"
   ],
   "scripts": {
-    "build": "tsup",
-    "dev": "tsup --watch",
-    "prepare": "husky",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
-    "typecheck": "tsc --noEmit",
-    "lint": "biome check src tests",
-    "lint:fix": "biome check src tests --write",
-    "format": "biome format --write src tests",
-    "check": "biome check src tests",
-    "knip": "knip"
-  },
-  "dependencies": {
-    "zod": "^3.23.0",
-    "globby": "^14.0.0",
-    "picocolors": "^1.1.0",
-    "citty": "^0.2.1",
-    "@mdx-js/mdx": "^3.1.0",
-    "remark-frontmatter": "^5.0.0",
-    "remark-mdx-frontmatter": "^5.0.0",
-    "react": "^19.0.0",
-    "tsx": "^4.21.0",
-    "p-map": "^5.0.0"
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "test": "turbo run test",
+    "test:e2e": "turbo run test --filter=@contenz/e2e",
+    "test:watch": "turbo run test:watch --parallel",
+    "test:coverage": "turbo run test:coverage",
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint",
+    "lint:fix": "turbo run lint:fix",
+    "format": "turbo run format",
+    "check": "turbo run check",
+    "knip": "turbo run knip",
+    "prepare": "husky"
   },
   "devDependencies": {
-    "typescript": "^5.0.0",
-    "@types/node": "^20.0.0",
-    "@types/react": "^19.0.0",
-    "vitest": "^2.0.0",
-    "@vitest/coverage-istanbul": "^2.0.0",
-    "@biomejs/biome": "^2.0.0",
-    "tsup": "^8.0.0",
-    "knip": "^5.0.0",
-    "husky": "^9.0.0"
+    "husky": "^9.0.0",
+    "turbo": "^2.3.0"
   }
 }
