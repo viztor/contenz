@@ -7,27 +7,12 @@ This roadmap is the milestone-level delivery plan. It should stay readable, depe
 - Baseline workspace split is done: `@contenz/core`, `@contenz/cli`, `@contenz/e2e`
 - Current command surface is `lint` and `build`
 - Core validation, generation, i18n filename grouping, and relation checks are working
-- Sprint 0 hardening is largely complete: regression tests and a minimum coverage floor are in place
-
-## Milestone 0: Baseline Hardening
-
-Status: substantially complete
-
-Delivered:
-
-- consistent `contenz` naming across the main package surface
-- direct regression tests for `runBuild` and `runLint`
-- smoke coverage for generated multi-type exports
-- enforced core coverage floor
-
-Exit criteria:
-
-- `npm run build`, `npm run test`, `npm run typecheck`, and `npm run lint` all pass
-- core hot paths have direct regression coverage
+- Baseline hardening is complete and now treated as finished foundation work
+- The roadmap below starts with the next active delivery milestone
 
 ## Milestone 1: Shared Pipeline Core And Diagnostics
 
-Status: next active milestone
+Status: complete
 
 Goal:
 
@@ -46,7 +31,16 @@ Exit criteria:
 - no regression in current e2e fixtures
 - machine-readable diagnostics are covered by tests
 
+Outcome:
+
+- shared source discovery and config normalization are in place
+- `contenz init` exists for existing-project scaffolding
+- build and lint emit structured diagnostics with `pretty`, `json`, and `github` output formats
+- regression coverage includes programmatic and CLI formatter behavior
+
 ## Milestone 2: Incremental Build And Watch
+
+Status: next active milestone
 
 Goal:
 
@@ -84,6 +78,32 @@ Exit criteria:
 
 - `i18n: true` remains backward-compatible
 - fallback behavior and translation coverage policy are verified in e2e coverage
+
+## Documentation Gate: Core API Stabilization
+
+This is the documentation pass that should happen immediately after Milestone 3, before broader surface expansion.
+
+Goal:
+
+Freeze and document the pre-`v0.2` core API surface so the project has a clear, trustworthy contract for config, schema authoring, source discovery, CLI usage, and i18n behavior.
+
+Deliverables:
+
+- root docs updated for the current product and CLI model
+- `@contenz/core` docs updated for schema helpers, config contracts, and programmatic APIs
+- explicit reference material for:
+  - source discovery semantics
+  - collection identity and naming rules
+  - collection-local config behavior
+  - multi-type collection rules
+  - current i18n semantics and compatibility rules
+- clear marking of stable vs deprecated surface areas
+
+Exit criteria:
+
+- a user can set up, configure, lint, build, and understand contenz without reading source code
+- config and discovery invariants are documented in one place, not spread across examples only
+- the documented surface matches the behavior covered by tests
 
 ## Milestone 4: Consumption Layer
 
@@ -127,20 +147,52 @@ This is not the current milestone focus, but it is part of the intended product 
 
 Goal:
 
-Provide a deployable, editor-facing interface so content teams can work directly in contenz without dealing with raw git workflows, folder conventions, or manual metadata editing.
+Provide a deployable, git-backed authoring interface so content teams can work directly in contenz without dealing with raw files, frontmatter, or day-to-day git mechanics.
 
 Expected capabilities:
 
 - schema-driven editing UI
 - locale-aware authoring and review
 - relation pickers and guided field editing
-- preview and publish flows
-- draft and workflow states
+- draft and review states
+- preview
+- AI assistance for drafting, rewriting, and translation
+- branch + PR oriented collaboration
 - translation coverage and staleness visibility
 
 Prerequisite:
 
 The core data model, diagnostics, and i18n semantics must be stable first. The studio should be built on top of those primitives, not in parallel with an unstable foundation.
+
+## Future Product Track: Site Starters
+
+This is also outside the current `v0.2` scope.
+
+Goal:
+
+Provide one-shot starter generation for teams that want a repo-backed website built around contenz from day one.
+
+First target:
+
+- `npm create contenz@latest`
+- powered by a dedicated `create-contenz` scaffolder
+- kept separate from the persistent `contenz` project CLI
+- standalone docs/helpdesk starter
+- Next.js first
+- curated theme presets
+
+Related future command:
+
+- `contenz init` in the persistent project CLI for scaffolding contenz into an existing project without automatically patching host app routes or layouts in v1
+
+Boundary:
+
+- this track is about starter scaffolding, not publish semantics
+- `publish` should remain reserved for editorial workflow and promotion concepts
+
+Prerequisite:
+
+The pipeline, config model, and integration story need to be stable first. Site starters should package a mature workflow, not invent one early.
 
 ## Deferred Until After Milestone 5
 
@@ -162,4 +214,5 @@ The intended `v0.2` release should include:
 - dry-run support
 - basic status support
 - improved i18n behavior
+- a documentation pass that freezes and explains the core API surface
 - a stronger quality baseline than the current `v0.1` starting point

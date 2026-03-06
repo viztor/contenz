@@ -9,8 +9,8 @@ export const lintCommand = defineCommand({
   args: {
     dir: {
       type: "string",
-      description: "Contenz source directory to lint",
-      default: "content",
+      description: 'Legacy source root override (treated as "<dir>/*")',
+      required: false,
     },
     collection: {
       type: "string",
@@ -27,6 +27,11 @@ export const lintCommand = defineCommand({
       description: "Write coverage report file (e.g. contenz.coverage.md)",
       default: false,
     },
+    format: {
+      type: "string",
+      description: "Diagnostic formatter: pretty, json, or github",
+      default: "pretty",
+    },
   },
   async run({ args }) {
     const result = await runLint({
@@ -34,6 +39,7 @@ export const lintCommand = defineCommand({
       dir: args.dir,
       collection: args.collection,
       coverage: args.coverage,
+      format: args.format as "pretty" | "json" | "github",
     });
     console.log(result.report);
     process.exit(result.success ? 0 : 1);

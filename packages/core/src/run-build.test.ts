@@ -24,7 +24,10 @@ describe("runBuild", () => {
 
     expect(result.success).toBe(true);
     expect(result.errors).toBe(0);
+    expect(result.diagnostics).toEqual([]);
     expect(result.generated).toEqual(["faq.ts", "index.ts"]);
+    expect(result.report).toContain("Build diagnostics");
+    expect(result.report).toContain("0 error(s), 0 warning(s), 0 info message(s)");
 
     const collectionOutput = await fs.readFile(
       path.join(cwd, "generated", "content", "faq.ts"),
@@ -50,7 +53,17 @@ describe("runBuild", () => {
     expect(result.success).toBe(false);
     expect(result.errors).toBe(1);
     expect(result.generated).toEqual(["index.ts"]);
-    expect(result.report).toContain("question");
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "META_VALIDATION_FAILED",
+        severity: "error",
+        category: "validation",
+        collection: "faq",
+        file: "short.mdx",
+        field: "question",
+      })
+    );
+    expect(result.report).toContain("META_VALIDATION_FAILED");
     expect(result.report).toContain("String must contain at least 10 character(s)");
 
     await expect(fs.access(path.join(cwd, "generated", "content", "faq.ts"))).rejects.toThrow();
@@ -87,5 +100,66 @@ describe("runBuild", () => {
     expect(indexOutput).toContain(
       'export type { TopicMeta, TopicEntry, TopicItem } from "./terms.js";'
     );
+  });
+
+  it("renders JSON diagnostics output", async () => {
+    const cwd = await useFixture("invalid-schema");
+
+    const result = await runBuild({ cwd, format: "json" });
+    const parsed = JSON.parse(result.report) as {
+      title: string;
+      success: boolean;
+      summary: { errors: number; warnings: number; info: number };
+      diagnostics: Array<{ code: string; severity: string; category: string }>;
+      generated: string[];
+    };
+
+    expect(parsed.title).toBe("Build diagnostics");
+    expect(parsed.success).toBe(false);
+    expect(parsed.summary).toEqual({ errors: 1, warnings: 0, info: 0 });
+    expect(parsed.generated).toEqual(["index.ts"]);
+    expect(parsed.diagnostics).toEqual([
+      expect.objectContaining({
+        code: "META_VALIDATION_FAILED",
+        severity: "error",
+        category: "validation",
+      }),
+    ]);
+  });
+
+  it("renders GitHub diagnostics output", async () => {
+    const cwd = await useFixture("invalid-schema");
+
+    const result = await runBuild({ cwd, format: "github" });
+
+    expect(result.report).toContain("::error ");
+    expect(result.report).toContain("title=META_VALIDATION_FAILED");
+    expect(result.report).toContain("short.mdx");
+    expect(result.report).toContain("String must contain at least 10 character(s)");
+  });
+
+  it("discovers collections from mixed source patterns", async () => {
+    const cwd = await useFixture("mixed-sources");
+
+    const result = await runBuild({ cwd });
+
+    expect(result.success).toBe(true);
+    expect(result.diagnostics).toEqual([]);
+    expect(result.generated).toEqual(["docs.ts", "faq.ts", "index.ts"]);
+
+    const docsOutput = await fs.readFile(
+      path.join(cwd, "generated", "content", "docs.ts"),
+      "utf-8"
+    );
+    const faqOutput = await fs.readFile(path.join(cwd, "generated", "content", "faq.ts"), "utf-8");
+    const indexOutput = await fs.readFile(
+      path.join(cwd, "generated", "content", "index.ts"),
+      "utf-8"
+    );
+
+    expect(docsOutput).toContain('"title": "Getting started"');
+    expect(faqOutput).toContain('"question": "What is contenz?"');
+    expect(indexOutput).toContain('export { docs, docsSlugs, docsStats } from "./docs.js";');
+    expect(indexOutput).toContain('export { faq, faqSlugs, faqStats } from "./faq.js";');
   });
 });

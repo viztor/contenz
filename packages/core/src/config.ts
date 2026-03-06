@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { resolveSourcePatterns } from "./sources.js";
 import type {
   CollectionConfig,
   ConfigModule,
@@ -10,11 +11,13 @@ import type {
   SchemaModule,
 } from "./types.js";
 
-const BUILT_IN_DEFAULTS: Required<Omit<ContenzConfig, "coveragePath" | "outputDir">> & {
+const BUILT_IN_DEFAULTS: Required<
+  Omit<ContenzConfig, "coveragePath" | "outputDir" | "contentDir">
+> & {
   coveragePath: string;
   outputDir: string;
 } = {
-  contentDir: "content",
+  sources: ["content/*"],
   outputDir: "generated/content",
   coveragePath: "contenz.coverage.md",
   strict: false,
@@ -79,43 +82,25 @@ export async function loadSchemaModule(collectionPath: string): Promise<SchemaMo
 }
 
 /**
- * Load source-level defaults from the configured content directory.
- */
-export async function loadContentDefaults(
-  contentDir: string
-): Promise<{ schema: SchemaModule | null; config: CollectionConfig | undefined }> {
-  const schema = await loadSchemaModule(contentDir);
-  const config = await loadCollectionConfig(contentDir);
-  return { schema, config };
-}
-
-/**
  * Resolve configuration by merging all levels:
- * Built-in defaults → contenz config → Content defaults → Collection config
+ * Built-in defaults → contenz config → Collection config
  */
 export function resolveConfig(
   project: ContenzConfig,
-  contentDefault?: CollectionConfig,
   collection?: CollectionConfig
 ): ResolvedConfig {
-  const contentDir = project.contentDir ?? BUILT_IN_DEFAULTS.contentDir;
   const outputDir = project.outputDir ?? BUILT_IN_DEFAULTS.outputDir;
 
   return {
-    contentDir,
+    sources: resolveSourcePatterns(project),
     outputDir,
     coveragePath: project.coveragePath ?? BUILT_IN_DEFAULTS.coveragePath,
     strict: project.strict ?? BUILT_IN_DEFAULTS.strict,
-    i18n: collection?.i18n ?? contentDefault?.i18n ?? project.i18n ?? BUILT_IN_DEFAULTS.i18n,
-    extensions:
-      collection?.extensions ??
-      contentDefault?.extensions ??
-      project.extensions ??
-      BUILT_IN_DEFAULTS.extensions,
-    ignore:
-      collection?.ignore ?? contentDefault?.ignore ?? project.ignore ?? BUILT_IN_DEFAULTS.ignore,
-    types: collection?.types ?? contentDefault?.types,
-    slugPattern: collection?.slugPattern ?? contentDefault?.slugPattern,
+    i18n: collection?.i18n ?? project.i18n ?? BUILT_IN_DEFAULTS.i18n,
+    extensions: collection?.extensions ?? project.extensions ?? BUILT_IN_DEFAULTS.extensions,
+    ignore: collection?.ignore ?? project.ignore ?? BUILT_IN_DEFAULTS.ignore,
+    types: collection?.types,
+    slugPattern: collection?.slugPattern,
   };
 }
 

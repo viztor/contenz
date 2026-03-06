@@ -105,7 +105,7 @@ export async function parseContentFileLegacy(
   filePath: string
 ): Promise<ParsedContent & { locale: string }> {
   const result = await parseContentFile(filePath, {
-    contentDir: "content",
+    sources: ["content/*"],
     outputDir: "generated/content",
     coveragePath: "contenz.coverage.md",
     strict: false,

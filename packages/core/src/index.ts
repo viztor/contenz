@@ -12,6 +12,13 @@ export {
   defineMultiTypeCollection,
 } from "./define-collection.js";
 export type {
+  Diagnostic,
+  DiagnosticCategory,
+  DiagnosticFormat,
+  DiagnosticSeverity,
+  DiagnosticSummary,
+} from "./diagnostics.js";
+export type {
   CollectionConfig,
   CollectionItem,
   CollectionStats,

@@ -31,7 +31,17 @@ export type Relations = Record<string, string>;
  * These settings apply globally to all content collections.
  */
 export interface ContenzConfig {
-  /** Root directory for content (default: "content") */
+  /**
+   * Source discovery patterns.
+   * - `content/*` discovers collections under direct child folders
+   * - `docs` treats `docs/` itself as a collection
+   * Default: ["content/*"]
+   */
+  sources?: string[];
+  /**
+   * Legacy container root for collections.
+   * @deprecated Use `sources`, for example `["content/*"]`.
+   */
   contentDir?: string;
   /** Output directory for generated files (default: "generated/content") */
   outputDir?: string;
@@ -48,7 +58,8 @@ export interface ContenzConfig {
 }
 
 /**
- * Collection-level configuration at contenz/{collection}/config.ts
+ * Collection-level configuration at a collection root, such as
+ * `content/{collection}/config.ts` or `docs/config.ts`.
  * These settings override project defaults for a specific collection.
  */
 export interface CollectionConfig {
@@ -68,7 +79,7 @@ export interface CollectionConfig {
  * Resolved configuration after merging all levels.
  */
 export interface ResolvedConfig {
-  contentDir: string;
+  sources: string[];
   outputDir: string;
   coveragePath: string;
   strict: boolean;

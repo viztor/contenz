@@ -7,7 +7,6 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { globby } from "globby";
 import pMap from "p-map";
-import pc from "picocolors";
 import {
   extractRelations,
   getContentType,
@@ -17,11 +16,16 @@ import {
   loadSchemaModule,
   resolveConfig,
 } from "./config.js";
+import { type Diagnostic, type DiagnosticFormat, formatDiagnosticsReport } from "./diagnostics.js";
 import { parseContentFile, parseFileName } from "./parser.js";
+import {
+  type DiscoveredCollection,
+  discoverCollections,
+  normalizeLegacyContentDir,
+} from "./sources.js";
 import type { Relations } from "./types.js";
 import {
   detectCircularReferences,
-  formatValidationResults,
   type ValidationResult,
   validateMeta,
   validateRelations,
@@ -33,11 +37,15 @@ export interface LintResult {
   success: boolean;
   errors: number;
   report: string;
+  diagnostics: Diagnostic[];
   coveragePath?: string;
 }
 
 export interface LintOptions {
   cwd: string;
+  format?: DiagnosticFormat;
+  sources?: string[];
+  /** @deprecated Use `sources` instead. */
   dir?: string;
   collection?: string;
   coverage?: boolean;
@@ -54,7 +62,7 @@ interface MissingRef {
 interface FirstPassResult {
   collectionName: string;
   slugs: Set<string>;
-  lines: string[];
+  diagnostics: Diagnostic[];
   coverageEntry: { name: string; total: number; locales: Record<string, number> };
   circularRefs: string[];
   selfRefs: string[];
@@ -63,29 +71,35 @@ interface FirstPassResult {
 }
 
 async function firstPassOneCollection(
-  schemaFile: string,
-  contentDir: string,
+  collection: DiscoveredCollection,
   projectConfig: import("./types.js").ContenzConfig,
   availableCollections: string[]
 ): Promise<FirstPassResult> {
-  const collectionName = path.dirname(schemaFile);
-  const collectionPath = path.join(contentDir, collectionName);
-  const lines: string[] = [];
+  const collectionName = collection.name;
+  const collectionPath = collection.collectionPath;
+  const diagnostics: Diagnostic[] = [];
   const slugs = new Set<string>();
   const slugLocales = new Map<string, Set<string>>();
   const itemsForCircularCheck = new Map<string, { slug: string; relatedSlugs: string[] }>();
   const validationResults: ValidationResult[] = [];
 
   const collectionConfig = await loadCollectionConfig(collectionPath);
-  const config = resolveConfig(projectConfig, undefined, collectionConfig);
+  const config = resolveConfig(projectConfig, collectionConfig);
 
   const schemaModule = await loadSchemaModule(collectionPath);
   if (!schemaModule) {
-    lines.push(pc.red(`${collectionName}/: Failed to load schema.ts`));
+    diagnostics.push({
+      code: "SCHEMA_LOAD_FAILED",
+      severity: "error",
+      category: "schema",
+      message: "Failed to load schema.ts.",
+      source: "lint",
+      collection: collectionName,
+    });
     return {
       collectionName,
       slugs,
-      lines,
+      diagnostics,
       coverageEntry: { name: collectionName, total: 0, locales: {} },
       circularRefs: [],
       selfRefs: [],
@@ -96,11 +110,18 @@ async function firstPassOneCollection(
 
   const rawSchema = schemaModule.meta || (schemaModule as Record<string, unknown>).metaSchema;
   if (!rawSchema) {
-    lines.push(pc.red(`${collectionName}/: No meta or metaSchema export found`));
+    diagnostics.push({
+      code: "SCHEMA_EXPORT_MISSING",
+      severity: "error",
+      category: "schema",
+      message: "No meta or metaSchema export found.",
+      source: "lint",
+      collection: collectionName,
+    });
     return {
       collectionName,
       slugs,
-      lines,
+      diagnostics,
       coverageEntry: { name: collectionName, total: 0, locales: {} },
       circularRefs: [],
       selfRefs: [],
@@ -109,8 +130,6 @@ async function firstPassOneCollection(
     };
   }
   const defaultSchema = rawSchema as import("zod").ZodSchema;
-
-  lines.push(pc.cyan(`Scanning ${collectionName}/...`));
 
   const extensionPattern = config.extensions.map((e) => `*.${e}`).join(",");
   const contentFiles = await globby(`{${extensionPattern}}`, {
@@ -126,7 +145,15 @@ async function firstPassOneCollection(
     const filePath = path.join(collectionPath, file);
     const parsed = parseFileName(file, config.i18n, config.slugPattern);
     if (!parsed) {
-      lines.push(pc.yellow(`  ⚠ Skipping ${file} (invalid naming pattern)`));
+      diagnostics.push({
+        code: "CONTENT_FILE_SKIPPED",
+        severity: "warning",
+        category: "content",
+        message: "Skipped file because it does not match the expected naming pattern.",
+        source: "lint",
+        collection: collectionName,
+        file,
+      });
       continue;
     }
     slugs.add(parsed.slug);
@@ -173,13 +200,33 @@ async function firstPassOneCollection(
     }
   }
 
-  const errorCount = validationResults.reduce((sum, r) => sum + r.errors.length, 0);
-  if (errorCount === 0) {
-    lines.push(pc.green(`  ✓ ${contentFiles.length} files validated`));
-  } else {
-    lines.push(pc.red(`  ✗ ${errorCount} errors in ${contentFiles.length} files`));
+  for (const result of validationResults) {
+    for (const error of result.errors) {
+      diagnostics.push({
+        code: error.field === "parse" ? "CONTENT_PARSE_FAILED" : "META_VALIDATION_FAILED",
+        severity: "error",
+        category: error.field === "parse" ? "content" : "validation",
+        message: error.message,
+        source: "lint",
+        collection: collectionName,
+        file: error.file,
+        field: error.field,
+      });
+    }
+    for (const warning of result.warnings) {
+      diagnostics.push({
+        code: "VALIDATION_WARNING",
+        severity: "warning",
+        category: "validation",
+        message: warning.message,
+        source: "lint",
+        collection: collectionName,
+        file: warning.file,
+      });
+    }
   }
-  lines.push(formatValidationResults(validationResults));
+
+  const errorCount = validationResults.reduce((sum, r) => sum + r.errors.length, 0);
 
   const { circularRefs, selfRefs } = detectCircularReferences(itemsForCircularCheck);
   const coverageEntry = config.i18n
@@ -197,7 +244,7 @@ async function firstPassOneCollection(
   return {
     collectionName,
     slugs,
-    lines,
+    diagnostics,
     coverageEntry,
     circularRefs: circularRefs.map((r) => `${collectionName}: ${r}`),
     selfRefs: selfRefs.map((r) => `${collectionName}: ${r}`),
@@ -207,32 +254,31 @@ async function firstPassOneCollection(
 }
 
 interface SecondPassResult {
-  lines: string[];
+  diagnostics: Diagnostic[];
   relationErrors: number;
   missingRefs: MissingRef[];
 }
 
 async function secondPassOneCollection(
-  schemaFile: string,
-  contentDir: string,
+  collection: DiscoveredCollection,
   projectConfig: import("./types.js").ContenzConfig,
   collectionSlugs: Map<string, Set<string>>,
   availableCollections: string[]
 ): Promise<SecondPassResult> {
-  const collectionName = path.dirname(schemaFile);
-  const collectionPath = path.join(contentDir, collectionName);
-  const lines: string[] = [];
+  const collectionName = collection.name;
+  const collectionPath = collection.collectionPath;
+  const diagnostics: Diagnostic[] = [];
   const missingRefs: MissingRef[] = [];
   let relationErrors = 0;
 
   const collectionConfig = await loadCollectionConfig(collectionPath);
-  const config = resolveConfig(projectConfig, undefined, collectionConfig);
+  const config = resolveConfig(projectConfig, collectionConfig);
   const schemaModule = await loadSchemaModule(collectionPath);
-  if (!schemaModule) return { lines, relationErrors: 0, missingRefs };
+  if (!schemaModule) return { diagnostics, relationErrors: 0, missingRefs };
 
   const relations: Relations =
     schemaModule.relations ?? extractRelations(schemaModule, availableCollections);
-  if (Object.keys(relations).length === 0) return { lines, relationErrors: 0, missingRefs };
+  if (Object.keys(relations).length === 0) return { diagnostics, relationErrors: 0, missingRefs };
 
   const extensionPattern = config.extensions.map((e) => `*.${e}`).join(",");
   const contentFiles = await globby(`{${extensionPattern}}`, {
@@ -256,7 +302,18 @@ async function secondPassOneCollection(
       );
       relationErrors += validation.errors.length;
       for (const error of validation.errors) {
-        lines.push(pc.red(`  ✗ ${collectionName}/${error.file}: ${error.message}`));
+        diagnostics.push({
+          code: error.targetCollection
+            ? "RELATION_MISSING_SLUG"
+            : "RELATION_TARGET_COLLECTION_MISSING",
+          severity: "error",
+          category: "relation",
+          message: error.message,
+          source: "lint",
+          collection: collectionName,
+          file: error.file,
+          field: error.field,
+        });
         if (error.missingSlug && error.targetCollection) {
           missingRefs.push({
             collection: collectionName,
@@ -268,16 +325,21 @@ async function secondPassOneCollection(
         }
       }
       for (const warning of validation.warnings) {
-        lines.push(pc.yellow(`  ⚠ ${collectionName}/${warning.file}: ${warning.message}`));
+        diagnostics.push({
+          code: "RELATION_SELF_REFERENCE",
+          severity: "warning",
+          category: "relation",
+          message: warning.message,
+          source: "lint",
+          collection: collectionName,
+          file: warning.file,
+        });
       }
     } catch {
       // Already reported in first pass
     }
   }
-  if (relationErrors === 0 && Object.keys(relations).length > 0) {
-    lines.push(pc.green(`  ✓ ${collectionName}: All relations valid`));
-  }
-  return { lines, relationErrors, missingRefs };
+  return { diagnostics, relationErrors, missingRefs };
 }
 
 async function generateCoverageReportFile(
@@ -360,37 +422,163 @@ Generated: ${timestamp}
 }
 
 export async function runLint(options: LintOptions): Promise<LintResult> {
-  const lines: string[] = [];
+  const diagnostics: Diagnostic[] = [];
   const cwd = path.resolve(process.cwd(), options.cwd ?? ".");
+  const format = options.format ?? "pretty";
 
   const projectConfig = await loadProjectConfig(cwd);
-  const baseConfig = resolveConfig(projectConfig);
-  const dir = options.dir ?? baseConfig.contentDir;
-  const contentDir = path.resolve(cwd, dir);
+  let baseConfig: ReturnType<typeof resolveConfig>;
+  try {
+    baseConfig = resolveConfig(projectConfig);
+  } catch (error) {
+    diagnostics.push({
+      code: "CONFIG_INVALID",
+      severity: "error",
+      category: "config",
+      message: error instanceof Error ? error.message : String(error),
+      source: "lint",
+    });
+    return {
+      success: false,
+      errors: 1,
+      report: formatDiagnosticsReport({
+        diagnostics,
+        format,
+        title: "Lint diagnostics",
+        success: false,
+      }),
+      diagnostics,
+    };
+  }
 
-  lines.push(pc.bold("\nContent Lint Report"));
-  lines.push("===================\n");
+  let sources: string[];
+  try {
+    sources =
+      options.sources ??
+      (options.dir ? [normalizeLegacyContentDir(options.dir)] : baseConfig.sources);
+  } catch (error) {
+    diagnostics.push({
+      code: "CONFIG_INVALID_SOURCE",
+      severity: "error",
+      category: "config",
+      message: error instanceof Error ? error.message : String(error),
+      source: "lint",
+    });
+    return {
+      success: false,
+      errors: 1,
+      report: formatDiagnosticsReport({
+        diagnostics,
+        format,
+        title: "Lint diagnostics",
+        success: false,
+      }),
+      diagnostics,
+    };
+  }
 
-  const schemaFiles = await globby("*/schema.ts", { cwd: contentDir, onlyFiles: true });
+  let discoveredCollections: DiscoveredCollection[];
+  let discoveryErrors: string[];
+  try {
+    const discovery = await discoverCollections(cwd, sources);
+    discoveredCollections = discovery.collections;
+    discoveryErrors = discovery.errors;
+  } catch (error) {
+    diagnostics.push({
+      code: "DISCOVERY_FAILED",
+      severity: "error",
+      category: "discovery",
+      message: error instanceof Error ? error.message : String(error),
+      source: "lint",
+    });
+    return {
+      success: false,
+      errors: 1,
+      report: formatDiagnosticsReport({
+        diagnostics,
+        format,
+        title: "Lint diagnostics",
+        success: false,
+      }),
+      diagnostics,
+    };
+  }
+
+  if (discoveryErrors.length > 0) {
+    for (const error of discoveryErrors) {
+      diagnostics.push({
+        code: "DISCOVERY_DUPLICATE_COLLECTION",
+        severity: "error",
+        category: "discovery",
+        message: error,
+        source: "lint",
+      });
+    }
+    return {
+      success: false,
+      errors: discoveryErrors.length,
+      report: formatDiagnosticsReport({
+        diagnostics,
+        format,
+        title: "Lint diagnostics",
+        success: false,
+      }),
+      diagnostics,
+    };
+  }
+
   const collections = options.collection
-    ? schemaFiles.filter((f) => f.startsWith(`${options.collection}/`))
-    : schemaFiles;
+    ? discoveredCollections.filter((collection) => collection.name === options.collection)
+    : discoveredCollections;
 
-  if (schemaFiles.length === 0) {
-    lines.push(pc.yellow("No schema.ts files found in the configured source directories."));
-    return { success: true, errors: 0, report: lines.join("\n") };
+  if (discoveredCollections.length === 0) {
+    diagnostics.push({
+      code: "DISCOVERY_NO_COLLECTIONS",
+      severity: "warning",
+      category: "discovery",
+      message: "No schema.ts files found in the configured sources.",
+      source: "lint",
+    });
+    return {
+      success: true,
+      errors: 0,
+      report: formatDiagnosticsReport({
+        diagnostics,
+        format,
+        title: "Lint diagnostics",
+        success: true,
+        footer: `Sources: ${sources.join(", ")}`,
+      }),
+      diagnostics,
+    };
   }
   if (collections.length === 0) {
-    lines.push(pc.yellow(`Collection "${options.collection}" not found.`));
-    return { success: false, errors: 1, report: lines.join("\n") };
+    diagnostics.push({
+      code: "DISCOVERY_COLLECTION_NOT_FOUND",
+      severity: "error",
+      category: "discovery",
+      message: `Collection "${options.collection}" not found.`,
+      source: "lint",
+    });
+    return {
+      success: false,
+      errors: 1,
+      report: formatDiagnosticsReport({
+        diagnostics,
+        format,
+        title: "Lint diagnostics",
+        success: false,
+        footer: `Sources: ${sources.join(", ")}`,
+      }),
+      diagnostics,
+    };
   }
 
-  const availableCollections = collections.map((f) => path.dirname(f));
+  const availableCollections = collections.map((collection) => collection.name);
 
   const firstPassResults = await pMap(
     collections,
-    (schemaFile) =>
-      firstPassOneCollection(schemaFile, contentDir, projectConfig, availableCollections),
+    (collection) => firstPassOneCollection(collection, projectConfig, availableCollections),
     { concurrency: LINT_CONCURRENCY }
   );
 
@@ -401,7 +589,7 @@ export async function runLint(options: LintOptions): Promise<LintResult> {
   const coverageReport: { name: string; total: number; locales: Record<string, number> }[] = [];
 
   for (const r of firstPassResults) {
-    lines.push(...r.lines);
+    diagnostics.push(...r.diagnostics);
     collectionSlugs.set(r.collectionName, r.slugs);
     totalErrors += r.errorCount;
     allCircularRefs.push(...r.circularRefs);
@@ -409,44 +597,41 @@ export async function runLint(options: LintOptions): Promise<LintResult> {
     coverageReport.push(r.coverageEntry);
   }
 
-  lines.push(pc.bold("\nRelation Validation"));
-  lines.push("-------------------");
-
   const secondPassResults = await pMap(
     collections,
-    (schemaFile) =>
-      secondPassOneCollection(
-        schemaFile,
-        contentDir,
-        projectConfig,
-        collectionSlugs,
-        availableCollections
-      ),
+    (collection) =>
+      secondPassOneCollection(collection, projectConfig, collectionSlugs, availableCollections),
     { concurrency: LINT_CONCURRENCY }
   );
 
   const allMissingRefs: MissingRef[] = [];
   for (const r of secondPassResults) {
-    lines.push(...r.lines);
+    diagnostics.push(...r.diagnostics);
     totalErrors += r.relationErrors;
     allMissingRefs.push(...r.missingRefs);
   }
 
   if (allCircularRefs.length > 0) {
-    lines.push(pc.blue("\nℹ Circular References (informational):"));
-    for (const ref of allCircularRefs) lines.push(`  ${ref}`);
+    for (const ref of allCircularRefs) {
+      diagnostics.push({
+        code: "RELATION_CIRCULAR_REFERENCE",
+        severity: "info",
+        category: "relation",
+        message: ref,
+        source: "lint",
+      });
+    }
   }
   if (allSelfRefs.length > 0) {
-    lines.push(pc.yellow("\n⚠ Self References:"));
-    for (const ref of allSelfRefs) lines.push(`  ${ref}`);
-  }
-
-  lines.push(pc.bold("\nTranslation Coverage:"));
-  for (const { name, total, locales } of coverageReport) {
-    const localeStr = Object.entries(locales)
-      .map(([l, c]) => `${l.toUpperCase()}: ${c}`)
-      .join(", ");
-    lines.push(`  ${name}: ${total} items${localeStr ? ` (${localeStr})` : ""}`);
+    for (const ref of allSelfRefs) {
+      diagnostics.push({
+        code: "RELATION_SELF_REFERENCE",
+        severity: "warning",
+        category: "relation",
+        message: ref,
+        source: "lint",
+      });
+    }
   }
 
   let coveragePath: string | undefined;
@@ -460,20 +645,22 @@ export async function runLint(options: LintOptions): Promise<LintResult> {
       allMissingRefs,
       totalErrors
     );
-    lines.push(pc.dim(`\nCoverage report: ${path.relative(cwd, coveragePath)}`));
-  }
-
-  lines.push("");
-  if (totalErrors > 0) {
-    lines.push(pc.red(`Lint failed with ${totalErrors} error(s).`));
-  } else {
-    lines.push(pc.green("Lint passed."));
   }
 
   return {
     success: totalErrors === 0,
     errors: totalErrors,
-    report: lines.join("\n"),
+    report: formatDiagnosticsReport({
+      diagnostics,
+      format,
+      title: "Lint diagnostics",
+      success: totalErrors === 0,
+      metadata: { coveragePath },
+      footer:
+        `Sources: ${sources.join(", ")}` +
+        (coveragePath ? `\nCoverage report: ${path.relative(cwd, coveragePath)}` : ""),
+    }),
+    diagnostics,
     coveragePath,
   };
 }

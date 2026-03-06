@@ -7,7 +7,6 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { globby } from "globby";
 import pMap from "p-map";
-import pc from "picocolors";
 import {
   getContentType,
   getSchemaForType,
@@ -16,6 +15,7 @@ import {
   loadSchemaModule,
   resolveConfig,
 } from "./config.js";
+import { type Diagnostic, type DiagnosticFormat, formatDiagnosticsReport } from "./diagnostics.js";
 import {
   calculateI18nStats,
   type FlatCollectionData,
@@ -26,6 +26,11 @@ import {
   type I18nCollectionData,
 } from "./generator.js";
 import { parseContentFile, parseFileName } from "./parser.js";
+import {
+  type DiscoveredCollection,
+  discoverCollections,
+  normalizeLegacyContentDir,
+} from "./sources.js";
 import { validateMeta } from "./validator.js";
 
 const BUILD_CONCURRENCY = 4;
@@ -34,11 +39,15 @@ export interface BuildResult {
   success: boolean;
   errors: number;
   report: string;
+  diagnostics: Diagnostic[];
   generated: string[];
 }
 
 export interface BuildOptions {
   cwd: string;
+  format?: DiagnosticFormat;
+  sources?: string[];
+  /** @deprecated Use `sources` instead. */
   dir?: string;
 }
 
@@ -135,36 +144,46 @@ export const ${typeName}s: Record<string, ${pascalName}Entry> = `;
 }
 
 async function processOneCollection(
-  schemaFile: string,
-  contentDir: string,
+  collection: DiscoveredCollection,
   outputDir: string,
   projectConfig: import("./types.js").ContenzConfig
 ): Promise<
-  | { ok: true; indexMeta: IndexMeta; outputName: string; lines: string[] }
-  | { ok: false; lines: string[] }
+  | { ok: true; indexMeta: IndexMeta; outputName: string; diagnostics: Diagnostic[] }
+  | { ok: false; diagnostics: Diagnostic[] }
 > {
-  const lines: string[] = [];
-  const collectionName = path.dirname(schemaFile);
-  const collectionPath = path.join(contentDir, collectionName);
+  const diagnostics: Diagnostic[] = [];
+  const collectionName = collection.name;
+  const collectionPath = collection.collectionPath;
 
   const collectionConfig = await loadCollectionConfig(collectionPath);
-  const projectConfigTyped = projectConfig;
-  const config = resolveConfig(projectConfigTyped, undefined, collectionConfig);
+  const config = resolveConfig(projectConfig, collectionConfig);
 
   const schemaModule = await loadSchemaModule(collectionPath);
   if (!schemaModule) {
-    lines.push(pc.red(`${collectionName}/: Failed to load schema.ts`));
-    return { ok: false, lines };
+    diagnostics.push({
+      code: "SCHEMA_LOAD_FAILED",
+      severity: "error",
+      category: "schema",
+      message: "Failed to load schema.ts.",
+      source: "build",
+      collection: collectionName,
+    });
+    return { ok: false, diagnostics };
   }
 
   const rawSchema = schemaModule.meta || (schemaModule as Record<string, unknown>).metaSchema;
   if (!rawSchema) {
-    lines.push(pc.red(`${collectionName}/: No meta or metaSchema export found`));
-    return { ok: false, lines };
+    diagnostics.push({
+      code: "SCHEMA_EXPORT_MISSING",
+      severity: "error",
+      category: "schema",
+      message: "No meta or metaSchema export found.",
+      source: "build",
+      collection: collectionName,
+    });
+    return { ok: false, diagnostics };
   }
   const defaultSchema = rawSchema as import("zod").ZodSchema;
-
-  lines.push(pc.cyan(`${collectionName}/`));
 
   const extensionPattern = config.extensions.map((e) => `*.${e}`).join(",");
   const contentFiles = await globby(`{${extensionPattern}}`, {
@@ -182,7 +201,15 @@ async function processOneCollection(
     const filePath = path.join(collectionPath, file);
     const parsed = parseFileName(file, config.i18n, config.slugPattern);
     if (!parsed) {
-      lines.push(pc.yellow(`  ⚠ Skipping ${file} (invalid naming pattern)`));
+      diagnostics.push({
+        code: "CONTENT_FILE_SKIPPED",
+        severity: "warning",
+        category: "content",
+        message: "Skipped file because it does not match the expected naming pattern.",
+        source: "build",
+        collection: collectionName,
+        file,
+      });
       continue;
     }
     try {
@@ -196,7 +223,16 @@ async function processOneCollection(
       if (!validation.valid) {
         parseErrors++;
         for (const err of validation.errors) {
-          lines.push(pc.red(`  ✗ ${file}: ${err.field} - ${err.message}`));
+          diagnostics.push({
+            code: "META_VALIDATION_FAILED",
+            severity: "error",
+            category: "validation",
+            message: err.message,
+            source: "build",
+            collection: collectionName,
+            file,
+            field: err.field,
+          });
         }
         continue;
       }
@@ -204,7 +240,15 @@ async function processOneCollection(
       const itemsMap = typeGroups.get(contentType);
       if (!itemsMap) {
         parseErrors++;
-        lines.push(pc.red(`  ✗ ${file}: internal error creating collection type group`));
+        diagnostics.push({
+          code: "BUILD_TYPE_GROUP_FAILED",
+          severity: "error",
+          category: "build",
+          message: "Internal error creating collection type group.",
+          source: "build",
+          collection: collectionName,
+          file,
+        });
         continue;
       }
       if (config.i18n && parsed.locale) {
@@ -223,12 +267,20 @@ async function processOneCollection(
       }
     } catch (error) {
       parseErrors++;
-      lines.push(pc.red(`  ✗ ${file}: ${String(error)}`));
+      diagnostics.push({
+        code: "CONTENT_PARSE_FAILED",
+        severity: "error",
+        category: "content",
+        message: error instanceof Error ? error.message : String(error),
+        source: "build",
+        collection: collectionName,
+        file,
+      });
     }
   }
 
   if (parseErrors > 0) {
-    return { ok: false, lines };
+    return { ok: false, diagnostics };
   }
 
   const types = config.types?.map((t) => t.name) ?? [];
@@ -236,11 +288,6 @@ async function processOneCollection(
   const collectionOutputPath = path.join(outputDir, `${collectionName}.ts`);
 
   if (types.length > 0) {
-    for (const [typeName, itemsMap] of typeGroups) {
-      if (typeName === defaultTypeName) continue;
-      const items = Array.from(itemsMap.values()).sort((a, b) => a.slug.localeCompare(b.slug));
-      lines.push(pc.dim(`  ✓ Parsed ${items.length} ${typeName} items`));
-    }
     await generateMultiTypeCollectionFile(
       collectionOutputPath,
       collectionName,
@@ -249,12 +296,11 @@ async function processOneCollection(
       locales,
       schemaModule as Record<string, unknown>
     );
-    lines.push(pc.green(`  ✓ Generated ${collectionName}.ts`));
     return {
       ok: true,
       indexMeta: { name: collectionName, types, hasI18n: config.i18n },
       outputName: `${collectionName}.ts`,
-      lines,
+      diagnostics,
     };
   }
 
@@ -283,59 +329,168 @@ async function processOneCollection(
     );
   }
 
-  lines.push(pc.dim(`  ✓ Parsed ${contentFiles.length} files (${items.length} slugs)`));
-  lines.push(pc.green(`  ✓ Generated ${collectionName}.ts`));
-
   return {
     ok: true,
     indexMeta: { name: collectionName, hasI18n: config.i18n, metaTypeName },
     outputName: `${collectionName}.ts`,
-    lines,
+    diagnostics,
   };
 }
 
 export async function runBuild(options: BuildOptions): Promise<BuildResult> {
-  const lines: string[] = [];
+  const diagnostics: Diagnostic[] = [];
   const cwd = path.resolve(process.cwd(), options.cwd ?? ".");
+  const format = options.format ?? "pretty";
 
   const projectConfig = await loadProjectConfig(cwd);
-  const baseConfig = resolveConfig(projectConfig);
-  const dir = options.dir ?? baseConfig.contentDir;
-  const contentDir = path.resolve(cwd, dir);
+  let baseConfig: ReturnType<typeof resolveConfig>;
+  try {
+    baseConfig = resolveConfig(projectConfig);
+  } catch (error) {
+    diagnostics.push({
+      code: "CONFIG_INVALID",
+      severity: "error",
+      category: "config",
+      message: error instanceof Error ? error.message : String(error),
+      source: "build",
+    });
+    return {
+      success: false,
+      errors: 1,
+      report: formatDiagnosticsReport({
+        diagnostics,
+        format,
+        title: "Build diagnostics",
+        success: false,
+        metadata: { generated: [] },
+      }),
+      diagnostics,
+      generated: [],
+    };
+  }
+
+  let sources: string[];
+  try {
+    sources =
+      options.sources ??
+      (options.dir ? [normalizeLegacyContentDir(options.dir)] : baseConfig.sources);
+  } catch (error) {
+    diagnostics.push({
+      code: "CONFIG_INVALID_SOURCE",
+      severity: "error",
+      category: "config",
+      message: error instanceof Error ? error.message : String(error),
+      source: "build",
+    });
+    return {
+      success: false,
+      errors: 1,
+      report: formatDiagnosticsReport({
+        diagnostics,
+        format,
+        title: "Build diagnostics",
+        success: false,
+        metadata: { generated: [] },
+      }),
+      diagnostics,
+      generated: [],
+    };
+  }
   const outputDir = path.resolve(cwd, baseConfig.outputDir);
 
   await fs.mkdir(outputDir, { recursive: true });
 
-  lines.push(pc.bold("\nBuilding content collections...\n"));
-  lines.push(pc.dim(`Output: ${path.relative(cwd, outputDir)}/\n`));
+  let collections: DiscoveredCollection[];
+  let discoveryErrors: string[];
+  try {
+    const discovery = await discoverCollections(cwd, sources);
+    collections = discovery.collections;
+    discoveryErrors = discovery.errors;
+  } catch (error) {
+    diagnostics.push({
+      code: "DISCOVERY_FAILED",
+      severity: "error",
+      category: "discovery",
+      message: error instanceof Error ? error.message : String(error),
+      source: "build",
+    });
+    return {
+      success: false,
+      errors: 1,
+      report: formatDiagnosticsReport({
+        diagnostics,
+        format,
+        title: "Build diagnostics",
+        success: false,
+        metadata: { generated: [] },
+      }),
+      diagnostics,
+      generated: [],
+    };
+  }
 
-  const schemaFiles = await globby("*/schema.ts", {
-    cwd: contentDir,
-    onlyFiles: true,
-  });
+  if (discoveryErrors.length > 0) {
+    for (const error of discoveryErrors) {
+      diagnostics.push({
+        code: "DISCOVERY_DUPLICATE_COLLECTION",
+        severity: "error",
+        category: "discovery",
+        message: error,
+        source: "build",
+      });
+    }
+    return {
+      success: false,
+      errors: discoveryErrors.length,
+      report: formatDiagnosticsReport({
+        diagnostics,
+        format,
+        title: "Build diagnostics",
+        success: false,
+        metadata: { generated: [] },
+      }),
+      diagnostics,
+      generated: [],
+    };
+  }
 
-  if (schemaFiles.length === 0) {
-    lines.push(pc.yellow("No schema.ts files found in the configured source directories."));
+  if (collections.length === 0) {
+    diagnostics.push({
+      code: "DISCOVERY_NO_COLLECTIONS",
+      severity: "warning",
+      category: "discovery",
+      message: "No schema.ts files found in the configured sources.",
+      source: "build",
+    });
     return {
       success: true,
       errors: 0,
-      report: lines.join("\n"),
+      report: formatDiagnosticsReport({
+        diagnostics,
+        format,
+        title: "Build diagnostics",
+        success: true,
+        metadata: { generated: [] },
+        footer: `Sources: ${sources.join(", ")}\nOutput: ${path.relative(cwd, outputDir)}/`,
+      }),
+      diagnostics,
       generated: [],
     };
   }
 
   const results = await pMap(
-    schemaFiles,
-    (schemaFile) => processOneCollection(schemaFile, contentDir, outputDir, projectConfig),
+    collections,
+    (collection) => processOneCollection(collection, outputDir, projectConfig),
     { concurrency: BUILD_CONCURRENCY }
   );
 
   for (const r of results) {
-    lines.push(...r.lines);
+    diagnostics.push(...r.diagnostics);
   }
 
   const succeeded = results.filter(
-    (r): r is { ok: true; indexMeta: IndexMeta; outputName: string; lines: string[] } => r.ok
+    (r): r is { ok: true; indexMeta: IndexMeta; outputName: string; diagnostics: Diagnostic[] } =>
+      r.ok
   );
   const indexMetaList = succeeded.map((r) => r.indexMeta);
   const generated = succeeded.map((r) => r.outputName);
@@ -351,25 +506,36 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
   );
   generated.push("index.ts");
 
-  lines.push(pc.green(`\nGenerated ${path.relative(cwd, outputDir)}/index.ts`));
-
   const failedCount = results.length - succeeded.length;
   if (failedCount > 0) {
-    lines.push(pc.red("\nBuild completed with errors."));
     return {
       success: false,
       errors: failedCount,
-      report: lines.join("\n"),
+      report: formatDiagnosticsReport({
+        diagnostics,
+        format,
+        title: "Build diagnostics",
+        success: false,
+        metadata: { generated },
+        footer: `Sources: ${sources.join(", ")}\nOutput: ${path.relative(cwd, outputDir)}/`,
+      }),
+      diagnostics,
       generated,
     };
   }
 
-  lines.push(pc.green("\nBuild complete."));
-  lines.push(pc.dim("Run `contenz lint --coverage` to generate coverage report."));
   return {
     success: true,
     errors: 0,
-    report: lines.join("\n"),
+    report: formatDiagnosticsReport({
+      diagnostics,
+      format,
+      title: "Build diagnostics",
+      success: true,
+      metadata: { generated },
+      footer: `Sources: ${sources.join(", ")}\nOutput: ${path.relative(cwd, outputDir)}/`,
+    }),
+    diagnostics,
     generated,
   };
 }

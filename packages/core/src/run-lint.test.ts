@@ -24,9 +24,11 @@ describe("runLint", () => {
 
     expect(result.success).toBe(true);
     expect(result.errors).toBe(0);
+    expect(result.diagnostics).toEqual([]);
     expect(result.coveragePath).toBe(path.join(cwd, "contenz.coverage.md"));
-    expect(result.report).toContain("Lint passed.");
-    expect(result.report).toContain("faq: 1 items (EN: 1, ZH: 1)");
+    expect(result.report).toContain("Lint diagnostics");
+    expect(result.report).toContain("0 error(s), 0 warning(s), 0 info message(s)");
+    expect(result.report).toContain("Coverage report: contenz.coverage.md");
 
     const coverageOutput = await fs.readFile(path.join(cwd, "contenz.coverage.md"), "utf-8");
     expect(coverageOutput).toContain("# Content Coverage Report");
@@ -41,8 +43,18 @@ describe("runLint", () => {
 
     expect(result.success).toBe(false);
     expect(result.errors).toBeGreaterThan(0);
-    expect(result.report).toContain("Lint failed");
-    expect(result.report).toContain("question");
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "META_VALIDATION_FAILED",
+        severity: "error",
+        category: "validation",
+        collection: "faq",
+        file: "short.mdx",
+        field: "question",
+      })
+    );
+    expect(result.report).toContain("META_VALIDATION_FAILED");
+    expect(result.report).toContain("String must contain at least 10 character(s)");
   });
 
   it("reports relation failures when referenced slugs are missing", async () => {
@@ -52,7 +64,59 @@ describe("runLint", () => {
 
     expect(result.success).toBe(false);
     expect(result.errors).toBeGreaterThan(0);
-    expect(result.report).toContain("Relation Validation");
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "RELATION_MISSING_SLUG",
+        severity: "error",
+        category: "relation",
+      })
+    );
+    expect(result.report).toContain("RELATION_MISSING_SLUG");
     expect(result.report).toMatch(/nonexistent-slug|not found/);
+  });
+
+  it("renders JSON diagnostics output", async () => {
+    const cwd = await useFixture("invalid-relation");
+
+    const result = await runLint({ cwd, format: "json" });
+    const parsed = JSON.parse(result.report) as {
+      title: string;
+      success: boolean;
+      summary: { errors: number; warnings: number; info: number };
+      diagnostics: Array<{ code: string; severity: string; category: string }>;
+    };
+
+    expect(parsed.title).toBe("Lint diagnostics");
+    expect(parsed.success).toBe(false);
+    expect(parsed.summary.errors).toBeGreaterThan(0);
+    expect(parsed.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "RELATION_MISSING_SLUG",
+        severity: "error",
+        category: "relation",
+      })
+    );
+  });
+
+  it("renders GitHub diagnostics output", async () => {
+    const cwd = await useFixture("invalid-relation");
+
+    const result = await runLint({ cwd, format: "github" });
+
+    expect(result.report).toContain("::error ");
+    expect(result.report).toContain("title=RELATION_MISSING_SLUG");
+    expect(result.report).toContain("moq.mdx");
+    expect(result.report).toMatch(/nonexistent-slug|not found/);
+  });
+
+  it("lints collections discovered from mixed source patterns", async () => {
+    const cwd = await useFixture("mixed-sources");
+
+    const result = await runLint({ cwd });
+
+    expect(result.success).toBe(true);
+    expect(result.errors).toBe(0);
+    expect(result.diagnostics).toEqual([]);
+    expect(result.report).toContain("Sources: content/*, docs");
   });
 });

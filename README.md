@@ -1,6 +1,6 @@
-# contenz workspace
+# Contenz
 
-This repository uses a Turborepo workspace layout. All packages are published under the **@contenz** scope on npm and live under the same group on Git (e.g. GitHub org `contenz`).
+Contenz is a content management toolkit for developers and content teams. It simplifies content management in git and offers an intuitive authoring experience with built-in support for internationalization, validation, and seamless integration.
 
 ## Packages
 
@@ -46,8 +46,17 @@ npm install @contenz/core
 ## CLI usage
 
 ```bash
+# Scaffold contenz into the current project
+contenz init
+
+# Scaffold an i18n-ready starter
+contenz init --i18n
+
 # Validate all content
 contenz lint
+
+# Emit diagnostics as JSON
+contenz lint --format json
 
 # Validate one collection
 contenz lint --collection faq
@@ -57,14 +66,22 @@ contenz lint --coverage
 
 # Generate content data
 contenz build
+
+# Emit GitHub Actions annotations
+contenz build --format github
 ```
 
 Use `--cwd` when the content project root is not the current directory:
 
 ```bash
+contenz init --cwd ../existing-app
 contenz lint --cwd ../other-package
 contenz build --cwd .
 ```
+
+`contenz init` creates `contenz.config.ts`, a starter collection schema, and sample content. The generated schema files import `@contenz/core` and `zod`, so install those in the target project before running `contenz lint` or `contenz build`.
+
+`contenz lint` and `contenz build` support `--format pretty|json|github`. `pretty` is the default terminal view, `json` is for machine-readable automation, and `github` emits GitHub Actions workflow commands.
 
 ## Configuration
 
@@ -74,10 +91,10 @@ Create `contenz.config.ts` in the project root:
 import type { ContenzConfig } from "@contenz/core";
 
 export const config: ContenzConfig = {
+  sources: ["content/*"],
   i18n: true,
   strict: false,
   ignore: ["README.md", "_*"],
-  // contentDir: "content",
   // outputDir: "generated/content",
   // coveragePath: "contenz.coverage.md",
   // extensions: ["md", "mdx"],
@@ -85,6 +102,13 @@ export const config: ContenzConfig = {
 ```
 
 The loader checks `contenz.config.ts`, then `contenz.config.mjs`, then `contenz.config.js`. Legacy `content.config.*` files are still supported as a fallback.
+
+Supported `sources` patterns are intentionally narrow:
+
+- `"content/*"` discovers direct child collection folders like `content/faq` and `content/blog`
+- `"docs"` treats `docs/` itself as a collection
+
+The default when `sources` is omitted is `["content/*"]`. Legacy `contentDir` is still accepted as a compatibility alias for `["<contentDir>/*"]`.
 
 Use `content/<collection>/config.ts` only when a collection needs overrides:
 
@@ -118,6 +142,14 @@ project-root/
         ├── index.ts
         ├── faq.ts
         └── terms.ts
+```
+
+Alternative root-level collections:
+
+```ts
+export const config: ContenzConfig = {
+  sources: ["docs", "blog"],
+};
 ```
 
 ## Filename patterns

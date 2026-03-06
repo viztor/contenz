@@ -3,6 +3,7 @@
 import { createRequire } from "node:module";
 import { defineCommand, runMain } from "citty";
 import { buildCommand } from "./commands/build.js";
+import { initCommand } from "./commands/init.js";
 import { lintCommand } from "./commands/lint.js";
 
 const require = createRequire(import.meta.url);
@@ -15,6 +16,7 @@ const main = defineCommand({
     description: "Content validation and generation tools",
   },
   subCommands: {
+    init: initCommand,
     lint: lintCommand,
     build: buildCommand,
   },

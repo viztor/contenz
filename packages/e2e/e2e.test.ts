@@ -7,19 +7,23 @@
 
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { beforeAll, describe, expect, it } from "vitest";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const workspaceRoot = path.resolve(__dirname, "..", "..");
 const cliRoot = path.resolve(__dirname, "..", "cli");
 const coreRoot = path.resolve(__dirname, "..", "core");
 const binPath = path.join(cliRoot, "bin", "run.mjs");
+const zodRoot = path.join(workspaceRoot, "node_modules", "zod");
 
 const FIXTURES_WITH_SCHEMA = [
   "minimal",
   "i18n",
   "multi-type",
+  "mixed-sources",
   "invalid-schema",
   "invalid-relation",
 ];
@@ -40,10 +44,8 @@ function runCli(
   };
 }
 
-function ensureContenzSymlink(fixtureDir: string): void {
-  const nodeModules = path.join(fixtureDir, "node_modules");
-  const scopeDir = path.join(nodeModules, "@contenz");
-  const linkPath = path.join(scopeDir, "core");
+function ensurePackageSymlink(projectDir: string, packageName: string, targetPath: string): void {
+  const linkPath = path.join(projectDir, "node_modules", ...packageName.split("/"));
   try {
     const stat = fs.lstatSync(linkPath);
     if (stat.isSymbolicLink()) {
@@ -55,8 +57,17 @@ function ensureContenzSymlink(fixtureDir: string): void {
       return;
     }
   } catch {}
-  fs.mkdirSync(scopeDir, { recursive: true });
-  fs.symlinkSync(coreRoot, linkPath);
+  fs.mkdirSync(path.dirname(linkPath), { recursive: true });
+  fs.symlinkSync(targetPath, linkPath);
+}
+
+function ensureContenzSymlink(fixtureDir: string): void {
+  ensurePackageSymlink(fixtureDir, "@contenz/core", coreRoot);
+}
+
+function ensureInitProjectDependencies(projectDir: string): void {
+  ensurePackageSymlink(projectDir, "@contenz/core", coreRoot);
+  ensurePackageSymlink(projectDir, "zod", zodRoot);
 }
 
 beforeAll(() => {
@@ -79,6 +90,21 @@ describe("e2e: minimal (flat, no i18n)", () => {
     const outFile = path.join(cwd, "generated", "content", "faq.ts");
     expect(fs.existsSync(outFile)).toBe(true);
     expect(fs.existsSync(path.join(cwd, "generated", "content", "index.ts"))).toBe(true);
+  });
+
+  it("lint --format json exits 0 and prints structured diagnostics", () => {
+    const { status, stdout } = runCli(["lint", "--format", "json"], cwd);
+    expect(status).toBe(0);
+    const parsed = JSON.parse(stdout) as {
+      title: string;
+      success: boolean;
+      summary: { errors: number; warnings: number; info: number };
+      diagnostics: unknown[];
+    };
+    expect(parsed.title).toBe("Lint diagnostics");
+    expect(parsed.success).toBe(true);
+    expect(parsed.summary).toEqual({ errors: 0, warnings: 0, info: 0 });
+    expect(parsed.diagnostics).toEqual([]);
   });
 });
 
@@ -120,6 +146,26 @@ describe("e2e: multi-type", () => {
   });
 });
 
+describe("e2e: mixed-sources", () => {
+  const cwd = path.join(__dirname, "fixtures", "mixed-sources");
+
+  it("lint exits 0", () => {
+    const { status } = runCli(["lint"], cwd);
+    expect(status).toBe(0);
+  });
+
+  it("build exits 0 and generates outputs for self and child sources", () => {
+    const { status } = runCli(["build"], cwd);
+    expect(status).toBe(0);
+
+    const docsOutput = fs.readFileSync(path.join(cwd, "generated", "content", "docs.ts"), "utf-8");
+    const faqOutput = fs.readFileSync(path.join(cwd, "generated", "content", "faq.ts"), "utf-8");
+
+    expect(docsOutput).toContain("Getting started");
+    expect(faqOutput).toContain("What is contenz?");
+  });
+});
+
 describe("e2e: invalid-schema", () => {
   const cwd = path.join(__dirname, "fixtures", "invalid-schema");
 
@@ -127,6 +173,13 @@ describe("e2e: invalid-schema", () => {
     const { status, stdout } = runCli(["lint"], cwd);
     expect(status).toBe(1);
     expect(stdout).toMatch(/Short|min|validation|error/i);
+  });
+
+  it("build --format github exits 1 and prints GitHub annotations", () => {
+    const { status, stdout } = runCli(["build", "--format", "github"], cwd);
+    expect(status).toBe(1);
+    expect(stdout).toContain("::error ");
+    expect(stdout).toContain("title=META_VALIDATION_FAILED");
   });
 });
 
@@ -178,5 +231,65 @@ describe("e2e: --coverage and --cwd", () => {
       cliRoot
     );
     expect(status).toBe(0);
+  });
+});
+
+describe("e2e: init", () => {
+  it("scaffolds a starter project", () => {
+    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "contenz-init-"));
+
+    try {
+      const { status, stdout } = runCli(["init"], cwd);
+      expect(status).toBe(0);
+      expect(stdout).toContain("Initialized contenz");
+      expect(fs.existsSync(path.join(cwd, "contenz.config.ts"))).toBe(true);
+      expect(fs.existsSync(path.join(cwd, "content", "pages", "schema.ts"))).toBe(true);
+      expect(fs.existsSync(path.join(cwd, "content", "pages", "welcome.mdx"))).toBe(true);
+    } finally {
+      fs.rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it("does not overwrite existing files without --force", () => {
+    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "contenz-init-"));
+
+    try {
+      const configPath = path.join(cwd, "contenz.config.ts");
+      fs.writeFileSync(configPath, "export const config = { strict: true };\n", "utf-8");
+
+      const { status, stderr } = runCli(["init"], cwd);
+      expect(status).toBe(1);
+      expect(stderr).toContain("Cannot initialize contenz");
+      expect(fs.readFileSync(configPath, "utf-8")).toContain("strict: true");
+    } finally {
+      fs.rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it("can lint and build the generated i18n starter", () => {
+    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "contenz-init-"));
+
+    try {
+      const initResult = runCli(["init", "--i18n"], cwd);
+      expect(initResult.status).toBe(0);
+
+      ensureInitProjectDependencies(cwd);
+
+      const lintResult = runCli(["lint"], cwd);
+      expect(lintResult.status).toBe(0);
+
+      const buildResult = runCli(["build"], cwd);
+      expect(buildResult.status).toBe(0);
+
+      const outputPath = path.join(cwd, "generated", "content", "pages.ts");
+      expect(fs.existsSync(outputPath)).toBe(true);
+
+      const output = fs.readFileSync(outputPath, "utf-8");
+      expect(output).toContain("welcome");
+      expect(output).toContain("en");
+      expect(output).toContain("zh");
+    } finally {
+      fs.rmSync(cwd, { recursive: true, force: true });
+    }
   });
 });

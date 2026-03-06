@@ -4,15 +4,9 @@ This backlog is the short-horizon execution queue. It should stay actionable and
 
 ## Current Focus
 
-Current focus is Milestone 1: shared pipeline internals and structured diagnostics.
+Milestone 1 is complete. Current focus is Milestone 2: incremental build and watch workflows.
 
-### Active
-
-- Extract shared discovery logic from `runBuild` and `runLint`.
-- Introduce shared file-level processing for parse, validation, and relation extraction.
-- Introduce shared collection-level processing for traversal and aggregation.
-- Define a stable diagnostics shape with category, severity, code, file, and message.
-- Add formatter support for `pretty`, `json`, and `github`.
+Near-term boundary: implement through Milestone 3, then do a documentation and API stabilization pass before starting Milestone 4.
 
 ### Done Recently
 
@@ -20,8 +14,11 @@ Current focus is Milestone 1: shared pipeline internals and structured diagnosti
 - Added smoke coverage for generated multi-type exports.
 - Enforced a minimum coverage floor in `packages/core`.
 - Cleaned up repo naming around `contenz` and `@contenz/*`.
+- Added source-pattern discovery with `sources`.
+- Implemented `contenz init` for existing-project scaffolding.
+- Added structured diagnostics and formatter outputs for `pretty`, `json`, and `github`.
 
-## Next Up
+### Active
 
 - Manifest storage and changed-input diffing
 - `build --force`
@@ -30,13 +27,42 @@ Current focus is Milestone 1: shared pipeline internals and structured diagnosti
 - `contenz watch`
 - minimal `contenz status`
 
+## Next Up
+
+- richer i18n config and fallback behavior design
+- translation coverage policy and stale-translation detection design
+
 ## After That
 
-- richer i18n config and fallback behavior
-- translation coverage policy and stale-translation detection
+- implement Milestone 3 once Milestone 2 incremental foundations are stable
+
+## Documentation Pass After Milestone 3
+
+Before starting the consumption layer, document the stabilized pre-`v0.2` API surface:
+
+- config reference for `contenz.config.*`
+- source discovery and collection naming rules
+- schema module contract and shared-schema guidance
+- multi-type collection behavior and current constraints
+- current i18n behavior, compatibility rules, and coverage semantics
+- CLI reference for `init`, `lint`, and `build`
+- programmatic API reference for `runLint`, `runBuild`, and config loading
+
+## Later
+
 - query API baseline
 - first practical Next.js integration
 - extensibility MVP for hooks, transforms, and plugins
+
+## Deferred Product Wedge
+
+After the core maturity milestones, the next broader product wedges are:
+
+- a git-backed authoring studio for writer/developer collaboration
+- `npm create contenz@latest` via `create-contenz` for standalone docs/helpdesk site starters, separate from the persistent CLI
+- `contenz init` in the persistent CLI for adding contenz to an existing project
+
+These stay out of the active backlog until the shared pipeline, diagnostics, incremental workflows, and i18n model are more mature. Site scaffolding is a future starter flow, not a `publish` feature.
 
 ## Working Rules
 
