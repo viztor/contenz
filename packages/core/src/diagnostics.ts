@@ -30,7 +30,7 @@ export interface DiagnosticSummary {
   info: number;
 }
 
-export interface DiagnosticReportInput {
+interface DiagnosticReportInput {
   diagnostics: Diagnostic[];
   format: DiagnosticFormat;
   title: string;
@@ -59,7 +59,7 @@ function escapeGithubValue(value: string): string {
   return value.replaceAll("%", "%25").replaceAll("\r", "%0D").replaceAll("\n", "%0A");
 }
 
-export function compareDiagnostics(left: Diagnostic, right: Diagnostic): number {
+function compareDiagnostics(left: Diagnostic, right: Diagnostic): number {
   return (
     severityWeight(left.severity) - severityWeight(right.severity) ||
     left.collection?.localeCompare(right.collection ?? "") ||
@@ -69,7 +69,7 @@ export function compareDiagnostics(left: Diagnostic, right: Diagnostic): number 
   );
 }
 
-export function summarizeDiagnostics(diagnostics: Diagnostic[]): DiagnosticSummary {
+function summarizeDiagnostics(diagnostics: Diagnostic[]): DiagnosticSummary {
   const summary: DiagnosticSummary = { errors: 0, warnings: 0, info: 0 };
   for (const diagnostic of diagnostics) {
     if (diagnostic.severity === "error") summary.errors += 1;
