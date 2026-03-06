@@ -17,6 +17,16 @@ export const buildCommand = defineCommand({
       description: "Project root (where contenz.config.ts lives)",
       default: ".",
     },
+    force: {
+      type: "boolean",
+      description: "Rebuild all collections, ignore manifest cache",
+      default: false,
+    },
+    "dry-run": {
+      type: "boolean",
+      description: "Report what would be generated without writing files",
+      default: false,
+    },
     format: {
       type: "string",
       description: "Diagnostic formatter: pretty, json, or github",
@@ -27,6 +37,8 @@ export const buildCommand = defineCommand({
     const result = await runBuild({
       cwd: args.cwd,
       dir: args.dir,
+      force: args.force,
+      dryRun: args["dry-run"],
       format: args.format as "pretty" | "json" | "github",
     });
     console.log(result.report);

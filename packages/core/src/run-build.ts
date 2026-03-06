@@ -25,6 +25,14 @@ import {
   generateTypeFromZod,
   type I18nCollectionData,
 } from "./generator.js";
+import {
+  computeCollectionInputHash,
+  getCachedInputHash,
+  loadManifest,
+  type ManifestCollectionEntry,
+  mergeManifest,
+  saveManifest,
+} from "./manifest.js";
 import { parseContentFile, parseFileName } from "./parser.js";
 import {
   type DiscoveredCollection,
@@ -49,6 +57,10 @@ export interface BuildOptions {
   sources?: string[];
   /** @deprecated Use `sources` instead. */
   dir?: string;
+  /** Rebuild all collections, ignore manifest cache */
+  force?: boolean;
+  /** Report what would be generated without writing files or updating manifest */
+  dryRun?: boolean;
 }
 
 /** Index metadata for one collection, used to generate index.ts */
@@ -146,9 +158,17 @@ export const ${typeName}s: Record<string, ${pascalName}Entry> = `;
 async function processOneCollection(
   collection: DiscoveredCollection,
   outputDir: string,
-  projectConfig: import("./types.js").ContenzConfig
+  projectConfig: import("./types.js").ContenzConfig,
+  dryRun: boolean
 ): Promise<
-  | { ok: true; indexMeta: IndexMeta; outputName: string; diagnostics: Diagnostic[] }
+  | {
+      ok: true;
+      indexMeta: IndexMeta;
+      outputName: string;
+      diagnostics: Diagnostic[];
+      inputHash: string;
+      contentFiles: string[];
+    }
   | { ok: false; diagnostics: Diagnostic[] }
 > {
   const diagnostics: Diagnostic[] = [];
@@ -286,21 +306,30 @@ async function processOneCollection(
   const types = config.types?.map((t) => t.name) ?? [];
   const locales = [...detectedLocales].sort();
   const collectionOutputPath = path.join(outputDir, `${collectionName}.ts`);
+  const inputHash = await computeCollectionInputHash(
+    collectionPath,
+    contentFiles,
+    config.extensions
+  );
 
   if (types.length > 0) {
-    await generateMultiTypeCollectionFile(
-      collectionOutputPath,
-      collectionName,
-      typeGroups,
-      config.i18n,
-      locales,
-      schemaModule as Record<string, unknown>
-    );
+    if (!dryRun) {
+      await generateMultiTypeCollectionFile(
+        collectionOutputPath,
+        collectionName,
+        typeGroups,
+        config.i18n,
+        locales,
+        schemaModule as Record<string, unknown>
+      );
+    }
     return {
       ok: true,
       indexMeta: { name: collectionName, types, hasI18n: config.i18n },
       outputName: `${collectionName}.ts`,
       diagnostics,
+      inputHash,
+      contentFiles,
     };
   }
 
@@ -311,22 +340,77 @@ async function processOneCollection(
     `${collectionName.charAt(0).toUpperCase() + collectionName.slice(1)}Meta`;
 
   if (config.i18n) {
-    await generateI18nCollectionFile(
-      collectionOutputPath,
-      collectionName,
-      items as I18nCollectionData[],
-      metaTypeName,
-      locales,
-      defaultSchema
-    );
+    const i18nItems = items as I18nCollectionData[];
+    const ri = config.resolvedI18n;
+    const stats = calculateI18nStats(i18nItems);
+
+    if (ri?.coverageThreshold != null && stats.coverage < ri.coverageThreshold) {
+      diagnostics.push({
+        code: "I18N_COVERAGE_BELOW_THRESHOLD",
+        severity: config.strict ? "error" : "warning",
+        category: "i18n",
+        message: `Translation coverage ${Math.round(stats.coverage * 100)}% is below threshold ${Math.round(ri.coverageThreshold * 100)}%.`,
+        source: "build",
+        collection: collectionName,
+      });
+    }
+
+    if (ri?.detectStale && ri.defaultLocale) {
+      const sourceLocale = ri.defaultLocale;
+      for (const item of i18nItems) {
+        const sourceEntry = item.locales[sourceLocale];
+        if (!sourceEntry) continue;
+        const sourcePath = path.join(collectionPath, sourceEntry.file);
+        let sourceMtime: number;
+        try {
+          sourceMtime = (await fs.stat(sourcePath)).mtimeMs;
+        } catch {
+          continue;
+        }
+        for (const [locale, entry] of Object.entries(item.locales)) {
+          if (locale === sourceLocale) continue;
+          const localePath = path.join(collectionPath, entry.file);
+          try {
+            const localeMtime = (await fs.stat(localePath)).mtimeMs;
+            if (localeMtime < sourceMtime) {
+              diagnostics.push({
+                code: "I18N_STALE_TRANSLATION",
+                severity: config.strict ? "error" : "warning",
+                category: "i18n",
+                message: `Translation ${entry.file} is older than source ${sourceEntry.file}.`,
+                source: "build",
+                collection: collectionName,
+                file: entry.file,
+              });
+            }
+          } catch {
+            // ignore
+          }
+        }
+      }
+    }
+
+    if (!dryRun) {
+      await generateI18nCollectionFile(
+        collectionOutputPath,
+        collectionName,
+        i18nItems,
+        metaTypeName,
+        locales,
+        defaultSchema,
+        ri?.includeFallbackMetadata ? ri : undefined
+      );
+    }
   } else {
-    await generateFlatCollectionFile(
-      collectionOutputPath,
-      collectionName,
-      items as FlatCollectionData[],
-      metaTypeName,
-      defaultSchema
-    );
+    if (!dryRun) {
+      await generateFlatCollectionFile(
+        collectionOutputPath,
+        collectionName,
+        items as FlatCollectionData[],
+        metaTypeName,
+        defaultSchema
+      );
+    }
   }
 
   return {
@@ -334,6 +418,8 @@ async function processOneCollection(
     indexMeta: { name: collectionName, hasI18n: config.i18n, metaTypeName },
     outputName: `${collectionName}.ts`,
     diagnostics,
+    inputHash,
+    contentFiles,
   };
 }
 
@@ -398,7 +484,9 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
   }
   const outputDir = path.resolve(cwd, baseConfig.outputDir);
 
-  await fs.mkdir(outputDir, { recursive: true });
+  if (!options.dryRun) {
+    await fs.mkdir(outputDir, { recursive: true });
+  }
 
   let collections: DiscoveredCollection[];
   let discoveryErrors: string[];
@@ -478,9 +566,67 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
     };
   }
 
+  const force = options.force ?? false;
+  const dryRun = options.dryRun ?? false;
+  const manifest = !force && !dryRun ? await loadManifest(cwd) : null;
+
+  /** Collections we can skip (cached hash matches, output exists) */
+  const skipped: { name: string; outputName: string; indexMeta: IndexMeta }[] = [];
+  /** Collections we need to build */
+  const toBuild: { collection: DiscoveredCollection; inputHash: string }[] = [];
+
+  for (const collection of collections) {
+    const collectionConfig = await loadCollectionConfig(collection.collectionPath);
+    const config = resolveConfig(projectConfig, collectionConfig);
+    const extensionPattern = config.extensions.map((e) => `*.${e}`).join(",");
+    const contentFiles = await globby(`{${extensionPattern}}`, {
+      cwd: collection.collectionPath,
+      onlyFiles: true,
+      ignore: config.ignore,
+    });
+    const inputHash = await computeCollectionInputHash(
+      collection.collectionPath,
+      contentFiles,
+      config.extensions
+    );
+
+    let skip = false;
+    if (!force && !dryRun && manifest) {
+      const cachedHash = getCachedInputHash(
+        manifest,
+        cwd,
+        baseConfig.outputDir,
+        sources,
+        collection.name
+      );
+      const outputPath = path.join(outputDir, `${collection.name}.ts`);
+      try {
+        await fs.access(outputPath);
+        if (cachedHash === inputHash) skip = true;
+      } catch {
+        // output missing, rebuild
+      }
+    }
+    if (skip) {
+      const entry = manifest?.collections.find((c) => c.name === collection.name);
+      const indexMeta = entry?.indexMeta ?? {
+        name: collection.name,
+        hasI18n: config.i18n,
+        types: config.types?.map((t) => t.name),
+      };
+      skipped.push({
+        name: collection.name,
+        outputName: `${collection.name}.ts`,
+        indexMeta: indexMeta as IndexMeta,
+      });
+    } else {
+      toBuild.push({ collection, inputHash });
+    }
+  }
+
   const results = await pMap(
-    collections,
-    (collection) => processOneCollection(collection, outputDir, projectConfig),
+    toBuild,
+    ({ collection }) => processOneCollection(collection, outputDir, projectConfig, dryRun),
     { concurrency: BUILD_CONCURRENCY }
   );
 
@@ -489,22 +635,51 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
   }
 
   const succeeded = results.filter(
-    (r): r is { ok: true; indexMeta: IndexMeta; outputName: string; diagnostics: Diagnostic[] } =>
-      r.ok
+    (
+      r
+    ): r is {
+      ok: true;
+      indexMeta: IndexMeta;
+      outputName: string;
+      diagnostics: Diagnostic[];
+      inputHash: string;
+      contentFiles: string[];
+    } => r.ok
   );
-  const indexMetaList = succeeded.map((r) => r.indexMeta);
-  const generated = succeeded.map((r) => r.outputName);
 
-  await generateIndexFile(
-    path.join(outputDir, "index.ts"),
-    indexMetaList.map((m) => ({
-      name: m.name,
-      types: m.types,
-      hasI18n: m.hasI18n,
-      metaTypeName: m.metaTypeName,
-    }))
-  );
+  const indexMetaList: IndexMeta[] = [
+    ...skipped.map((s) => s.indexMeta),
+    ...succeeded.map((r) => r.indexMeta),
+  ].sort((a, b) => a.name.localeCompare(b.name));
+
+  const generated: string[] = [
+    ...skipped.map((s) => s.outputName),
+    ...succeeded.map((r) => r.outputName),
+  ];
+
+  if (!dryRun) {
+    await generateIndexFile(
+      path.join(outputDir, "index.ts"),
+      indexMetaList.map((m) => ({
+        name: m.name,
+        types: m.types,
+        hasI18n: m.hasI18n,
+        metaTypeName: m.metaTypeName,
+      }))
+    );
+  }
   generated.push("index.ts");
+
+  if (!dryRun && succeeded.length > 0) {
+    const updates: ManifestCollectionEntry[] = succeeded.map((r) => ({
+      name: r.indexMeta.name,
+      inputHash: r.inputHash,
+      outputFiles: [r.outputName],
+      indexMeta: r.indexMeta,
+    }));
+    const merged = mergeManifest(manifest, cwd, baseConfig.outputDir, sources, updates);
+    await saveManifest(merged);
+  }
 
   const failedCount = results.length - succeeded.length;
   if (failedCount > 0) {

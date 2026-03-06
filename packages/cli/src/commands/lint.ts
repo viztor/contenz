@@ -27,6 +27,11 @@ export const lintCommand = defineCommand({
       description: "Write coverage report file (e.g. contenz.coverage.md)",
       default: false,
     },
+    "dry-run": {
+      type: "boolean",
+      description: "Report only; do not write coverage report file",
+      default: false,
+    },
     format: {
       type: "string",
       description: "Diagnostic formatter: pretty, json, or github",
@@ -39,6 +44,7 @@ export const lintCommand = defineCommand({
       dir: args.dir,
       collection: args.collection,
       coverage: args.coverage,
+      dryRun: args["dry-run"],
       format: args.format as "pretty" | "json" | "github",
     });
     console.log(result.report);

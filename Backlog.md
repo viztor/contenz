@@ -4,37 +4,27 @@ This backlog is the short-horizon execution queue. It should stay actionable and
 
 ## Current Focus
 
-Milestone 1 is complete. Current focus is Milestone 2: incremental build and watch workflows.
+Milestones 1–3 are complete. Current focus is the Documentation Gate: Core API Stabilization, then Milestone 4 (Consumption Layer).
 
-Near-term boundary: implement through Milestone 3, then do a documentation and API stabilization pass before starting Milestone 4.
+Near-term boundary: documentation pass after Milestone 3, then start Milestone 4.
 
 ### Done Recently
 
-- Added direct regression tests for `runBuild` and `runLint`.
-- Added smoke coverage for generated multi-type exports.
-- Enforced a minimum coverage floor in `packages/core`.
-- Cleaned up repo naming around `contenz` and `@contenz/*`.
-- Added source-pattern discovery with `sources`.
-- Implemented `contenz init` for existing-project scaffolding.
-- Added structured diagnostics and formatter outputs for `pretty`, `json`, and `github`.
+- Milestone 2: manifest-backed incremental build, build --force, build --dry-run, lint --dry-run, contenz watch, contenz status.
+- Milestone 3: richer i18n config (I18nConfigShape), locale fallback rules, coverage thresholds and stale translation detection, optional _fallback metadata in generated output; i18n: true remains backward-compatible.
+- E2E coverage for dry-run, force, status, and i18n backward compat.
 
 ### Active
 
-- Manifest storage and changed-input diffing
-- `build --force`
-- `build --dry-run`
-- `lint --dry-run`
-- `contenz watch`
-- minimal `contenz status`
+- Documentation Gate: root docs, @contenz/core API reference, source discovery and i18n semantics documented
 
 ## Next Up
 
-- richer i18n config and fallback behavior design
-- translation coverage policy and stale-translation detection design
+- Documentation pass: config reference, source discovery, collection naming, i18n semantics, CLI reference
 
 ## After That
 
-- implement Milestone 3 once Milestone 2 incremental foundations are stable
+- Milestone 4: query API baseline, relation joins, first Next.js integration
 
 ## Documentation Pass After Milestone 3
 

@@ -5,10 +5,9 @@ This roadmap is the milestone-level delivery plan. It should stay readable, depe
 ## Current Status
 
 - Baseline workspace split is done: `@contenz/core`, `@contenz/cli`, `@contenz/e2e`
-- Current command surface is `lint` and `build`
-- Core validation, generation, i18n filename grouping, and relation checks are working
-- Baseline hardening is complete and now treated as finished foundation work
-- The roadmap below starts with the next active delivery milestone
+- Current command surface is `init`, `lint`, `build`, `watch`, `status`
+- Milestones 1–3 are complete: shared pipeline, diagnostics, incremental build, watch, status, i18n v2 (rich config, fallback, coverage, stale detection)
+- The roadmap below continues with the documentation gate and Milestone 4
 
 ## Milestone 1: Shared Pipeline Core And Diagnostics
 
@@ -40,7 +39,7 @@ Outcome:
 
 ## Milestone 2: Incremental Build And Watch
 
-Status: next active milestone
+Status: complete
 
 Goal:
 
@@ -62,6 +61,8 @@ Exit criteria:
 - watch mode is stable on normal fixture projects
 
 ## Milestone 3: i18n v2 Core
+
+Status: complete
 
 Goal:
 

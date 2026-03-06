@@ -25,8 +25,10 @@ export type {
   ConfigModule,
   ContentType,
   ContenzConfig,
+  I18nConfigShape,
   ParsedContent,
   Relations,
   ResolvedConfig,
+  ResolvedI18nConfig,
   SchemaModule,
 } from "./types.js";

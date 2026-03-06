@@ -49,6 +49,8 @@ export interface LintOptions {
   dir?: string;
   collection?: string;
   coverage?: boolean;
+  /** Report only; do not write coverage report file */
+  dryRun?: boolean;
 }
 
 interface MissingRef {
@@ -635,7 +637,7 @@ export async function runLint(options: LintOptions): Promise<LintResult> {
   }
 
   let coveragePath: string | undefined;
-  if (options.coverage) {
+  if (options.coverage && !options.dryRun) {
     coveragePath = path.resolve(cwd, baseConfig.coveragePath);
     await generateCoverageReportFile(
       coveragePath,

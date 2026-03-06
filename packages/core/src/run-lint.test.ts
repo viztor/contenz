@@ -119,4 +119,18 @@ describe("runLint", () => {
     expect(result.diagnostics).toEqual([]);
     expect(result.report).toContain("Sources: content/*, docs");
   });
+
+  it("dryRun with coverage does not write coverage file", async () => {
+    const cwd = await useFixture("i18n");
+    const coveragePath = path.join(cwd, "contenz.coverage.md");
+    try {
+      await fs.unlink(coveragePath);
+    } catch {}
+
+    const result = await runLint({ cwd, coverage: true, dryRun: true });
+
+    expect(result.success).toBe(true);
+    expect(result.report).toContain("Lint diagnostics");
+    await expect(fs.access(coveragePath)).rejects.toThrow();
+  });
 });

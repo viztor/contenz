@@ -6,10 +6,71 @@ import type {
   CollectionConfig,
   ConfigModule,
   ContenzConfig,
+  I18nConfigShape,
   Relations,
   ResolvedConfig,
+  ResolvedI18nConfig,
   SchemaModule,
 } from "./types.js";
+
+/** Normalize i18n config: boolean or partial shape -> enabled flag and full resolved i18n when enabled */
+function normalizeI18n(raw: boolean | I18nConfigShape | undefined): {
+  enabled: boolean;
+  resolvedI18n: ResolvedI18nConfig;
+} {
+  const enabled = typeof raw === "boolean" ? raw : (raw as I18nConfigShape)?.enabled === true;
+  if (!enabled) {
+    return {
+      enabled: false,
+      resolvedI18n: {
+        enabled: false,
+        defaultLocale: null,
+        locales: [],
+        fallbackMap: {},
+        coverageThreshold: null,
+        detectStale: false,
+        includeFallbackMetadata: false,
+      },
+    };
+  }
+  const shape = (typeof raw === "object" && raw !== null ? raw : {}) as I18nConfigShape;
+  const defaultLocale = typeof shape.defaultLocale === "string" ? shape.defaultLocale : null;
+  const locales = Array.isArray(shape.locales)
+    ? shape.locales.filter((l): l is string => typeof l === "string")
+    : [];
+  let fallbackMap: Record<string, string> = {};
+  if (shape.fallback) {
+    if (Array.isArray(shape.fallback)) {
+      const defaultFallback = shape.fallback[0];
+      if (typeof defaultFallback === "string") {
+        fallbackMap = { __default: defaultFallback };
+      }
+    } else if (typeof shape.fallback === "object") {
+      fallbackMap = { ...shape.fallback };
+    }
+  }
+  const coverageThreshold =
+    typeof shape.coverageThreshold === "number" &&
+    shape.coverageThreshold >= 0 &&
+    shape.coverageThreshold <= 1
+      ? shape.coverageThreshold
+      : null;
+  const detectStale = shape.detectStale === true;
+  const includeFallbackMetadata = shape.includeFallbackMetadata === true;
+
+  return {
+    enabled: true,
+    resolvedI18n: {
+      enabled: true,
+      defaultLocale,
+      locales,
+      fallbackMap,
+      coverageThreshold,
+      detectStale,
+      includeFallbackMetadata,
+    },
+  };
+}
 
 const BUILT_IN_DEFAULTS: Required<
   Omit<ContenzConfig, "coveragePath" | "outputDir" | "contentDir">
@@ -90,13 +151,16 @@ export function resolveConfig(
   collection?: CollectionConfig
 ): ResolvedConfig {
   const outputDir = project.outputDir ?? BUILT_IN_DEFAULTS.outputDir;
+  const rawI18n = collection?.i18n ?? project.i18n ?? BUILT_IN_DEFAULTS.i18n;
+  const { enabled: i18nEnabled, resolvedI18n } = normalizeI18n(rawI18n);
 
   return {
     sources: resolveSourcePatterns(project),
     outputDir,
     coveragePath: project.coveragePath ?? BUILT_IN_DEFAULTS.coveragePath,
     strict: project.strict ?? BUILT_IN_DEFAULTS.strict,
-    i18n: collection?.i18n ?? project.i18n ?? BUILT_IN_DEFAULTS.i18n,
+    i18n: i18nEnabled,
+    resolvedI18n,
     extensions: collection?.extensions ?? project.extensions ?? BUILT_IN_DEFAULTS.extensions,
     ignore: collection?.ignore ?? project.ignore ?? BUILT_IN_DEFAULTS.ignore,
     types: collection?.types,

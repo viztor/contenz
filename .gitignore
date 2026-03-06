@@ -3,6 +3,7 @@
 
 # Build output
 packages/*/dist/
+**/.next/
 
 # Node modules (if installed locally)
 node_modules/

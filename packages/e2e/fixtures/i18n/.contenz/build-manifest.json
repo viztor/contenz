@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "cwd": "/Users/viz/dev/contenz/packages/e2e/fixtures/i18n",
+  "outputDir": "generated/content",
+  "sources": [
+    "content/*"
+  ],
+  "generatedAt": "2026-03-06T01:23:17.758Z",
+  "collections": [
+    {
+      "name": "faq",
+      "inputHash": "87fe208e85cd0c0596debc1d412360ddd7894c02f45692c578e53add2252820f",
+      "outputFiles": [
+        "faq.ts"
+      ],
+      "indexMeta": {
+        "name": "faq",
+        "hasI18n": true,
+        "metaTypeName": "FaqMeta"
+      }
+    }
+  ]
+}

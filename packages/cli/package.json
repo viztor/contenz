@@ -5,7 +5,7 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=18"
+    "node": ">=24"
   },
   "bin": {
     "contenz": "./bin/run.mjs"
@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@contenz/core": "*",
+    "@contenz/studio": "*",
     "citty": "^0.2.1",
     "tsx": "^4.21.0"
   },

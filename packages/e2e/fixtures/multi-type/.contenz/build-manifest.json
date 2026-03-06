@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "cwd": "/Users/viz/dev/contenz/packages/e2e/fixtures/multi-type",
+  "outputDir": "generated/content",
+  "sources": [
+    "content/*"
+  ],
+  "generatedAt": "2026-03-06T01:23:18.421Z",
+  "collections": [
+    {
+      "name": "terms",
+      "inputHash": "6a8eb8440111e81e73af237ff2a12439fb6317fc080bc66360d96f9c7da29258",
+      "outputFiles": [
+        "terms.ts"
+      ],
+      "indexMeta": {
+        "name": "terms",
+        "types": [
+          "topic",
+          "term"
+        ],
+        "hasI18n": true
+      }
+    }
+  ]
+}

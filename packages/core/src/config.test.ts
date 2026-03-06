@@ -56,6 +56,50 @@ describe("resolveConfig", () => {
     expect(resolved.i18n).toBe(false);
     expect(resolved.extensions).toEqual(["mdx"]);
   });
+
+  it("normalizes i18n rich config: boolean true", () => {
+    const project: ContenzConfig = { i18n: true };
+    const resolved = resolveConfig(project);
+    expect(resolved.i18n).toBe(true);
+    expect(resolved.resolvedI18n).toBeDefined();
+    expect(resolved.resolvedI18n?.enabled).toBe(true);
+    expect(resolved.resolvedI18n?.defaultLocale).toBeNull();
+    expect(resolved.resolvedI18n?.coverageThreshold).toBeNull();
+  });
+
+  it("normalizes i18n rich config: shape with defaultLocale and coverageThreshold", () => {
+    const project: ContenzConfig = {
+      i18n: {
+        enabled: true,
+        defaultLocale: "en",
+        locales: ["en", "zh"],
+        coverageThreshold: 0.8,
+        includeFallbackMetadata: true,
+      },
+    };
+    const resolved = resolveConfig(project);
+    expect(resolved.i18n).toBe(true);
+    expect(resolved.resolvedI18n?.defaultLocale).toBe("en");
+    expect(resolved.resolvedI18n?.locales).toEqual(["en", "zh"]);
+    expect(resolved.resolvedI18n?.coverageThreshold).toBe(0.8);
+    expect(resolved.resolvedI18n?.includeFallbackMetadata).toBe(true);
+  });
+
+  it("normalizes i18n fallback array to __default in fallbackMap", () => {
+    const project: ContenzConfig = {
+      i18n: { enabled: true, fallback: ["en"] },
+    };
+    const resolved = resolveConfig(project);
+    expect(resolved.resolvedI18n?.fallbackMap).toEqual({ __default: "en" });
+  });
+
+  it("normalizes i18n fallback record", () => {
+    const project: ContenzConfig = {
+      i18n: { enabled: true, fallback: { "zh-Hant": "zh", zh: "en" } },
+    };
+    const resolved = resolveConfig(project);
+    expect(resolved.resolvedI18n?.fallbackMap).toEqual({ "zh-Hant": "zh", zh: "en" });
+  });
 });
 
 describe("normalizeSourcePattern", () => {

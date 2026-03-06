@@ -27,6 +27,31 @@ export interface ContentType {
 export type Relations = Record<string, string>;
 
 /**
+ * Rich i18n configuration (v2).
+ * When i18n is enabled, optional fallback, coverage, and staleness options apply.
+ */
+export interface I18nConfigShape {
+  /** Enable locale detection from filenames */
+  enabled: boolean;
+  /** Default locale (e.g. "en"); used for fallback and as source for staleness */
+  defaultLocale?: string;
+  /** Explicit list of locales; if omitted, locales are inferred from filenames */
+  locales?: string[];
+  /**
+   * Locale fallback: locale -> fallback locale(s).
+   * - Record: { "zh-Hant": "zh", "zh": "en" }
+   * - Array: ["en"] means all locales fall back to "en"
+   */
+  fallback?: Record<string, string> | string[];
+  /** Minimum coverage ratio (0–1) before warning/error; e.g. 0.8 = 80% */
+  coverageThreshold?: number;
+  /** Emit diagnostics when a translation file is older than the defaultLocale source */
+  detectStale?: boolean;
+  /** Include _fallback field in generated output when entry is from fallback locale */
+  includeFallbackMetadata?: boolean;
+}
+
+/**
  * Root-level contenz configuration at /contenz.config.ts
  * These settings apply globally to all content collections.
  */
@@ -49,8 +74,11 @@ export interface ContenzConfig {
   coveragePath?: string;
   /** Fail build on warnings like missing translations (default: false) */
   strict?: boolean;
-  /** Enable locale detection from filenames (default: false) */
-  i18n?: boolean;
+  /**
+   * Enable locale detection from filenames (default: false).
+   * Can be boolean (backward-compatible) or rich I18nConfigShape.
+   */
+  i18n?: boolean | I18nConfigShape;
   /** Supported file extensions (default: ["md", "mdx"]) */
   extensions?: string[];
   /** Glob patterns to ignore (default: ["README.md", "_*"]) */
@@ -67,12 +95,27 @@ export interface CollectionConfig {
   types?: ContentType[];
   /** Custom slug extraction regex */
   slugPattern?: RegExp;
-  /** Override: enable locale detection from filenames */
-  i18n?: boolean;
+  /** Override: enable locale detection from filenames (boolean or rich i18n config) */
+  i18n?: boolean | I18nConfigShape;
   /** Override: supported file extensions */
   extensions?: string[];
   /** Override: glob patterns to ignore */
   ignore?: string[];
+}
+
+/**
+ * Resolved i18n options used at build/lint time.
+ */
+export interface ResolvedI18nConfig {
+  enabled: boolean;
+  defaultLocale: string | null;
+  /** Ordered locale list (default first when present) */
+  locales: string[];
+  /** Map: locale -> fallback locale (single step) */
+  fallbackMap: Record<string, string>;
+  coverageThreshold: number | null;
+  detectStale: boolean;
+  includeFallbackMetadata: boolean;
 }
 
 /**
@@ -83,7 +126,10 @@ export interface ResolvedConfig {
   outputDir: string;
   coveragePath: string;
   strict: boolean;
+  /** When true, i18n is enabled (backward-compatible). Use resolvedI18n for full options. */
   i18n: boolean;
+  /** Resolved i18n options (only meaningful when i18n is true) */
+  resolvedI18n?: ResolvedI18nConfig;
   extensions: string[];
   ignore: string[];
   types?: ContentType[];
@@ -123,6 +169,8 @@ export interface ParsedContent {
   locale?: string;
   /** Content type name (for multi-type collections) */
   type?: string;
+  /** Body only (content after meta block; not the raw file) */
+  body?: string;
 }
 
 /**
