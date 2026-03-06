@@ -32,24 +32,24 @@ export const { meta, metaSchema, relations } = defineCollection({
 });
 ```
 
-For multi-type collections:
+For multi-type collections you can put schemas and (optionally) patterns in one place:
 
 ```ts
 import { defineMultiTypeCollection } from "@contenz/core";
 import { z } from "zod";
 
-const termSchema = z.object({
-  term: z.string(),
-});
+const termSchema = z.object({ term: z.string() });
+const topicSchema = z.object({ title: z.string() });
 
-const topicSchema = z.object({
-  title: z.string(),
-});
-
-export const { termMeta, topicMeta, meta, relations } = defineMultiTypeCollection({
-  schemas: { term: termSchema, topic: topicSchema },
+export const { termMeta, topicMeta, meta, relations, types } = defineMultiTypeCollection({
+  schemas: {
+    topic: { schema: topicSchema, pattern: /^topic-/ },
+    term: { schema: termSchema, pattern: /.*/ },
+  },
 });
 ```
+
+Then you can omit `config.types` in `config.ts`. Or use plain `schemas: { term: termSchema, topic: topicSchema }` and set `config.types` in `config.ts`. See [Configuration – Multi-type](../../docs/CONFIGURATION.md#multi-type-collection).
 
 ## Programmatic API
 
@@ -67,6 +67,7 @@ const buildResult = await runBuild({ cwd });
 
 ## Related docs
 
-- Workspace overview: [/Users/viz/dev/contenz/README.md](/Users/viz/dev/contenz/README.md)
-- Workspace contribution guide: [/Users/viz/dev/contenz/CONTRIBUTING.md](/Users/viz/dev/contenz/CONTRIBUTING.md)
-- Core package notes: [/Users/viz/dev/contenz/packages/core/CONTRIBUTING.md](/Users/viz/dev/contenz/packages/core/CONTRIBUTING.md)
+- [Repository README](../../README.md) – overview and CLI
+- [Documentation index](../../docs/README.md) – full docs (config, CLI, content model, API)
+- [CONTRIBUTING](../../CONTRIBUTING.md) – workspace setup and code style
+- [packages/core/CONTRIBUTING.md](./CONTRIBUTING.md) – core package notes (if present)

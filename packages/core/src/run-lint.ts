@@ -133,11 +133,16 @@ async function firstPassOneCollection(
   }
   const defaultSchema = rawSchema as import("zod").ZodSchema;
 
-  const extensionPattern = config.extensions.map((e) => `*.${e}`).join(",");
+  const effectiveConfig = {
+    ...config,
+    types: config.types?.length ? config.types : schemaModule.types,
+  };
+
+  const extensionPattern = effectiveConfig.extensions.map((e) => `*.${e}`).join(",");
   const contentFiles = await globby(`{${extensionPattern}}`, {
     cwd: collectionPath,
     onlyFiles: true,
-    ignore: config.ignore,
+    ignore: effectiveConfig.ignore,
   });
 
   const relations: Relations =
@@ -145,7 +150,7 @@ async function firstPassOneCollection(
 
   for (const file of contentFiles) {
     const filePath = path.join(collectionPath, file);
-    const parsed = parseFileName(file, config.i18n, config.slugPattern);
+    const parsed = parseFileName(file, effectiveConfig.i18n, effectiveConfig.slugPattern);
     if (!parsed) {
       diagnostics.push({
         code: "CONTENT_FILE_SKIPPED",
@@ -160,14 +165,14 @@ async function firstPassOneCollection(
     }
     slugs.add(parsed.slug);
     try {
-      const result = await parseContentFile(filePath, config);
-      const contentType = getContentType(file, config);
+      const result = await parseContentFile(filePath, effectiveConfig);
+      const contentType = getContentType(file, effectiveConfig);
       const schema = contentType
         ? (getSchemaForType(schemaModule, contentType) ?? defaultSchema)
         : defaultSchema;
       const validation = validateMeta(result.meta, schema, file);
       validationResults.push(validation);
-      if (config.i18n && parsed.locale) {
+      if (effectiveConfig.i18n && parsed.locale) {
         if (!slugLocales.has(parsed.slug)) slugLocales.set(parsed.slug, new Set());
         slugLocales.get(parsed.slug)?.add(parsed.locale);
       }
@@ -231,7 +236,7 @@ async function firstPassOneCollection(
   const errorCount = validationResults.reduce((sum, r) => sum + r.errors.length, 0);
 
   const { circularRefs, selfRefs } = detectCircularReferences(itemsForCircularCheck);
-  const coverageEntry = config.i18n
+  const coverageEntry = effectiveConfig.i18n
     ? (() => {
         const locales: Record<string, number> = {};
         for (const localeSet of slugLocales.values()) {

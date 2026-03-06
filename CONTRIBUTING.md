@@ -70,6 +70,8 @@ Tracked root planning docs have distinct roles:
 
 Temporary planning drafts should stay local-only and out of the canonical repo docs.
 
+For user-facing and API documentation (config, CLI, content model, Studio, core API), see the [docs/](./docs/README.md) folder.
+
 ## Core quality gate
 
 `packages/core` currently enforces this minimum test coverage floor:

@@ -146,6 +146,8 @@ export interface SchemaModule {
   [key: `${string}Meta`]: ZodSchema | undefined;
   /** Relations mapping for this collection */
   relations?: Relations;
+  /** Content types with filename patterns; when present, overrides config.types when config does not set types */
+  types?: ContentType[];
 }
 
 /**

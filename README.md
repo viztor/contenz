@@ -6,15 +6,27 @@ Contenz is a content management toolkit for developers and content teams. It sim
 
 - `packages/core` – core library (published as `@contenz/core`); programmatic API only, no CLI binary
 - `packages/cli` – CLI (published as `@contenz/cli`); provides the `contenz` binary
+- `packages/studio` – authoring studio (used by `contenz studio`; not published standalone)
 - `packages/e2e` – e2e tests and fixtures (private; not published)
 
 ## Documentation
 
-- Project scope: [/Users/viz/dev/contenz/PROJECT_SCOPE.md](/Users/viz/dev/contenz/PROJECT_SCOPE.md)
-- Delivery roadmap: [/Users/viz/dev/contenz/ROADMAP.md](/Users/viz/dev/contenz/ROADMAP.md)
-- Active backlog: [/Users/viz/dev/contenz/BACKLOG.md](/Users/viz/dev/contenz/BACKLOG.md)
-- Core library API: [/Users/viz/dev/contenz/packages/core/README.md](/Users/viz/dev/contenz/packages/core/README.md)
-- Workspace contribution guide: [/Users/viz/dev/contenz/CONTRIBUTING.md](/Users/viz/dev/contenz/CONTRIBUTING.md)
+Full documentation lives in the [docs](./docs/README.md) folder:
+
+- [Architecture](./docs/ARCHITECTURE.md) – packages and pipeline
+- [Configuration](./docs/CONFIGURATION.md) – project and collection config, schemas
+- [CLI reference](./docs/CLI.md) – all commands and options
+- [Content model](./docs/CONTENT-MODEL.md) – filenames, output shape, relations, i18n
+- [Studio](./docs/STUDIO.md) – authoring studio usage and development
+- [Core API](./docs/API.md) – programmatic API from `@contenz/core/api`
+
+Planning and contribution:
+
+- [PROJECT_SCOPE.md](./PROJECT_SCOPE.md) – product direction and scope
+- [ROADMAP.md](./ROADMAP.md) – milestone sequencing
+- [BACKLOG.md](./BACKLOG.md) – near-term work
+- [CONTRIBUTING.md](./CONTRIBUTING.md) – workspace setup and code style
+- [packages/core/README.md](./packages/core/README.md) – schema helpers and core package
 
 ## Common commands
 
@@ -48,27 +60,27 @@ npm install @contenz/core
 ```bash
 # Scaffold contenz into the current project
 contenz init
-
-# Scaffold an i18n-ready starter
 contenz init --i18n
 
 # Validate all content
 contenz lint
-
-# Emit diagnostics as JSON
+contenz lint --coverage --collection faq
 contenz lint --format json
 
-# Validate one collection
-contenz lint --collection faq
-
-# Write coverage report
-contenz lint --coverage
-
-# Generate content data
+# Generate content data (incremental when possible)
 contenz build
-
-# Emit GitHub Actions annotations
+contenz build --force --dry-run
 contenz build --format github
+
+# Watch and rebuild on change
+contenz watch
+
+# Check if build is up to date
+contenz status
+
+# Start the authoring studio
+contenz studio
+contenz studio --cwd ./my-content --port 3002
 ```
 
 Use `--cwd` when the content project root is not the current directory:
@@ -77,11 +89,12 @@ Use `--cwd` when the content project root is not the current directory:
 contenz init --cwd ../existing-app
 contenz lint --cwd ../other-package
 contenz build --cwd .
+contenz studio --cwd ./content-repo
 ```
 
-`contenz init` creates `contenz.config.ts`, a starter collection schema, and sample content. The generated schema files import `@contenz/core` and `zod`, so install those in the target project before running `contenz lint` or `contenz build`.
+`contenz init` creates `contenz.config.ts`, a starter collection schema, and sample content. Install `@contenz/core` and `zod` in the target project before running `contenz lint` or `contenz build`.
 
-`contenz lint` and `contenz build` support `--format pretty|json|github`. `pretty` is the default terminal view, `json` is for machine-readable automation, and `github` emits GitHub Actions workflow commands.
+`contenz lint` and `contenz build` support `--format pretty|json|github`. For full CLI reference see [docs/CLI.md](./docs/CLI.md).
 
 ## Configuration
 

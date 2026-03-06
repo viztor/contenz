@@ -10,6 +10,7 @@ export {
   type DefineCollectionSingleOptions,
   defineCollection,
   defineMultiTypeCollection,
+  type SchemaWithPattern,
 } from "./define-collection.js";
 export type {
   Diagnostic,

@@ -205,11 +205,16 @@ async function processOneCollection(
   }
   const defaultSchema = rawSchema as import("zod").ZodSchema;
 
-  const extensionPattern = config.extensions.map((e) => `*.${e}`).join(",");
+  const effectiveConfig = {
+    ...config,
+    types: config.types?.length ? config.types : schemaModule.types,
+  };
+
+  const extensionPattern = effectiveConfig.extensions.map((e) => `*.${e}`).join(",");
   const contentFiles = await globby(`{${extensionPattern}}`, {
     cwd: collectionPath,
     onlyFiles: true,
-    ignore: config.ignore,
+    ignore: effectiveConfig.ignore,
   });
 
   const typeGroups = new Map<string, Map<string, I18nCollectionData | FlatCollectionData>>();
@@ -219,7 +224,7 @@ async function processOneCollection(
 
   for (const file of contentFiles) {
     const filePath = path.join(collectionPath, file);
-    const parsed = parseFileName(file, config.i18n, config.slugPattern);
+    const parsed = parseFileName(file, effectiveConfig.i18n, effectiveConfig.slugPattern);
     if (!parsed) {
       diagnostics.push({
         code: "CONTENT_FILE_SKIPPED",
@@ -233,8 +238,8 @@ async function processOneCollection(
       continue;
     }
     try {
-      const result = await parseContentFile(filePath, config);
-      const contentType = getContentType(file, config) ?? defaultTypeName;
+      const result = await parseContentFile(filePath, effectiveConfig);
+      const contentType = getContentType(file, effectiveConfig) ?? defaultTypeName;
       const schema =
         contentType !== defaultTypeName
           ? (getSchemaForType(schemaModule, contentType) ?? defaultSchema)
@@ -271,7 +276,7 @@ async function processOneCollection(
         });
         continue;
       }
-      if (config.i18n && parsed.locale) {
+      if (effectiveConfig.i18n && parsed.locale) {
         detectedLocales.add(parsed.locale);
         if (!itemsMap.has(parsed.slug)) {
           itemsMap.set(parsed.slug, { slug: parsed.slug, locales: {} });
@@ -303,13 +308,13 @@ async function processOneCollection(
     return { ok: false, diagnostics };
   }
 
-  const types = config.types?.map((t) => t.name) ?? [];
+  const types = effectiveConfig.types?.map((t) => t.name) ?? [];
   const locales = [...detectedLocales].sort();
   const collectionOutputPath = path.join(outputDir, `${collectionName}.ts`);
   const inputHash = await computeCollectionInputHash(
     collectionPath,
     contentFiles,
-    config.extensions
+    effectiveConfig.extensions
   );
 
   if (types.length > 0) {
@@ -318,14 +323,14 @@ async function processOneCollection(
         collectionOutputPath,
         collectionName,
         typeGroups,
-        config.i18n,
+        effectiveConfig.i18n,
         locales,
         schemaModule as Record<string, unknown>
       );
     }
     return {
       ok: true,
-      indexMeta: { name: collectionName, types, hasI18n: config.i18n },
+      indexMeta: { name: collectionName, types, hasI18n: effectiveConfig.i18n },
       outputName: `${collectionName}.ts`,
       diagnostics,
       inputHash,
@@ -339,15 +344,15 @@ async function processOneCollection(
     ((schemaModule as Record<string, unknown>).metaTypeName as string | undefined) ??
     `${collectionName.charAt(0).toUpperCase() + collectionName.slice(1)}Meta`;
 
-  if (config.i18n) {
+  if (effectiveConfig.i18n) {
     const i18nItems = items as I18nCollectionData[];
-    const ri = config.resolvedI18n;
+    const ri = effectiveConfig.resolvedI18n;
     const stats = calculateI18nStats(i18nItems);
 
     if (ri?.coverageThreshold != null && stats.coverage < ri.coverageThreshold) {
       diagnostics.push({
         code: "I18N_COVERAGE_BELOW_THRESHOLD",
-        severity: config.strict ? "error" : "warning",
+        severity: effectiveConfig.strict ? "error" : "warning",
         category: "i18n",
         message: `Translation coverage ${Math.round(stats.coverage * 100)}% is below threshold ${Math.round(ri.coverageThreshold * 100)}%.`,
         source: "build",
@@ -375,7 +380,7 @@ async function processOneCollection(
             if (localeMtime < sourceMtime) {
               diagnostics.push({
                 code: "I18N_STALE_TRANSLATION",
-                severity: config.strict ? "error" : "warning",
+                severity: effectiveConfig.strict ? "error" : "warning",
                 category: "i18n",
                 message: `Translation ${entry.file} is older than source ${sourceEntry.file}.`,
                 source: "build",
@@ -415,7 +420,7 @@ async function processOneCollection(
 
   return {
     ok: true,
-    indexMeta: { name: collectionName, hasI18n: config.i18n, metaTypeName },
+    indexMeta: { name: collectionName, hasI18n: effectiveConfig.i18n, metaTypeName },
     outputName: `${collectionName}.ts`,
     diagnostics,
     inputHash,

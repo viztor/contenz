@@ -6,7 +6,7 @@
     "content/*",
     "docs"
   ],
-  "generatedAt": "2026-03-06T01:32:59.800Z",
+  "generatedAt": "2026-03-06T12:47:18.846Z",
   "collections": [
     {
       "name": "docs",
@@ -22,7 +22,7 @@
     },
     {
       "name": "faq",
-      "inputHash": "d062d8d005f9c09180513d42a51c818df1691c92c77b895166ebb0df66b0182e",
+      "inputHash": "51aa4b77e0c0de0041dc0caf9ecdde9ea13a2a7146b6df6eb5f7646dcd5045bc",
       "outputFiles": [
         "faq.ts"
       ],

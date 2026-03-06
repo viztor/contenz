@@ -1,5 +1,5 @@
 import type { ZodSchema } from "zod";
-import type { Relations, SchemaModule } from "./types.js";
+import type { ContentType, Relations, SchemaModule } from "./types.js";
 
 /**
  * Options for a single-type collection (one schema for all files).
@@ -11,12 +11,24 @@ export interface DefineCollectionSingleOptions {
   relations?: Relations;
 }
 
+/** Schema plus optional filename pattern for multi-type; first matching pattern wins. */
+export interface SchemaWithPattern {
+  schema: ZodSchema;
+  pattern: RegExp;
+}
+
 /**
  * Options for a multi-type collection (different schemas by filename pattern).
+ * Each entry in schemas can be a plain ZodSchema (no pattern; config.types required for routing)
+ * or { schema, pattern } to define routing in this file (single source of truth).
  */
 export interface DefineCollectionMultiOptions {
-  /** Named schemas; each key becomes export `{key}Meta` (e.g. "term" → termMeta) */
-  schemas: Record<string, ZodSchema>;
+  /**
+   * Named schemas; each key becomes export `{key}Meta` (e.g. "term" → termMeta).
+   * Value can be a ZodSchema (then use config.types in config.ts for patterns)
+   * or { schema, pattern } to define the filename pattern here and export types.
+   */
+  schemas: Record<string, ZodSchema | SchemaWithPattern>;
   /** Cross-collection relations: field name → target collection name */
   relations?: Relations;
 }
@@ -66,16 +78,31 @@ export function defineCollection(
 
   const { schemas, relations } = options;
   const result: SchemaModule & Record<string, unknown> = {};
+  const types: ContentType[] = [];
   let first: ZodSchema | undefined;
-  for (const [name, schema] of Object.entries(schemas)) {
+
+  for (const [name, value] of Object.entries(schemas)) {
+    const schema =
+      typeof value === "object" && value !== null && "schema" in value
+        ? (value as SchemaWithPattern).schema
+        : (value as ZodSchema);
+    const pattern =
+      typeof value === "object" && value !== null && "pattern" in value
+        ? (value as SchemaWithPattern).pattern
+        : undefined;
+
     const exportKey = `${name}Meta`;
     result[exportKey] = schema;
     if (first === undefined) first = schema;
+    if (pattern) types.push({ name, pattern });
   }
+
   if (first) result.meta = first;
   if (relations && Object.keys(relations).length > 0) {
     result.relations = relations;
   }
+  if (types.length > 0) result.types = types;
+
   return result as unknown as SchemaModule & Record<string, ZodSchema | Relations | undefined>;
 }
 
