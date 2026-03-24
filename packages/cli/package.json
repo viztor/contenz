@@ -3,15 +3,16 @@
   "version": "0.1.0",
   "description": "CLI for contenz (content validation and codegen)",
   "license": "MPL-2.0",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/viztor/content-tools.git",
-    "directory": "packages/cli"
-  },
   "publishConfig": {
     "access": "public"
   },
-  "keywords": ["contenz", "cli", "content", "markdown", "mdx"],
+  "keywords": [
+    "contenz",
+    "cli",
+    "content",
+    "markdown",
+    "mdx"
+  ],
   "type": "module",
   "engines": {
     "node": ">=20"

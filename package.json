@@ -1,7 +1,7 @@
 {
-  "name": "contenz-workspace",
+  "name": "contenz",
   "private": true,
-  "packageManager": "npm@10.9.2",
+  "packageManager": "npm@11.12.0",
   "workspaces": [
     "packages/*"
   ],
@@ -18,6 +18,8 @@
     "format": "turbo run format",
     "check": "turbo run check",
     "knip": "turbo run knip",
+    "publish:all": "node scripts/publish.mjs",
+    "publish:dry": "node scripts/publish.mjs --dry-run",
     "prepare": "husky"
   },
   "devDependencies": {

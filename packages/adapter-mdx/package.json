@@ -3,15 +3,16 @@
   "version": "0.1.0",
   "description": "Unified MD/MDX format adapter for contenz",
   "license": "MPL-2.0",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/viztor/content-tools.git",
-    "directory": "packages/adapter-mdx"
-  },
   "publishConfig": {
     "access": "public"
   },
-  "keywords": ["contenz", "mdx", "markdown", "frontmatter", "adapter"],
+  "keywords": [
+    "contenz",
+    "mdx",
+    "markdown",
+    "frontmatter",
+    "adapter"
+  ],
   "type": "module",
   "engines": {
     "node": ">=20"

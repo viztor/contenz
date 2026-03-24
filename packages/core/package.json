@@ -3,11 +3,6 @@
   "version": "0.1.0",
   "description": "Content validation and codegen from MDX/Markdown with Zod",
   "license": "MPL-2.0",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/viztor/content-tools.git",
-    "directory": "packages/core"
-  },
   "publishConfig": {
     "access": "public"
   },

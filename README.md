@@ -6,7 +6,7 @@ Contenz is a content management toolkit for developers and content teams. It sim
 
 - `packages/core` – core library (published as `@contenz/core`); programmatic API only, no CLI binary
 - `packages/cli` – CLI (published as `@contenz/cli`); provides the `contenz` binary
-- `packages/studio` – authoring studio (used by `contenz studio`; not published standalone)
+- `packages/adapter-mdx` – MD/MDX format adapter (published as `@contenz/adapter-mdx`)
 - `packages/e2e` – e2e tests and fixtures (private; not published)
 
 ## Documentation
@@ -18,14 +18,13 @@ Full documentation lives in the [docs](./docs/README.md) folder:
 - [Configuration](./docs/CONFIGURATION.md) – project and collection config, schemas
 - [CLI reference](./docs/CLI.md) – all commands and options
 - [Content model](./docs/CONTENT-MODEL.md) – filenames, output shape, relations, i18n
-- [Studio](./docs/STUDIO.md) – authoring studio usage and development
 - [Core API](./docs/API.md) – programmatic API from `@contenz/core/api`
+- [Codebase](./docs/CODEBASE.md) – maintainer reference, module map, cleanup items
 
 Planning and contribution:
 
 - [PROJECT_SCOPE.md](./PROJECT_SCOPE.md) – product direction and scope
 - [ROADMAP.md](./ROADMAP.md) – milestone sequencing
-- [BACKLOG.md](./BACKLOG.md) – near-term work
 - [CONTRIBUTING.md](./CONTRIBUTING.md) – workspace setup and code style
 - [packages/core/README.md](./packages/core/README.md) – schema helpers and core package
 
@@ -35,6 +34,8 @@ Planning and contribution:
 - `npm run test` - run tests for all packages
 - `npm run lint` - lint all packages
 - `npm run typecheck` - typecheck all packages
+- `npm run publish:all` - build and publish all packages to npm
+- `npm run publish:dry` - preview what would be published
 
 To run package-level commands directly:
 
@@ -79,9 +80,13 @@ contenz watch
 # Check if build is up to date
 contenz status
 
-# Start the authoring studio
-contenz studio
-contenz studio --cwd ./my-content --port 3002
+# Content operations
+contenz list faq
+contenz view faq/hello
+contenz create faq --slug new-item --meta '{"question":"..."}'
+contenz update faq/hello --meta '{"question":"Updated"}'
+contenz search faq --query "order"
+contenz schema faq --format json
 ```
 
 Use `--cwd` when the content project root is not the current directory:
@@ -90,7 +95,6 @@ Use `--cwd` when the content project root is not the current directory:
 contenz init --cwd ../existing-app
 contenz lint --cwd ../other-package
 contenz build --cwd .
-contenz studio --cwd ./content-repo
 ```
 
 `contenz init` creates `contenz.config.ts`, a starter collection schema, and sample content. Install `@contenz/core` and `zod` in the target project before running `contenz lint` or `contenz build`.
@@ -103,15 +107,33 @@ Create `contenz.config.ts` in the project root:
 
 ```ts
 import type { ContenzConfig } from "@contenz/core";
+import { mdxAdapter } from "@contenz/adapter-mdx";
 
 export const config: ContenzConfig = {
   sources: ["content/*"],
+  adapters: [mdxAdapter],
   i18n: true,
   strict: false,
   ignore: ["README.md", "_*"],
-  // outputDir: "generated/content",
-  // coveragePath: "contenz.coverage.md",
-  // extensions: ["md", "mdx"],
+};
+```
+
+You can also define collections inline (centralized config):
+
+```ts
+import { z } from "zod";
+import type { ContenzConfig } from "@contenz/core";
+
+export const config: ContenzConfig = {
+  collections: {
+    faq: {
+      path: "content/faq",
+      schema: z.object({
+        question: z.string(),
+        category: z.enum(["products", "ordering"]),
+      }),
+    },
+  },
 };
 ```
 

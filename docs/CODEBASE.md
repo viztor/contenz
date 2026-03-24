@@ -13,7 +13,7 @@ contenz/
 │   ├── core/          # @contenz/core — schema validation, codegen, workspace, introspection
 │   ├── cli/           # @contenz/cli — citty-based CLI (12 commands)
 │   ├── adapter-mdx/   # @contenz/adapter-mdx — MD/MDX format adapter (peer dep on core)
-│   └── e2e/           # @contenz/e2e — integration tests (6 fixture projects)
+│   └── e2e/           # @contenz/e2e — integration tests (7 fixture projects)
 ├── docs/              # Project documentation (8 files)
 ├── turbo.json         # Turborepo task config
 └── package.json       # Workspace root (npm workspaces)
@@ -167,6 +167,7 @@ contenz.config.ts (project root)
   ├── i18n: boolean | I18nConfig — locale detection
   ├── strict: boolean            — fail on warnings
   ├── adapters: FormatAdapter[]  — external format adapters
+  ├── collections: Record<string, CollectionDeclaration>  — inline collection definitions
   └── coveragePath: string       — coverage report path
 
 content/{collection}/config.ts (collection override)
@@ -184,6 +185,8 @@ content/{collection}/schema.ts (collection schema)
 ### Config Resolution Order
 
 `BUILT_IN_DEFAULTS` → `contenz.config.ts` → `{collection}/config.ts`
+
+Inline `collections` definitions in `contenz.config.ts` are merged with filesystem-discovered collections. Inline definitions take precedence for collections with the same name.
 
 Built-in defaults: `extensions: ["md", "mdx", "json"]`, `sources: ["content/*"]`, `outputDir: "generated/content"`
 
@@ -250,15 +253,9 @@ See above — parser now uses `extAlternation(extensions)` to build regex dynami
 
 This file contains 4 unrelated operations: `runList`, `runView`, `runCreate`, `runUpdate`. Each is independent. Consider splitting into separate files to match `run-search.ts` and `run-schema.ts` pattern.
 
-### 🟠 DOCS: Stale Documentation
+### ✅ DONE: Stale Documentation
 
-| File | Issue |
-|---|---|
-| `docs/CONFIGURATION.md` | May reference old defaults |
-| `Plan.md` (55KB) | Very large planning doc — consider archiving |
-| `Backlog.md` | May contain completed items |
-| `ROADMAP.md` | May contain completed milestones |
-| `README.md` (root) | May need updates |
+Updated `docs/CONFIGURATION.md`, `docs/CONTENT-MODEL.md`, `README.md`, and `ROADMAP.md`. Removed studio references, added centralized config, adapter-mdx, and content ops documentation.
 
 ### 🟠 CLEAN: Global Mutable Adapter Registry
 
@@ -275,6 +272,7 @@ This file contains 4 unrelated operations: `runList`, `runView`, `runCreate`, `r
 | Package | Runner | Files | Tests |
 |---|---|---|---|
 | core | Vitest | 7 test files | 72 |
+| adapter-mdx | Vitest | 1 test file | 16 |
 | e2e | Vitest | 2 test files | 114 |
 
 ### Core Tests
@@ -288,6 +286,7 @@ E2E tests live in `packages/e2e/`. They use 6 fixture projects under `packages/e
 | Fixture | Purpose |
 |---|---|
 | `minimal` | Basic single-collection, flat |
+| `centralized` | Inline collections config (no schema.ts) |
 | `i18n` | Multi-locale collection |
 | `multi-type` | Collection with multiple content types |
 | `mixed-sources` | Multiple source patterns |
