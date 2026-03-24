@@ -5,24 +5,11 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
-import { globby } from "globby";
+
 import pMap from "p-map";
-import {
-  extractRelations,
-  getContentType,
-  getSchemaForType,
-  loadCollectionConfig,
-  loadProjectConfig,
-  loadSchemaModule,
-  resolveConfig,
-} from "./config.js";
+import { extractRelations, getContentType, getSchemaForType } from "./config.js";
 import { type Diagnostic, type DiagnosticFormat, formatDiagnosticsReport } from "./diagnostics.js";
 import { parseContentFile, parseFileName } from "./parser.js";
-import {
-  type DiscoveredCollection,
-  discoverCollections,
-  normalizeLegacyContentDir,
-} from "./sources.js";
 import type { Relations } from "./types.js";
 import {
   detectCircularReferences,
@@ -30,6 +17,7 @@ import {
   validateMeta,
   validateRelations,
 } from "./validator.js";
+import { type CollectionContext, createWorkspace } from "./workspace.js";
 
 const LINT_CONCURRENCY = 4;
 
@@ -73,22 +61,16 @@ interface FirstPassResult {
 }
 
 async function firstPassOneCollection(
-  collection: DiscoveredCollection,
-  projectConfig: import("./types.js").ContenzConfig,
+  ctx: CollectionContext,
   availableCollections: string[]
 ): Promise<FirstPassResult> {
-  const collectionName = collection.name;
-  const collectionPath = collection.collectionPath;
+  const { name: collectionName, collectionPath, config, schema: schemaModule, contentFiles } = ctx;
   const diagnostics: Diagnostic[] = [];
   const slugs = new Set<string>();
   const slugLocales = new Map<string, Set<string>>();
   const itemsForCircularCheck = new Map<string, { slug: string; relatedSlugs: string[] }>();
   const validationResults: ValidationResult[] = [];
 
-  const collectionConfig = await loadCollectionConfig(collectionPath);
-  const config = resolveConfig(projectConfig, collectionConfig);
-
-  const schemaModule = await loadSchemaModule(collectionPath);
   if (!schemaModule) {
     diagnostics.push({
       code: "SCHEMA_LOAD_FAILED",
@@ -137,13 +119,6 @@ async function firstPassOneCollection(
     ...config,
     types: config.types?.length ? config.types : schemaModule.types,
   };
-
-  const extensionPattern = effectiveConfig.extensions.map((e) => `*.${e}`).join(",");
-  const contentFiles = await globby(`{${extensionPattern}}`, {
-    cwd: collectionPath,
-    onlyFiles: true,
-    ignore: effectiveConfig.ignore,
-  });
 
   const relations: Relations =
     schemaModule.relations ?? extractRelations(schemaModule, availableCollections);
@@ -267,32 +242,20 @@ interface SecondPassResult {
 }
 
 async function secondPassOneCollection(
-  collection: DiscoveredCollection,
-  projectConfig: import("./types.js").ContenzConfig,
+  ctx: CollectionContext,
   collectionSlugs: Map<string, Set<string>>,
   availableCollections: string[]
 ): Promise<SecondPassResult> {
-  const collectionName = collection.name;
-  const collectionPath = collection.collectionPath;
+  const { name: collectionName, collectionPath, config, schema: schemaModule, contentFiles } = ctx;
   const diagnostics: Diagnostic[] = [];
   const missingRefs: MissingRef[] = [];
   let relationErrors = 0;
 
-  const collectionConfig = await loadCollectionConfig(collectionPath);
-  const config = resolveConfig(projectConfig, collectionConfig);
-  const schemaModule = await loadSchemaModule(collectionPath);
   if (!schemaModule) return { diagnostics, relationErrors: 0, missingRefs };
 
   const relations: Relations =
     schemaModule.relations ?? extractRelations(schemaModule, availableCollections);
   if (Object.keys(relations).length === 0) return { diagnostics, relationErrors: 0, missingRefs };
-
-  const extensionPattern = config.extensions.map((e) => `*.${e}`).join(",");
-  const contentFiles = await globby(`{${extensionPattern}}`, {
-    cwd: collectionPath,
-    onlyFiles: true,
-    ignore: config.ignore,
-  });
 
   for (const file of contentFiles) {
     const filePath = path.join(collectionPath, file);
@@ -433,10 +396,15 @@ export async function runLint(options: LintOptions): Promise<LintResult> {
   const cwd = path.resolve(process.cwd(), options.cwd ?? ".");
   const format = options.format ?? "pretty";
 
-  const projectConfig = await loadProjectConfig(cwd);
-  let baseConfig: ReturnType<typeof resolveConfig>;
+  // ── Bootstrap via Workspace ──────────────────────────────────────────
+  let workspace: Awaited<ReturnType<typeof createWorkspace>>;
   try {
-    baseConfig = resolveConfig(projectConfig);
+    workspace = await createWorkspace({
+      cwd,
+      sources: options.sources,
+      dir: options.dir,
+      collection: options.collection,
+    });
   } catch (error) {
     diagnostics.push({
       code: "CONFIG_INVALID",
@@ -458,61 +426,10 @@ export async function runLint(options: LintOptions): Promise<LintResult> {
     };
   }
 
-  let sources: string[];
-  try {
-    sources =
-      options.sources ??
-      (options.dir ? [normalizeLegacyContentDir(options.dir)] : baseConfig.sources);
-  } catch (error) {
-    diagnostics.push({
-      code: "CONFIG_INVALID_SOURCE",
-      severity: "error",
-      category: "config",
-      message: error instanceof Error ? error.message : String(error),
-      source: "lint",
-    });
-    return {
-      success: false,
-      errors: 1,
-      report: formatDiagnosticsReport({
-        diagnostics,
-        format,
-        title: "Lint diagnostics",
-        success: false,
-      }),
-      diagnostics,
-    };
-  }
+  const { resolvedConfig: baseConfig, sources, collections } = workspace;
 
-  let discoveredCollections: DiscoveredCollection[];
-  let discoveryErrors: string[];
-  try {
-    const discovery = await discoverCollections(cwd, sources);
-    discoveredCollections = discovery.collections;
-    discoveryErrors = discovery.errors;
-  } catch (error) {
-    diagnostics.push({
-      code: "DISCOVERY_FAILED",
-      severity: "error",
-      category: "discovery",
-      message: error instanceof Error ? error.message : String(error),
-      source: "lint",
-    });
-    return {
-      success: false,
-      errors: 1,
-      report: formatDiagnosticsReport({
-        diagnostics,
-        format,
-        title: "Lint diagnostics",
-        success: false,
-      }),
-      diagnostics,
-    };
-  }
-
-  if (discoveryErrors.length > 0) {
-    for (const error of discoveryErrors) {
+  if (workspace.discoveryErrors.length > 0) {
+    for (const error of workspace.discoveryErrors) {
       diagnostics.push({
         code: "DISCOVERY_DUPLICATE_COLLECTION",
         severity: "error",
@@ -523,7 +440,7 @@ export async function runLint(options: LintOptions): Promise<LintResult> {
     }
     return {
       success: false,
-      errors: discoveryErrors.length,
+      errors: workspace.discoveryErrors.length,
       report: formatDiagnosticsReport({
         diagnostics,
         format,
@@ -534,11 +451,29 @@ export async function runLint(options: LintOptions): Promise<LintResult> {
     };
   }
 
-  const collections = options.collection
-    ? discoveredCollections.filter((collection) => collection.name === options.collection)
-    : discoveredCollections;
-
-  if (discoveredCollections.length === 0) {
+  if (collections.length === 0) {
+    // If filtering by collection and no match, it's an error
+    if (options.collection) {
+      diagnostics.push({
+        code: "DISCOVERY_COLLECTION_NOT_FOUND",
+        severity: "error",
+        category: "discovery",
+        message: `Collection "${options.collection}" not found.`,
+        source: "lint",
+      });
+      return {
+        success: false,
+        errors: 1,
+        report: formatDiagnosticsReport({
+          diagnostics,
+          format,
+          title: "Lint diagnostics",
+          success: false,
+          footer: `Sources: ${sources.join(", ")}`,
+        }),
+        diagnostics,
+      };
+    }
     diagnostics.push({
       code: "DISCOVERY_NO_COLLECTIONS",
       severity: "warning",
@@ -559,33 +494,12 @@ export async function runLint(options: LintOptions): Promise<LintResult> {
       diagnostics,
     };
   }
-  if (collections.length === 0) {
-    diagnostics.push({
-      code: "DISCOVERY_COLLECTION_NOT_FOUND",
-      severity: "error",
-      category: "discovery",
-      message: `Collection "${options.collection}" not found.`,
-      source: "lint",
-    });
-    return {
-      success: false,
-      errors: 1,
-      report: formatDiagnosticsReport({
-        diagnostics,
-        format,
-        title: "Lint diagnostics",
-        success: false,
-        footer: `Sources: ${sources.join(", ")}`,
-      }),
-      diagnostics,
-    };
-  }
 
-  const availableCollections = collections.map((collection) => collection.name);
+  const availableCollections = collections.map((c) => c.name);
 
   const firstPassResults = await pMap(
     collections,
-    (collection) => firstPassOneCollection(collection, projectConfig, availableCollections),
+    (ctx) => firstPassOneCollection(ctx, availableCollections),
     { concurrency: LINT_CONCURRENCY }
   );
 
@@ -606,8 +520,7 @@ export async function runLint(options: LintOptions): Promise<LintResult> {
 
   const secondPassResults = await pMap(
     collections,
-    (collection) =>
-      secondPassOneCollection(collection, projectConfig, collectionSlugs, availableCollections),
+    (ctx) => secondPassOneCollection(ctx, collectionSlugs, availableCollections),
     { concurrency: LINT_CONCURRENCY }
   );
 

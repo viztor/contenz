@@ -5,7 +5,7 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=24"
+    "node": ">=20"
   },
   "bin": {
     "contenz": "./bin/run.mjs"
@@ -25,8 +25,8 @@
     "tsx": "^4.21.0"
   },
   "devDependencies": {
-    "typescript": "^5.0.0",
-    "@types/node": "^20.0.0",
-    "tsup": "^8.0.0"
+    "typescript": "^6.0.2",
+    "@types/node": "^25.5.0",
+    "tsup": "^8.5.1"
   }
 }

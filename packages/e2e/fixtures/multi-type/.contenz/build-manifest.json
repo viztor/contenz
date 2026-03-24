@@ -5,11 +5,12 @@
   "sources": [
     "content/*"
   ],
-  "generatedAt": "2026-03-06T01:23:18.421Z",
+  "configHash": "fb9c39fa9187392555e4811b206aa72721db4aae024aed556ddbbccb93a7c64b",
+  "generatedAt": "2026-03-24T12:03:45.933Z",
   "collections": [
     {
       "name": "terms",
-      "inputHash": "6a8eb8440111e81e73af237ff2a12439fb6317fc080bc66360d96f9c7da29258",
+      "inputHash": "f361a682e317838db34fc214dfb96075b3a3b48631fd88959e2fa001ba1bee6f",
       "outputFiles": [
         "terms.ts"
       ],

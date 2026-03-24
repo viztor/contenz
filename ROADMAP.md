@@ -106,114 +106,96 @@ Exit criteria:
 - config and discovery invariants are documented in one place, not spread across examples only
 - the documented surface matches the behavior covered by tests
 
-## Milestone 4: Consumption Layer
+## Milestone 4: AI-Native Foundation
 
-Goal:
+**Goal:** Transform contenz from a read-only build tool into a bidirectional, AI-native content management CLI.
 
-Make generated content easier to consume in real application code.
+This milestone is broken into three sequential phases to manage risk:
 
-Deliverables:
+### Phase 4a: Introspection & The CLI Contract
+Establish the foundation for AI agents to understand and mutate content.
 
-- query API baseline for filtering, slug access, sorting, and pagination
-- basic relation joins
-- first practical Next.js integration
+**Deliverables:**
+- **Schema Introspection Layer:** Extract fields, types, and descriptions from Zod schemas without validation.
+- **Content I/O Module:** Symmetric read/update/write operations for content files.
+- **New CLI Commands:** `create`, `update`, `view`, `search`, `list`.
+- **Command Registry & Help:** Structured, self-describing command architecture with `contenz help --format json` and context-aware help.
+- **Stable JSON Contract:** Guaranteed `success`, `data`, and `diagnostics` envelope for all `--format json` outputs.
 
-Exit criteria:
+**Exit Criteria:**
+- An AI agent can discover commands, list collections, read an item, and create a new item entirely via the CLI using JSON formats.
 
-- query helpers are type-safe against generated output
-- integration coverage exists for a sample Next-oriented fixture
+### Phase 4b: Format Adapters & Schema Presets
+Expand the content model beyond `.mdx` only, and solve the "blank page" problem.
 
-## Milestone 5: Extensibility MVP
+**Deliverables:**
+- **Format Adapter Pipeline:** Refactor the parser to support pluggable format adapters.
+- **JSON Content Adapter:** Support `.json` files as first-class content items alongside `md`/`mdx`.
+- **Dual MDX Metadata:** Support both `export const meta` and frontmatter in `.mdx` files.
+- **Schema Presets:** Ship pre-built schemas (`blogPost`, `faq`, etc.) in `@contenz/core`.
+- **Global Constraints:** Implement linting for cross-collection invariants (starting with `slugGroups` for `urlPrefix` collisions).
 
-Goal:
+**Exit Criteria:**
+- A single collection can mix `.mdx` and `.json` content safely.
+- Users can bootstrap a collection using `presets.blogPost`.
+- `contenz lint` catches slug collisions across collections sharing a URL prefix.
 
-Establish stable extension hooks before adding broader ecosystem breadth.
+### Phase 4c: Workspace Integration & Skills
+Close the loop on DX and AI agent onboarding.
 
-Deliverables:
+**Deliverables:**
+- **Smart Init:** `contenz init` detects Next.js, offers preset selection, and optionally scaffolds `mdx-components.tsx` and route handlers.
+- **Skill Generator:** `contenz skill` command to generate `.agents/skills/contenz/SKILL.md` and workflows tailored to the project's actual schema.
 
-- lifecycle hooks
-- transform pipeline
-- validation plugin API
-- computed fields
-- optional body extraction
+**Exit Criteria:**
+- A developer can run `contenz init`, pick a few presets, and have a working Next.js content route in 30 seconds.
+- Running `contenz skill` generates a markdown file that successfully teaches Cursor/Copilot/Gemini how to edit the project's specific collections.
 
-Exit criteria:
+---
 
-- hooks and plugins are covered by integration tests
-- at least one built-in transform and one built-in validation extension exist
+## Milestone 5: Consumption & Extensibility (v1.0 Candidate)
+
+**Goal:** Make generated content robust to query, and establish stable extension hooks before reaching v1.0.
+
+**Deliverables:**
+- **Query API:** Type-safe helpers for filtering, sorting, pagination, and relation joins against generated output.
+- **Extension Hooks:** Lifecycle hooks, transform pipeline, validation plugins.
+- **Computed Fields:** Ability to define fields derived from other content at build time.
+
+**Exit Criteria:**
+- Next.js server components can cleanly query content with relations fully typed.
+- Hooks and plugins are covered by integration tests.
+
+---
 
 ## Future Product Track: Authoring Studio
 
 This is not the current milestone focus, but it is part of the intended product scope.
 
-Goal:
+**Goal:** Provide a deployable, git-backed authoring interface so content teams can work directly inside contenz visually without dealing with raw files or CLI commands.
 
-Provide a deployable, git-backed authoring interface so content teams can work directly in contenz without dealing with raw files, frontmatter, or day-to-day git mechanics.
-
-Expected capabilities:
-
+**Expected capabilities:**
 - schema-driven editing UI
 - locale-aware authoring and review
 - relation pickers and guided field editing
-- draft and review states
 - preview
-- AI assistance for drafting, rewriting, and translation
+- integrated AI assistance for drafting and translation
 - branch + PR oriented collaboration
-- translation coverage and staleness visibility
 
-Prerequisite:
+**Prerequisite:**
+The core data model, schema introspection, and Content I/O symmetric layer (M4a) must be rock solid. The studio relies on the exact same I/O and introspection primitives as the CLI.
 
-The core data model, diagnostics, and i18n semantics must be stable first. The studio should be built on top of those primitives, not in parallel with an unstable foundation.
-
-## Future Product Track: Site Starters
-
-This is also outside the current `v0.2` scope.
-
-Goal:
-
-Provide one-shot starter generation for teams that want a repo-backed website built around contenz from day one.
-
-First target:
-
-- `npm create contenz@latest`
-- powered by a dedicated `create-contenz` scaffolder
-- kept separate from the persistent `contenz` project CLI
-- standalone docs/helpdesk starter
-- Next.js first
-- curated theme presets
-
-Related future command:
-
-- `contenz init` in the persistent project CLI for scaffolding contenz into an existing project without automatically patching host app routes or layouts in v1
-
-Boundary:
-
-- this track is about starter scaffolding, not publish semantics
-- `publish` should remain reserved for editorial workflow and promotion concepts
-
-Prerequisite:
-
-The pipeline, config model, and integration story need to be stable first. Site starters should package a mature workflow, not invent one early.
+---
 
 ## Deferred Until After Milestone 5
 
-- remote content adapters
-- migration tooling
-- asset pipeline breadth
-- framework adapters beyond the first practical target
+- remote content adapters (headless CMS sync)
+- asset pipeline breadth (image optimization orchestration)
 - graph visualization
-- worker-thread parsing unless profiling proves the need
+- worker-thread parsing (unless profiling proves the need)
+
+---
 
 ## Release Target
 
-The intended `v0.2` release should include:
-
-- shared pipeline internals
-- diagnostics formats
-- incremental build support
-- watch mode
-- dry-run support
-- basic status support
-- improved i18n behavior
-- a documentation pass that freezes and explains the core API surface
-- a stronger quality baseline than the current `v0.1` starting point
+The intended `v1.0` release should include the completion of Milestones 1 through 5, delivering a complete, bidirectional, AI-native content lifecycle from scaffolding to agent-driven updates to type-safe frontend querying.

@@ -25,7 +25,7 @@ export type CollectionData = I18nCollectionData | FlatCollectionData;
  * Get the Zod type name from a schema (handles both old and new Zod versions).
  */
 function getZodTypeName(schema: ZodTypeAny): string | undefined {
-  const def = schema._def;
+  const def = schema._def as any;
   // New Zod (v4+) uses _def.type as a string
   if (def?.type && typeof def.type === "string") {
     return def.type;
@@ -39,7 +39,7 @@ function getZodTypeName(schema: ZodTypeAny): string | undefined {
  */
 function zodToTypeString(schema: ZodTypeAny, indent = 0): string {
   const pad = "  ".repeat(indent);
-  const def = schema._def;
+  const def = schema._def as any;
   const typeName = getZodTypeName(schema);
 
   // Handle optional wrapper (new Zod uses "optional", old uses "ZodOptional")
@@ -386,80 +386,4 @@ export async function generateIndexFile(
   }
 
   await fs.writeFile(outputPath, output, "utf-8");
-}
-
-/**
- * Generate coverage report.
- */
-export async function generateCoverageReport(
-  outputPath: string,
-  collections: {
-    name: string;
-    items: I18nCollectionData[];
-    stats: ReturnType<typeof calculateI18nStats>;
-    locales: string[];
-  }[]
-): Promise<void> {
-  const timestamp = new Date().toISOString();
-
-  // Get all unique locales
-  const allLocales = [...new Set(collections.flatMap((c) => c.locales))].sort();
-
-  let output = `# Content Coverage Report
-
-Generated: ${timestamp}
-
-## Summary
-
-| Collection | Total | ${allLocales.map((l) => l.toUpperCase()).join(" | ")} | Complete | Coverage |
-|------------|-------|${allLocales.map(() => "----").join("|")}|----------|----------|
-`;
-
-  for (const { name, stats } of collections) {
-    const localeCounts = allLocales.map((l) => (stats.locales[l] ?? 0).toString()).join(" | ");
-    output += `| ${name} | ${stats.total} | ${localeCounts} | ${stats.complete} | ${Math.round(stats.coverage * 100)}% |\n`;
-  }
-
-  output += "\n## Missing Translations\n";
-
-  for (const { name, items, locales } of collections) {
-    output += `\n### ${name}\n\n`;
-
-    const missing = items.filter((item) => !locales.every((locale) => item.locales[locale]));
-
-    if (missing.length === 0) {
-      output += "All translations complete.\n";
-    } else {
-      for (const item of missing) {
-        const missingLocales = locales.filter((l) => !item.locales[l]);
-        output += `- \`${item.slug}\` - missing: ${missingLocales.join(", ")}\n`;
-      }
-    }
-  }
-
-  // Add relation validation section placeholder
-  output += "\n## Relation Validation\n\n";
-  output += "_Run `contenz lint` for detailed relation validation._\n";
-
-  await fs.writeFile(outputPath, output, "utf-8");
-}
-
-// Legacy exports for backward compatibility
-export { calculateI18nStats as calculateStats };
-export async function generateCollectionFile(
-  outputPath: string,
-  collectionName: string,
-  items: I18nCollectionData[],
-  metaTypeName: string,
-  schema?: ZodTypeAny
-): Promise<void> {
-  const locales = [...new Set(items.flatMap((i) => Object.keys(i.locales)))];
-  return generateI18nCollectionFile(
-    outputPath,
-    collectionName,
-    items,
-    metaTypeName,
-    locales,
-    schema
-  );
 }

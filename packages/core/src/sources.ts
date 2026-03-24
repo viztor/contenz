@@ -143,3 +143,20 @@ export async function discoverCollections(
     errors,
   };
 }
+
+/**
+ * Glob content files in a collection directory using the resolved config extensions.
+ * Shared utility to eliminate duplicated pattern construction.
+ */
+export async function globContentFiles(
+  collectionPath: string,
+  extensions: string[],
+  ignore: string[]
+): Promise<string[]> {
+  const extensionPattern = extensions.map((e) => `*.${e}`).join(",");
+  return globby(`{${extensionPattern}}`, {
+    cwd: collectionPath,
+    onlyFiles: true,
+    ignore,
+  });
+}

@@ -4,9 +4,9 @@ This backlog is the short-horizon execution queue. It should stay actionable and
 
 ## Current Focus
 
-Milestones 1–3 are complete. Current focus is the Documentation Gate: Core API Stabilization, then Milestone 4 (Consumption Layer).
+Milestones 1–3 are complete. Current focus is Milestone 4: AI-Native Foundation.
 
-Near-term boundary: documentation pass after Milestone 3, then start Milestone 4.
+Near-term boundary: design and build the schema introspection and symmetric I/O primitives required for the bidirectional CLI commands.
 
 ### Done Recently
 
@@ -16,29 +16,23 @@ Near-term boundary: documentation pass after Milestone 3, then start Milestone 4
 
 ### Active
 
-- Documentation Gate: root docs, @contenz/core API reference, source discovery and i18n semantics documented
+- Architecture alignment: finalize the data model for format adapters, schema introspection, and self-describing commands.
 
-## Next Up
+## Next Up (Milestone 4a: Introspection & The CLI Contract)
 
-- Documentation pass: config reference, source discovery, collection naming, i18n semantics, CLI reference
+- Build `src/introspect.ts`: extract structural metadata (type, descriptions, defaults) from Zod schemas without validation
+- Build `src/content-io.ts`: symmetric read/update/write operations for content files
+- Implement command registry pattern for self-describing commands
+- Build `contenz view`, `contenz create`, `contenz update` emitting strict `--format json` output
 
-## After That
+## After That (Milestone 4b & 4c)
 
-- Milestone 4: query API baseline, relation joins, first Next.js integration
+- Format Adapters: support `.json` files and dual `.mdx` metadata extraction
+- Schema Presets: ship `blogPost`, `faq`, etc. schemas in `@contenz/core`
+- `contenz skill`: workspace integration generator for AI agents
+- `contenz init`: smart scaffolding for existing Next.js projects
 
-## Documentation Pass After Milestone 3
-
-Before starting the consumption layer, document the stabilized pre-`v0.2` API surface:
-
-- config reference for `contenz.config.*`
-- source discovery and collection naming rules
-- schema module contract and shared-schema guidance
-- multi-type collection behavior and current constraints
-- current i18n behavior, compatibility rules, and coverage semantics
-- CLI reference for `init`, `lint`, and `build`
-- programmatic API reference for `runLint`, `runBuild`, and config loading
-
-## Later
+## Later (Milestone 5)
 
 - query API baseline
 - first practical Next.js integration
@@ -46,13 +40,14 @@ Before starting the consumption layer, document the stabilized pre-`v0.2` API su
 
 ## Deferred Product Wedge
 
-After the core maturity milestones, the next broader product wedges are:
+After the AI-native and consumption milestones, the next broader product wedges are:
 
-- a git-backed authoring studio for writer/developer collaboration
+- A git-backed authoring studio for human collaboration
 - `npm create contenz@latest` via `create-contenz` for standalone docs/helpdesk site starters, separate from the persistent CLI
-- `contenz init` in the persistent CLI for adding contenz to an existing project
 
-These stay out of the active backlog until the shared pipeline, diagnostics, incremental workflows, and i18n model are more mature. Site scaffolding is a future starter flow, not a `publish` feature.
+(Note: `contenz init` in the persistent CLI is no longer deferred; it is a core part of Milestone 4c for workspace integration.)
+
+These stay out of the active backlog until the AI CLI logic (introspection, symmetric I/O) is rock solid. Site scaffolding is a future starter flow, not a `publish` feature.
 
 ## Working Rules
 

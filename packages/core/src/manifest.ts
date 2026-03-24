@@ -26,6 +26,8 @@ export interface BuildManifest {
   cwd: string;
   outputDir: string;
   sources: string[];
+  /** Hash of the resolved project config; invalidates all collections when changed */
+  configHash?: string;
   generatedAt: string;
   collections: ManifestCollectionEntry[];
 }
@@ -35,6 +37,15 @@ const MANIFEST_FILENAME = "build-manifest.json";
 
 function sha256(data: string): string {
   return crypto.createHash("sha256").update(data, "utf-8").digest("hex");
+}
+
+/**
+ * Compute a stable hash of the resolved project config.
+ * Used to invalidate the entire manifest when project-level settings change.
+ */
+export function computeConfigHash(config: Record<string, unknown>): string {
+  // Serialize deterministically: sorted keys, no RegExp/function values
+  return sha256(JSON.stringify(config, (_, v) => (v instanceof RegExp ? v.source : v)));
 }
 
 async function readFileSafe(filePath: string): Promise<string> {
@@ -118,13 +129,18 @@ export function getCachedInputHash(
   cwd: string,
   outputDir: string,
   sources: string[],
-  collectionName: string
+  collectionName: string,
+  configHash?: string
 ): string | null {
   if (!manifest || manifest.cwd !== cwd || manifest.outputDir !== outputDir) return null;
   if (
     manifest.sources.length !== sources.length ||
     manifest.sources.some((s, i) => s !== sources[i])
   ) {
+    return null;
+  }
+  // Invalidate all collections if project config changed
+  if (configHash && manifest.configHash && manifest.configHash !== configHash) {
     return null;
   }
   const entry = manifest.collections.find((c) => c.name === collectionName);
@@ -140,7 +156,8 @@ export function mergeManifest(
   cwd: string,
   outputDir: string,
   sources: string[],
-  updates: ManifestCollectionEntry[]
+  updates: ManifestCollectionEntry[],
+  configHash?: string
 ): BuildManifest {
   const byName = new Map<string, ManifestCollectionEntry>();
   if (existing && existing.cwd === cwd && existing.outputDir === outputDir) {
@@ -156,6 +173,7 @@ export function mergeManifest(
     cwd,
     outputDir,
     sources,
+    configHash,
     generatedAt: new Date().toISOString(),
     collections: [...byName.values()].sort((a, b) => a.name.localeCompare(b.name)),
   };

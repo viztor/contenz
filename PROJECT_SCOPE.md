@@ -4,13 +4,13 @@ This document defines the stable product scope for contenz. It should answer wha
 
 ## What contenz Is
 
-contenz is a schema-first, git-backed content collaboration platform for application teams.
+contenz is a schema-first, AI-native content management CLI for application teams.
 
 It is for teams that want:
 
 - repository-backed content as the canonical source of truth
 - typed developer workflows around schemas, validation, and generated outputs
-- a better writing and review experience for non-developers
+- an API-like interface for AI agents to safely read and write content
 - strong multilingual workflows without adopting a CMS as the system of record
 
 ## What contenz Is Not
@@ -101,7 +101,16 @@ The layer that makes content usable inside apps and tooling:
 - preview and delivery hooks
 - future application-facing integration surfaces
 
-### 3. Authoring Studio
+### 3. AI-Native CLI & Workspace Integration
+
+The layer that makes contenz the perfect bridge between AI agents and project content:
+
+- **Symmetric I/O:** Commands to read, create, and update content programmatically
+- **Self-Describing API:** CLI commands emit pure JSON and describe their own arguments
+- **Skill Generation:** `contenz skill` teaches AI coding assistants (Cursor, Copilot, Gemini) exactly how to manage content in a specific repo
+- **Schema Presets:** Pre-built, best-practice schemas that can be extended or used as-is
+
+### 4. Authoring Studio
 
 A deployable authoring interface over repo-backed content.
 
@@ -123,7 +132,7 @@ The studio should eventually provide:
 - PR-oriented collaboration
 - validation messages mapped to real fields and content blocks
 
-### 4. Site Starters
+### 5. Site Starters
 
 A future product surface for generating opinionated websites that run on contenz.
 
@@ -135,26 +144,18 @@ The first target should be:
 
 This is a future product track, not part of the current `v0.2` target.
 
-## AI Assistance
+## AI Assistance & The CLI
 
-AI should be part of the authoring experience, but in an assistive role.
+Contenz is designed to be **AI-friendly, not AI-powered**.
 
-AI should help with:
+It does not bundle LLMs or prompt users. Instead, it provides the perfect API for external AI agents (like Cursor, Gemini, or custom scripts) to manage content safely.
 
-- drafting and rewriting
-- summarizing and restructuring
-- translation assistance
-- metadata suggestions
-- relation suggestions
-- preparing review-ready changes
+- **Introspection:** AI agents can read the exact schema structure, types, and descriptions.
+- **JSON Contracts:** Every command can output strict JSON for AI parsing (`--format json`).
+- **Workspace Skills:** Contenz generates instructions (`SKILL.md`) that teach AI agents how to interact with the project's specific content model.
+- **Safe Mutation:** AI agents update content through `contenz update` or `contenz create`, ensuring schemas are always validated before writing to disk.
 
-AI should not:
-
-- bypass schema validation
-- become the source of truth
-- publish or merge changes without human approval
-
-The intended model is human-reviewed, AI-assisted authorship.
+The intended model is: developers define the schema, `contenz` provides the CLI, and AI agents act as the intelligent, safe operators to draft, translate, and update content.
 
 ## Internationalization As A First-Class Citizen
 
@@ -235,27 +236,25 @@ The project should deliver these major outcomes over time:
 1. A reliable schema-first content pipeline for developers.
 2. A strong diagnostics and validation system that is understandable by humans and machines.
 3. A truly internationalized content model with fallback, coverage, and workflow support.
-4. A runtime and integration layer for apps.
-5. A deployable authoring studio for writers and localization teams.
-6. Opinionated site starters for teams that want a one-command documentation/helpdesk website.
-7. An extensibility model for hooks, transforms, plugins, and future adapters.
+4. An **AI-native CLI** that allows agents to safely inspect, create, and update content.
+5. A runtime and integration layer for apps (query API).
+6. A deployable authoring studio for writers and localization teams.
+7. Opinionated site starters for teams that want a one-command documentation/helpdesk website.
+8. An extensibility model for hooks, transforms, plugins, and future adapters.
 
 ## Current Development Target
 
-The current development target remains a practical `v0.2` focused on core maturity.
+The current development target is **Milestone 4: AI-Native Foundation**.
 
-`v0.2` should prove that the foundation is strong enough to support the broader product:
+Contenz v0.1 proved the read-only build pipeline works (incremental builds, diagnostics, i18n). Milestone 4 pivots the project to becoming a bidirectional interface.
 
-- shared build/lint pipeline internals
-- structured diagnostics
-- incremental build support
-- watch mode
-- dry-run support
-- minimal status support
-- improved i18n behavior around fallback and coverage policy
-- a clearly stronger quality baseline than the current starting point
+The goal is to build out:
+- Schema Introspection
+- Symmetric Content I/O (handling MDX, MD, JSON seamlessly)
+- A self-describing command registry (`create`, `update`, `view`, `search`, `list`)
+- The `contenz skill` generator to onboard AI agents
 
-This matters because the future studio and starter-site surfaces will only be credible if the core data model and workflow semantics are stable.
+This foundation is required before moving up the stack to runtime queries or the authoring studio, because both human and AI editors will rely on the exact same introspection and I/O primitives.
 
 ## Product Principles
 

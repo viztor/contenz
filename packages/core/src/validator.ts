@@ -1,4 +1,3 @@
-import pc from "picocolors";
 import type { ZodSchema } from "zod";
 import type { Relations } from "./types.js";
 
@@ -178,82 +177,4 @@ export function detectCircularReferences(
   }
 
   return { circularRefs, selfRefs };
-}
-
-/**
- * Auto-detect relations from field names matching `related{Collection}` pattern.
- */
-export function autoDetectRelations(
-  meta: Record<string, unknown>,
-  availableCollections: string[]
-): Relations {
-  const relations: Relations = {};
-
-  for (const fieldName of Object.keys(meta)) {
-    const match = fieldName.match(/^related([A-Z][a-zA-Z]*)$/);
-    if (match) {
-      const targetCollection = match[1].toLowerCase();
-      if (availableCollections.includes(targetCollection)) {
-        relations[fieldName] = targetCollection;
-      }
-    }
-  }
-
-  return relations;
-}
-
-/**
- * Format validation results for console output.
- */
-export function formatValidationResults(results: ValidationResult[]): string {
-  const allErrors = results.flatMap((r) => r.errors);
-  const allWarnings = results.flatMap((r) => r.warnings);
-
-  let output = "";
-
-  if (allErrors.length > 0) {
-    output += pc.red("\n✗ Validation Errors:\n");
-    for (const error of allErrors) {
-      output += `  ${pc.dim(error.file)}: ${error.field} - ${error.message}\n`;
-    }
-  }
-
-  if (allWarnings.length > 0) {
-    output += pc.yellow("\n⚠ Warnings:\n");
-    for (const warning of allWarnings) {
-      output += `  ${pc.dim(warning.file)}: ${warning.message}\n`;
-    }
-  }
-
-  return output;
-}
-
-// Legacy export for backward compatibility
-export interface RelationshipValidationResult {
-  errors: ValidationError[];
-  circularRefs: string[];
-  selfRefs: string[];
-}
-
-export function validateRelationships(
-  items: Map<string, { slug: string; relatedSlugs: string[] }>,
-  collectionName: string
-): RelationshipValidationResult {
-  const { circularRefs, selfRefs } = detectCircularReferences(items);
-  const errors: ValidationError[] = [];
-  const allSlugs = new Set(items.keys());
-
-  for (const [slug, item] of items) {
-    for (const relatedSlug of item.relatedSlugs) {
-      if (relatedSlug !== slug && !allSlugs.has(relatedSlug)) {
-        errors.push({
-          file: `${collectionName}/${slug}`,
-          field: "relatedTerms/relatedFaqs",
-          message: `References non-existent slug "${relatedSlug}"`,
-        });
-      }
-    }
-  }
-
-  return { errors, circularRefs, selfRefs };
 }

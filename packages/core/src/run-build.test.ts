@@ -59,12 +59,12 @@ describe("runBuild", () => {
         severity: "error",
         category: "validation",
         collection: "faq",
-        file: "short.mdx",
+        file: "short.json",
         field: "question",
       })
     );
     expect(result.report).toContain("META_VALIDATION_FAILED");
-    expect(result.report).toContain("String must contain at least 10 character(s)");
+    expect(result.report).toContain("Too small");
 
     await expect(fs.access(path.join(cwd, "generated", "content", "faq.ts"))).rejects.toThrow();
 
@@ -107,17 +107,19 @@ describe("runBuild", () => {
 
     const result = await runBuild({ cwd, format: "json" });
     const parsed = JSON.parse(result.report) as {
-      title: string;
       success: boolean;
-      summary: { errors: number; warnings: number; info: number };
+      data: {
+        title: string;
+        summary: { errors: number; warnings: number; info: number };
+        generated: string[];
+      };
       diagnostics: Array<{ code: string; severity: string; category: string }>;
-      generated: string[];
     };
 
-    expect(parsed.title).toBe("Build diagnostics");
+    expect(parsed.data.title).toBe("Build diagnostics");
     expect(parsed.success).toBe(false);
-    expect(parsed.summary).toEqual({ errors: 1, warnings: 0, info: 0 });
-    expect(parsed.generated).toEqual(["index.ts"]);
+    expect(parsed.data.summary).toEqual({ errors: 1, warnings: 0, info: 0 });
+    expect(parsed.data.generated).toEqual(["index.ts"]);
     expect(parsed.diagnostics).toEqual([
       expect.objectContaining({
         code: "META_VALIDATION_FAILED",
@@ -134,8 +136,8 @@ describe("runBuild", () => {
 
     expect(result.report).toContain("::error ");
     expect(result.report).toContain("title=META_VALIDATION_FAILED");
-    expect(result.report).toContain("short.mdx");
-    expect(result.report).toContain("String must contain at least 10 character(s)");
+    expect(result.report).toContain("short.json");
+    expect(result.report).toContain("Too small");
   });
 
   it("discovers collections from mixed source patterns", async () => {
@@ -235,7 +237,7 @@ describe("runBuild", () => {
     const cwd = await useFixture("mixed-sources");
     const docsPath = path.join(cwd, "generated", "content", "docs.ts");
     const faqPath = path.join(cwd, "generated", "content", "faq.ts");
-    const faqContentPath = path.join(cwd, "content", "faq", "hello.mdx");
+    const faqContentPath = path.join(cwd, "content", "faq", "hello.json");
 
     await runBuild({ cwd });
     const docsBefore = await fs.readFile(docsPath, "utf-8");

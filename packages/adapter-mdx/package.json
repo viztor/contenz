@@ -1,0 +1,35 @@
+{
+  "name": "@contenz/adapter-mdx",
+  "version": "0.1.0",
+  "description": "Unified MD/MDX format adapter for contenz",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.2",
+    "@types/node": "^25.5.0",
+    "tsup": "^8.5.1"
+  },
+  "peerDependencies": {
+    "@contenz/core": "*"
+  }
+}

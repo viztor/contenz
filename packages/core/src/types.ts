@@ -1,4 +1,5 @@
 import type { ZodSchema } from "zod";
+import type { FormatAdapter } from "./format-adapter.js";
 
 /**
  * Content type definition for multi-type collections.
@@ -83,6 +84,17 @@ export interface ContenzConfig {
   extensions?: string[];
   /** Glob patterns to ignore (default: ["README.md", "_*"]) */
   ignore?: string[];
+  /**
+   * Format adapters for content file parsing and serialization.
+   * Register adapters for file formats beyond JSON (which is built-in).
+   *
+   * @example
+   * ```ts
+   * import { mdxAdapter } from "@contenz/adapter-mdx";
+   * export const config: ContenzConfig = { adapters: [mdxAdapter] };
+   * ```
+   */
+  adapters?: FormatAdapter[];
 }
 
 /**

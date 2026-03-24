@@ -49,12 +49,12 @@ describe("runLint", () => {
         severity: "error",
         category: "validation",
         collection: "faq",
-        file: "short.mdx",
+        file: "short.json",
         field: "question",
       })
     );
     expect(result.report).toContain("META_VALIDATION_FAILED");
-    expect(result.report).toContain("String must contain at least 10 character(s)");
+    expect(result.report).toContain("Too small");
   });
 
   it("reports relation failures when referenced slugs are missing", async () => {
@@ -80,15 +80,17 @@ describe("runLint", () => {
 
     const result = await runLint({ cwd, format: "json" });
     const parsed = JSON.parse(result.report) as {
-      title: string;
       success: boolean;
-      summary: { errors: number; warnings: number; info: number };
+      data: {
+        title: string;
+        summary: { errors: number; warnings: number; info: number };
+      };
       diagnostics: Array<{ code: string; severity: string; category: string }>;
     };
 
-    expect(parsed.title).toBe("Lint diagnostics");
+    expect(parsed.data.title).toBe("Lint diagnostics");
     expect(parsed.success).toBe(false);
-    expect(parsed.summary.errors).toBeGreaterThan(0);
+    expect(parsed.data.summary.errors).toBeGreaterThan(0);
     expect(parsed.diagnostics).toContainEqual(
       expect.objectContaining({
         code: "RELATION_MISSING_SLUG",
@@ -105,7 +107,7 @@ describe("runLint", () => {
 
     expect(result.report).toContain("::error ");
     expect(result.report).toContain("title=RELATION_MISSING_SLUG");
-    expect(result.report).toContain("moq.mdx");
+    expect(result.report).toContain("moq.json");
     expect(result.report).toMatch(/nonexistent-slug|not found/);
   });
 

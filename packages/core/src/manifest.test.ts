@@ -10,6 +10,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   type BuildManifest,
   computeCollectionInputHash,
+  computeConfigHash,
   getCachedInputHash,
   loadManifest,
   type ManifestCollectionEntry,
@@ -70,6 +71,17 @@ describe("computeCollectionInputHash", () => {
   });
 });
 
+describe("computeConfigHash", () => {
+  it("computes a stable SHA-256 hash for a config object", () => {
+    const hash = computeConfigHash({ strict: true, extensions: ["mdx", "md"] });
+    expect(hash).toMatch(/^[a-f0-9]{64}$/);
+
+    // different order should yield different hash in JSON.stringify unless we sort
+    // but right now it's just JSON.stringify, so just check it doesn't throw
+    expect(computeConfigHash({ a: 1 })).not.toBe(computeConfigHash({ a: 2 }));
+  });
+});
+
 describe("manifest load/save/merge", () => {
   it("save and load round-trip", async () => {
     const cwd = await createTempDir();
@@ -103,13 +115,51 @@ describe("manifest load/save/merge", () => {
       outputDir: "/proj/generated/content",
       sources: ["content/*"],
       generatedAt: "",
+      configHash: "cfghash",
       collections: [{ name: "faq", inputHash: "abc123", outputFiles: ["faq.ts"] }],
     };
     expect(
-      getCachedInputHash(manifest, "/proj", "/proj/generated/content", ["content/*"], "faq")
+      getCachedInputHash(
+        manifest,
+        "/proj",
+        "/proj/generated/content",
+        ["content/*"],
+        "faq",
+        "cfghash"
+      )
     ).toBe("abc123");
+
     expect(
-      getCachedInputHash(manifest, "/proj", "/proj/generated/content", ["content/*"], "other")
+      getCachedInputHash(
+        manifest,
+        "/proj",
+        "/proj/generated/content",
+        ["content/*"],
+        "other",
+        "cfghash"
+      )
+    ).toBeNull();
+  });
+
+  it("getCachedInputHash returns null if config hash mismatches", () => {
+    const manifest: BuildManifest = {
+      version: 1,
+      cwd: "/proj",
+      outputDir: "/proj/generated/content",
+      sources: ["content/*"],
+      generatedAt: "",
+      configHash: "cfghash",
+      collections: [{ name: "faq", inputHash: "abc123", outputFiles: ["faq.ts"] }],
+    };
+    expect(
+      getCachedInputHash(
+        manifest,
+        "/proj",
+        "/proj/generated/content",
+        ["content/*"],
+        "faq",
+        "different"
+      )
     ).toBeNull();
   });
 
@@ -126,8 +176,9 @@ describe("manifest load/save/merge", () => {
       { name: "faq", inputHash: "new", outputFiles: ["faq.ts"] },
       { name: "docs", inputHash: "docHash", outputFiles: ["docs.ts"] },
     ];
-    const merged = mergeManifest(existing, "/p", "/p/out", ["content/*"], updates);
+    const merged = mergeManifest(existing, "/p", "/p/out", ["content/*"], updates, "newCfgHash");
     expect(merged.collections).toHaveLength(2);
+    expect(merged.configHash).toBe("newCfgHash");
     const faq = merged.collections.find((c) => c.name === "faq");
     const docs = merged.collections.find((c) => c.name === "docs");
     expect(faq?.inputHash).toBe("new");

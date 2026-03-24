@@ -4,12 +4,17 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
-import { globby } from "globby";
 import { loadCollectionConfig, loadProjectConfig, resolveConfig } from "./config.js";
-import { computeCollectionInputHash, getCachedInputHash, loadManifest } from "./manifest.js";
+import {
+  computeCollectionInputHash,
+  computeConfigHash,
+  getCachedInputHash,
+  loadManifest,
+} from "./manifest.js";
 import {
   type DiscoveredCollection,
   discoverCollections,
+  globContentFiles,
   normalizeLegacyContentDir,
 } from "./sources.js";
 
@@ -79,18 +84,18 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
   }
 
   const manifest = await loadManifest(cwd);
+  const projectConfigHash = computeConfigHash(baseConfig as unknown as Record<string, unknown>);
   const dirty: string[] = [];
   const fresh: string[] = [];
 
   for (const collection of collections) {
     const collectionConfig = await loadCollectionConfig(collection.collectionPath);
     const config = resolveConfig(projectConfig, collectionConfig);
-    const extensionPattern = config.extensions.map((e) => `*.${e}`).join(",");
-    const contentFiles = await globby(`{${extensionPattern}}`, {
-      cwd: collection.collectionPath,
-      onlyFiles: true,
-      ignore: config.ignore,
-    });
+    const contentFiles = await globContentFiles(
+      collection.collectionPath,
+      config.extensions,
+      config.ignore
+    );
     const inputHash = await computeCollectionInputHash(
       collection.collectionPath,
       contentFiles,
@@ -102,7 +107,8 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
       cwd,
       baseConfig.outputDir,
       sources,
-      collection.name
+      collection.name,
+      projectConfigHash
     );
     const outputPath = path.join(outputDir, `${collection.name}.ts`);
     let outputExists = false;

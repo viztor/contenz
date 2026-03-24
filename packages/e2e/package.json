@@ -8,8 +8,9 @@
   "devDependencies": {
     "@contenz/core": "*",
     "@contenz/cli": "*",
-    "typescript": "^5.0.0",
-    "@types/node": "^20.0.0",
-    "vitest": "^2.0.0"
+    "@contenz/adapter-mdx": "*",
+    "typescript": "^6.0.2",
+    "@types/node": "^25.5.0",
+    "vitest": "^4.1.1"
   }
 }

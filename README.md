@@ -13,6 +13,7 @@ Contenz is a content management toolkit for developers and content teams. It sim
 
 Full documentation lives in the [docs](./docs/README.md) folder:
 
+- [**Usage guide**](./docs/USAGE.md) – comprehensive guide covering every command and workflow
 - [Architecture](./docs/ARCHITECTURE.md) – packages and pipeline
 - [Configuration](./docs/CONFIGURATION.md) – project and collection config, schemas
 - [CLI reference](./docs/CLI.md) – all commands and options

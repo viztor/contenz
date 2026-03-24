@@ -44,7 +44,7 @@ describe("runStatus", () => {
   it("returns needs-build when content file changed", async () => {
     const cwd = await useFixture("minimal");
     await runBuild({ cwd });
-    const contentPath = path.join(cwd, "content", "faq", "hello.mdx");
+    const contentPath = path.join(cwd, "content", "faq", "hello.json");
     const original = await fs.readFile(contentPath, "utf-8");
     await fs.writeFile(contentPath, `${original}\n`, "utf-8");
 

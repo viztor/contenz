@@ -18,7 +18,7 @@ export interface Diagnostic {
   severity: DiagnosticSeverity;
   category: DiagnosticCategory;
   message: string;
-  source: "build" | "lint";
+  source: string;
   collection?: string;
   file?: string;
   field?: string;
@@ -121,11 +121,13 @@ function formatPrettyReport(input: DiagnosticReportInput): string {
 function formatJsonReport(input: DiagnosticReportInput): string {
   return JSON.stringify(
     {
-      title: input.title,
       success: input.success,
-      summary: summarizeDiagnostics(input.diagnostics),
+      data: {
+        title: input.title,
+        summary: summarizeDiagnostics(input.diagnostics),
+        ...input.metadata,
+      },
       diagnostics: [...input.diagnostics].sort(compareDiagnostics),
-      ...input.metadata,
     },
     null,
     2

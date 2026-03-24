@@ -25,7 +25,7 @@ describe("resolveConfig", () => {
     expect(resolved.outputDir).toBe("generated/content");
     expect(resolved.coveragePath).toBe("contenz.coverage.md");
     expect(resolved.i18n).toBe(false);
-    expect(resolved.extensions).toEqual(["md", "mdx"]);
+    expect(resolved.extensions).toEqual(["md", "mdx", "json"]);
     expect(resolved.ignore).toEqual(["README.md", "_*"]);
   });
 
@@ -164,7 +164,7 @@ describe("getContentType", () => {
       coveragePath: "contenz.coverage.md",
       strict: false,
       i18n: true,
-      extensions: ["md", "mdx"],
+      extensions: ["md", "mdx", "json"],
       ignore: [],
       types: [
         { name: "topic", pattern: /^topic-/ },

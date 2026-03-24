@@ -1,4 +1,3 @@
-import fs from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { resolveSourcePatterns } from "./sources.js";
@@ -83,8 +82,9 @@ const BUILT_IN_DEFAULTS: Required<
   coveragePath: "contenz.coverage.md",
   strict: false,
   i18n: false,
-  extensions: ["md", "mdx"],
+  extensions: ["md", "mdx", "json"],
   ignore: ["README.md", "_*"],
+  adapters: [],
 };
 
 const CONFIG_FILENAMES = [
@@ -104,7 +104,6 @@ export async function loadProjectConfig(cwd: string): Promise<ContenzConfig> {
   for (const filename of CONFIG_FILENAMES) {
     const configPath = path.join(cwd, filename);
     try {
-      await fs.access(configPath);
       const imported = await import(pathToFileURL(configPath).href);
       return imported.config ?? {};
     } catch {}
@@ -120,7 +119,6 @@ export async function loadCollectionConfig(
 ): Promise<CollectionConfig | undefined> {
   const configPath = path.join(collectionPath, "config.ts");
   try {
-    await fs.access(configPath);
     const imported: ConfigModule = await import(pathToFileURL(configPath).href);
     return imported.config;
   } catch {
@@ -134,7 +132,6 @@ export async function loadCollectionConfig(
 export async function loadSchemaModule(collectionPath: string): Promise<SchemaModule | null> {
   const schemaPath = path.join(collectionPath, "schema.ts");
   try {
-    await fs.access(schemaPath);
     const imported = await import(pathToFileURL(schemaPath).href);
     return imported;
   } catch {

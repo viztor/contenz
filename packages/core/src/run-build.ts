@@ -5,16 +5,9 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
-import { globby } from "globby";
+
 import pMap from "p-map";
-import {
-  getContentType,
-  getSchemaForType,
-  loadCollectionConfig,
-  loadProjectConfig,
-  loadSchemaModule,
-  resolveConfig,
-} from "./config.js";
+import { getContentType, getSchemaForType } from "./config.js";
 import { type Diagnostic, type DiagnosticFormat, formatDiagnosticsReport } from "./diagnostics.js";
 import {
   calculateI18nStats,
@@ -27,6 +20,7 @@ import {
 } from "./generator.js";
 import {
   computeCollectionInputHash,
+  computeConfigHash,
   getCachedInputHash,
   loadManifest,
   type ManifestCollectionEntry,
@@ -34,12 +28,8 @@ import {
   saveManifest,
 } from "./manifest.js";
 import { parseContentFile, parseFileName } from "./parser.js";
-import {
-  type DiscoveredCollection,
-  discoverCollections,
-  normalizeLegacyContentDir,
-} from "./sources.js";
 import { validateMeta } from "./validator.js";
+import { type CollectionContext, createWorkspace } from "./workspace.js";
 
 const BUILD_CONCURRENCY = 4;
 
@@ -156,9 +146,8 @@ export const ${typeName}s: Record<string, ${pascalName}Entry> = `;
 }
 
 async function processOneCollection(
-  collection: DiscoveredCollection,
+  ctx: CollectionContext,
   outputDir: string,
-  projectConfig: import("./types.js").ContenzConfig,
   dryRun: boolean
 ): Promise<
   | {
@@ -172,13 +161,8 @@ async function processOneCollection(
   | { ok: false; diagnostics: Diagnostic[] }
 > {
   const diagnostics: Diagnostic[] = [];
-  const collectionName = collection.name;
-  const collectionPath = collection.collectionPath;
+  const { name: collectionName, collectionPath, config, schema: schemaModule, contentFiles } = ctx;
 
-  const collectionConfig = await loadCollectionConfig(collectionPath);
-  const config = resolveConfig(projectConfig, collectionConfig);
-
-  const schemaModule = await loadSchemaModule(collectionPath);
   if (!schemaModule) {
     diagnostics.push({
       code: "SCHEMA_LOAD_FAILED",
@@ -209,13 +193,6 @@ async function processOneCollection(
     ...config,
     types: config.types?.length ? config.types : schemaModule.types,
   };
-
-  const extensionPattern = effectiveConfig.extensions.map((e) => `*.${e}`).join(",");
-  const contentFiles = await globby(`{${extensionPattern}}`, {
-    cwd: collectionPath,
-    onlyFiles: true,
-    ignore: effectiveConfig.ignore,
-  });
 
   const typeGroups = new Map<string, Map<string, I18nCollectionData | FlatCollectionData>>();
   const defaultTypeName = "default";
@@ -433,10 +410,14 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
   const cwd = path.resolve(process.cwd(), options.cwd ?? ".");
   const format = options.format ?? "pretty";
 
-  const projectConfig = await loadProjectConfig(cwd);
-  let baseConfig: ReturnType<typeof resolveConfig>;
+  // ── Bootstrap via Workspace ──────────────────────────────────────────
+  let workspace: Awaited<ReturnType<typeof createWorkspace>>;
   try {
-    baseConfig = resolveConfig(projectConfig);
+    workspace = await createWorkspace({
+      cwd,
+      sources: options.sources,
+      dir: options.dir,
+    });
   } catch (error) {
     diagnostics.push({
       code: "CONFIG_INVALID",
@@ -460,70 +441,15 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
     };
   }
 
-  let sources: string[];
-  try {
-    sources =
-      options.sources ??
-      (options.dir ? [normalizeLegacyContentDir(options.dir)] : baseConfig.sources);
-  } catch (error) {
-    diagnostics.push({
-      code: "CONFIG_INVALID_SOURCE",
-      severity: "error",
-      category: "config",
-      message: error instanceof Error ? error.message : String(error),
-      source: "build",
-    });
-    return {
-      success: false,
-      errors: 1,
-      report: formatDiagnosticsReport({
-        diagnostics,
-        format,
-        title: "Build diagnostics",
-        success: false,
-        metadata: { generated: [] },
-      }),
-      diagnostics,
-      generated: [],
-    };
-  }
+  const { resolvedConfig: baseConfig, sources, collections } = workspace;
   const outputDir = path.resolve(cwd, baseConfig.outputDir);
 
   if (!options.dryRun) {
     await fs.mkdir(outputDir, { recursive: true });
   }
 
-  let collections: DiscoveredCollection[];
-  let discoveryErrors: string[];
-  try {
-    const discovery = await discoverCollections(cwd, sources);
-    collections = discovery.collections;
-    discoveryErrors = discovery.errors;
-  } catch (error) {
-    diagnostics.push({
-      code: "DISCOVERY_FAILED",
-      severity: "error",
-      category: "discovery",
-      message: error instanceof Error ? error.message : String(error),
-      source: "build",
-    });
-    return {
-      success: false,
-      errors: 1,
-      report: formatDiagnosticsReport({
-        diagnostics,
-        format,
-        title: "Build diagnostics",
-        success: false,
-        metadata: { generated: [] },
-      }),
-      diagnostics,
-      generated: [],
-    };
-  }
-
-  if (discoveryErrors.length > 0) {
-    for (const error of discoveryErrors) {
+  if (workspace.discoveryErrors.length > 0) {
+    for (const error of workspace.discoveryErrors) {
       diagnostics.push({
         code: "DISCOVERY_DUPLICATE_COLLECTION",
         severity: "error",
@@ -534,7 +460,7 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
     }
     return {
       success: false,
-      errors: discoveryErrors.length,
+      errors: workspace.discoveryErrors.length,
       report: formatDiagnosticsReport({
         diagnostics,
         format,
@@ -573,26 +499,19 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
 
   const force = options.force ?? false;
   const dryRun = options.dryRun ?? false;
+  const projectConfigHash = computeConfigHash(baseConfig as unknown as Record<string, unknown>);
   const manifest = !force && !dryRun ? await loadManifest(cwd) : null;
 
   /** Collections we can skip (cached hash matches, output exists) */
   const skipped: { name: string; outputName: string; indexMeta: IndexMeta }[] = [];
   /** Collections we need to build */
-  const toBuild: { collection: DiscoveredCollection; inputHash: string }[] = [];
+  const toBuild: { ctx: CollectionContext; inputHash: string }[] = [];
 
-  for (const collection of collections) {
-    const collectionConfig = await loadCollectionConfig(collection.collectionPath);
-    const config = resolveConfig(projectConfig, collectionConfig);
-    const extensionPattern = config.extensions.map((e) => `*.${e}`).join(",");
-    const contentFiles = await globby(`{${extensionPattern}}`, {
-      cwd: collection.collectionPath,
-      onlyFiles: true,
-      ignore: config.ignore,
-    });
+  for (const ctx of collections) {
     const inputHash = await computeCollectionInputHash(
-      collection.collectionPath,
-      contentFiles,
-      config.extensions
+      ctx.collectionPath,
+      ctx.contentFiles,
+      ctx.config.extensions
     );
 
     let skip = false;
@@ -602,9 +521,10 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
         cwd,
         baseConfig.outputDir,
         sources,
-        collection.name
+        ctx.name,
+        projectConfigHash
       );
-      const outputPath = path.join(outputDir, `${collection.name}.ts`);
+      const outputPath = path.join(outputDir, `${ctx.name}.ts`);
       try {
         await fs.access(outputPath);
         if (cachedHash === inputHash) skip = true;
@@ -613,27 +533,25 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
       }
     }
     if (skip) {
-      const entry = manifest?.collections.find((c) => c.name === collection.name);
+      const entry = manifest?.collections.find((c) => c.name === ctx.name);
       const indexMeta = entry?.indexMeta ?? {
-        name: collection.name,
-        hasI18n: config.i18n,
-        types: config.types?.map((t) => t.name),
+        name: ctx.name,
+        hasI18n: ctx.config.i18n,
+        types: ctx.config.types?.map((t) => t.name),
       };
       skipped.push({
-        name: collection.name,
-        outputName: `${collection.name}.ts`,
+        name: ctx.name,
+        outputName: `${ctx.name}.ts`,
         indexMeta: indexMeta as IndexMeta,
       });
     } else {
-      toBuild.push({ collection, inputHash });
+      toBuild.push({ ctx, inputHash });
     }
   }
 
-  const results = await pMap(
-    toBuild,
-    ({ collection }) => processOneCollection(collection, outputDir, projectConfig, dryRun),
-    { concurrency: BUILD_CONCURRENCY }
-  );
+  const results = await pMap(toBuild, ({ ctx }) => processOneCollection(ctx, outputDir, dryRun), {
+    concurrency: BUILD_CONCURRENCY,
+  });
 
   for (const r of results) {
     diagnostics.push(...r.diagnostics);
@@ -682,7 +600,14 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
       outputFiles: [r.outputName],
       indexMeta: r.indexMeta,
     }));
-    const merged = mergeManifest(manifest, cwd, baseConfig.outputDir, sources, updates);
+    const merged = mergeManifest(
+      manifest,
+      cwd,
+      baseConfig.outputDir,
+      sources,
+      updates,
+      projectConfigHash
+    );
     await saveManifest(merged);
   }
 

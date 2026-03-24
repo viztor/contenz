@@ -1,10 +1,18 @@
 /**
- * contenz – Content validation and codegen from MDX/Markdown with Zod.
+ * contenz – Content validation and codegen from MDX/Markdown/JSON with Zod.
  *
  * Use the CLI: `contenz lint`, `contenz build`
  * Use in schema files: `import { defineCollection } from "@contenz/core"`
  */
 
+export {
+  type ContentLocation,
+  readContent,
+  resolveContentFile,
+  updateContent,
+  type WriteContentOptions,
+  writeContent,
+} from "./content-io.js";
 export {
   type DefineCollectionMultiOptions,
   type DefineCollectionSingleOptions,
@@ -19,6 +27,19 @@ export type {
   DiagnosticSeverity,
   DiagnosticSummary,
 } from "./diagnostics.js";
+export {
+  type FormatAdapter,
+  getAdapterForExtension,
+  jsonAdapter,
+  registerAdapters,
+} from "./format-adapter.js";
+export {
+  type IntrospectedField,
+  type IntrospectedSchema,
+  introspectField,
+  introspectSchema,
+  type SchemaFieldType,
+} from "./introspect.js";
 export type {
   CollectionConfig,
   CollectionItem,
@@ -33,3 +54,9 @@ export type {
   ResolvedI18nConfig,
   SchemaModule,
 } from "./types.js";
+export {
+  type CollectionContext,
+  type CreateWorkspaceOptions,
+  createWorkspace,
+  type Workspace,
+} from "./workspace.js";
