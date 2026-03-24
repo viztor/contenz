@@ -8,7 +8,13 @@ import path from "node:path";
 
 import pMap from "p-map";
 import { extractRelations, getContentType, getSchemaForType } from "./config.js";
-import { type Diagnostic, type DiagnosticFormat, formatDiagnosticsReport } from "./diagnostics.js";
+import {
+  type Diagnostic,
+  type DiagnosticFormat,
+  formatDiagnosticsReport,
+  schemaExportMissing,
+  schemaLoadFailed,
+} from "./diagnostics.js";
 import { parseContentFile, parseFileName } from "./parser.js";
 import type { Relations } from "./types.js";
 import {
@@ -72,14 +78,7 @@ async function firstPassOneCollection(
   const validationResults: ValidationResult[] = [];
 
   if (!schemaModule) {
-    diagnostics.push({
-      code: "SCHEMA_LOAD_FAILED",
-      severity: "error",
-      category: "schema",
-      message: "Failed to load schema.ts.",
-      source: "lint",
-      collection: collectionName,
-    });
+    diagnostics.push(schemaLoadFailed("lint", collectionName));
     return {
       collectionName,
       slugs,
@@ -94,14 +93,7 @@ async function firstPassOneCollection(
 
   const rawSchema = schemaModule.meta;
   if (!rawSchema) {
-    diagnostics.push({
-      code: "SCHEMA_EXPORT_MISSING",
-      severity: "error",
-      category: "schema",
-      message: "No meta export found in schema module.",
-      source: "lint",
-      collection: collectionName,
-    });
+    diagnostics.push(schemaExportMissing("lint", collectionName));
     return {
       collectionName,
       slugs,

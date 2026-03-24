@@ -3,7 +3,8 @@ import path from "node:path";
 import { getAdapterForExtension } from "./format-adapter.js";
 import type { ParsedContent, ResolvedConfig } from "./types.js";
 
-export type ContentExtension = "mdx" | "md" | "json";
+/** File extension for content files (e.g. "md", "mdx", "json"). */
+export type ContentExtension = string;
 
 export interface ParseFileNameResult {
   slug: string;
@@ -11,10 +12,17 @@ export interface ParseFileNameResult {
   ext: ContentExtension;
 }
 
-// Pattern for i18n: {slug}.{locale}.{ext}
-const I18N_PATTERN = /^(.+)\.([a-z]{2}(?:-[A-Z]{2})?)\.(mdx|md|json)$/;
-// Pattern for non-i18n: {slug}.{ext}
-const NON_I18N_PATTERN = /^(.+)\.(mdx|md|json)$/;
+/** Default extensions used when no config-level extensions are specified. */
+const DEFAULT_EXTENSIONS = ["mdx", "md", "json"];
+
+/**
+ * Build a regex alternation pattern from an array of extensions.
+ * e.g. ["md", "mdx", "json"] → "md|mdx|json"
+ */
+function extAlternation(extensions?: string[]): string {
+  const exts = extensions?.length ? extensions : DEFAULT_EXTENSIONS;
+  return exts.map((e) => e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+}
 
 /**
  * Parse filename to extract slug and optional locale.
@@ -25,7 +33,8 @@ const NON_I18N_PATTERN = /^(.+)\.(mdx|md|json)$/;
 export function parseFileName(
   fileName: string,
   i18nEnabled: boolean,
-  customPattern?: RegExp
+  customPattern?: RegExp,
+  extensions?: string[]
 ): ParseFileNameResult | null {
   // Use custom pattern if provided
   if (customPattern) {
@@ -35,26 +44,28 @@ export function parseFileName(
     return {
       slug: match[1],
       locale: match[2],
-      ext: (match[3] || match[2]) as ContentExtension,
+      ext: match[3] || match[2],
     };
   }
 
+  const alt = extAlternation(extensions);
+
   if (i18nEnabled) {
-    const match = fileName.match(I18N_PATTERN);
+    const match = fileName.match(new RegExp(`^(.+)\\.([a-z]{2}(?:-[A-Z]{2})?)\\.(${alt})$`));
     if (!match) return null;
     return {
       slug: match[1],
       locale: match[2],
-      ext: match[3] as ContentExtension,
-    };
-  } else {
-    const match = fileName.match(NON_I18N_PATTERN);
-    if (!match) return null;
-    return {
-      slug: match[1],
-      ext: match[2] as ContentExtension,
+      ext: match[3],
     };
   }
+
+  const match = fileName.match(new RegExp(`^(.+)\\.(${alt})$`));
+  if (!match) return null;
+  return {
+    slug: match[1],
+    ext: match[2],
+  };
 }
 
 /**

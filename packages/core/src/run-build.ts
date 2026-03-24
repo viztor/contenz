@@ -8,7 +8,13 @@ import path from "node:path";
 
 import pMap from "p-map";
 import { getContentType, getSchemaForType } from "./config.js";
-import { type Diagnostic, type DiagnosticFormat, formatDiagnosticsReport } from "./diagnostics.js";
+import {
+  type Diagnostic,
+  type DiagnosticFormat,
+  formatDiagnosticsReport,
+  schemaExportMissing,
+  schemaLoadFailed,
+} from "./diagnostics.js";
 import {
   calculateI18nStats,
   type FlatCollectionData,
@@ -164,27 +170,13 @@ async function processOneCollection(
   const { name: collectionName, collectionPath, config, schema: schemaModule, contentFiles } = ctx;
 
   if (!schemaModule) {
-    diagnostics.push({
-      code: "SCHEMA_LOAD_FAILED",
-      severity: "error",
-      category: "schema",
-      message: "Failed to load schema.ts.",
-      source: "build",
-      collection: collectionName,
-    });
+    diagnostics.push(schemaLoadFailed("build", collectionName));
     return { ok: false, diagnostics };
   }
 
   const rawSchema = schemaModule.meta;
   if (!rawSchema) {
-    diagnostics.push({
-      code: "SCHEMA_EXPORT_MISSING",
-      severity: "error",
-      category: "schema",
-      message: "No meta export found in schema module.",
-      source: "build",
-      collection: collectionName,
-    });
+    diagnostics.push(schemaExportMissing("build", collectionName));
     return { ok: false, diagnostics };
   }
   const defaultSchema = rawSchema as import("zod").ZodSchema;

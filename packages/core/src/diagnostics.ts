@@ -175,3 +175,27 @@ export function formatDiagnosticsReport(input: DiagnosticReportInput): string {
       return formatPrettyReport(input);
   }
 }
+
+// ── Diagnostic factories (DRY helpers for pipelines) ───────────────────────
+
+export function schemaLoadFailed(source: string, collection: string): Diagnostic {
+  return {
+    code: "SCHEMA_LOAD_FAILED",
+    severity: "error",
+    category: "schema",
+    message: "Failed to load schema.ts.",
+    source,
+    collection,
+  };
+}
+
+export function schemaExportMissing(source: string, collection: string): Diagnostic {
+  return {
+    code: "SCHEMA_EXPORT_MISSING",
+    severity: "error",
+    category: "schema",
+    message: "No meta export found in schema module.",
+    source,
+    collection,
+  };
+}
