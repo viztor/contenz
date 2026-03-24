@@ -197,24 +197,13 @@ Actionable items ordered by priority. Each is self-contained and can be executed
 
 Removed in this session: deleted `packages/studio/`, `commands/studio.ts`, `docs/STUDIO.md`, `@contenz/studio` dependency, and all doc references.
 
-### 🔴 REMOVE: `metaSchema` Legacy Alias
+### ✅ DONE: `metaSchema` Legacy Alias
 
-`defineCollection()` returns both `meta` and `metaSchema` pointing to the same schema. `metaSchema` is a legacy name. Both `run-build.ts` and `run-lint.ts` use a fallback pattern `schemaModule.meta || schemaModule.metaSchema`.
+Removed `metaSchema` from `defineCollection()` return type, `run-build.ts`, `run-lint.ts`, all fixture schemas, and `init.ts` template.
 
-**Files to change:**
-1. **Remove** `metaSchema` from `define-collection.ts` return values and overload signatures
-2. **Remove** `|| (schemaModule as Record<string, unknown>).metaSchema` fallback from `run-build.ts:178` and `run-lint.ts:95`
-3. **Update** all fixture `schema.ts` files to destructure only `{ meta, relations }` (drop `metaSchema`)
-4. **Update** `packages/cli/src/commands/init.ts:64` scaffolded template
+### ✅ DONE: `init` Command Scaffolds Stale Content
 
-### 🟡 FIX: `init` Command Scaffolds Stale Content
-
-`init.ts` scaffolds `.mdx` files with `export const meta = { ... }` syntax but:
-- Does not include `@contenz/adapter-mdx` in install instructions
-- Does not add `adapters: [mdxAdapter]` to the generated config
-- Comment says default extensions are `["md", "mdx"]` — actual default is `["md", "mdx", "json"]`
-
-**Fix:** Either scaffold `.json` files (zero-adapter), or include adapter setup in generated config.
+Changed init to scaffold `.json` files (zero-adapter default), corrected extensions default in config template comment.
 
 ### 🟡 CONSOLIDATE: `index.ts` vs `api.ts` Export Overlap
 
