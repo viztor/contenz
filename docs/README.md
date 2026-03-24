@@ -17,7 +17,6 @@ This folder is the main documentation set for the Contenz repo. Use it to set up
 
 - [PROJECT_SCOPE.md](../PROJECT_SCOPE.md) – Product direction and scope
 - [ROADMAP.md](../ROADMAP.md) – Milestone sequencing
-- [BACKLOG.md](../BACKLOG.md) – Near-term work
 - [CONTRIBUTING.md](../CONTRIBUTING.md) – Setup, workspace commands, and code style
 
 ## Quick start

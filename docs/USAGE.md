@@ -90,7 +90,7 @@ project-root/
 | `false` | `{slug}.{ext}` | `hello-world.mdx`, `faq.md` |
 | `true` | `{slug}.{locale}.{ext}` | `moq.en.mdx`, `intro.zh.md` |
 
-Supported extensions: `md`, `mdx`, `json`.
+Supported extensions: `md`, `mdx`, `json` (default). MD/MDX require `@contenz/adapter-mdx` to be registered; JSON is built-in.
 
 ### Metadata formats
 
@@ -426,6 +426,8 @@ See [API reference](./API.md) for the complete list of exports and types.
 | `ignore` | `string[]` | `["README.md", "_*"]` | Patterns to ignore |
 | `strict` | `boolean` | `false` | Fail on warnings |
 | `coveragePath` | `string` | `"contenz.coverage.md"` | Coverage report path |
+| `adapters` | `FormatAdapter[]` | `[]` | Format adapters for content parsing. Register `@contenz/adapter-mdx` for MD/MDX support. JSON is built-in. |
+| `collections` | `Record<string, CollectionDeclaration>` | `undefined` | Inline collection declarations with schemas. See [Configuration – Centralized collections](./CONFIGURATION.md#centralized-collections). |
 
 ### Collection config (`content/<collection>/config.ts`)
 

@@ -12,10 +12,10 @@ contenz/
 │   ├── adapter-mdx/ # @contenz/adapter-mdx – MD/MDX format adapter
 │   └── e2e/        # E2E tests and fixtures (private, not published)
 ├── docs/           # This documentation set
+├── scripts/        # Publish and utility scripts
 ├── contenz.config.ts
 ├── PROJECT_SCOPE.md
-├── ROADMAP.md
-└── BACKLOG.md
+└── ROADMAP.md
 ```
 
 ## Packages
@@ -42,12 +42,12 @@ contenz/
 ### packages/e2e
 
 - **Role**: End-to-end tests and fixtures. Not published.
-- **Fixtures**: `minimal`, `mixed-sources`, `i18n`, `multi-type` – used to drive CLI and pipeline tests.
+- **Fixtures**: `minimal`, `centralized`, `i18n`, `multi-type`, `mixed-sources`, `invalid-schema`, `invalid-relation` – used to drive CLI and pipeline tests.
 
 ## Data flow
 
 1. **Config**
-   `contenz.config.ts` (and optional `content/<collection>/config.ts`) is loaded and resolved by `@contenz/core`. Defines sources, i18n, output dir, extensions, ignore patterns.
+   `contenz.config.ts` (and optional `content/<collection>/config.ts`) is loaded and resolved by `@contenz/core`. Defines sources, i18n, output dir, extensions, ignore patterns, format adapters, and optional inline `collections` declarations.
 
 2. **Discovery**
    `discoverCollections(cwd, sources)` walks the filesystem and returns collection roots and their paths. Collection identity comes from folder names under the source pattern (e.g. `content/*` → `content/faq` → collection `faq`).

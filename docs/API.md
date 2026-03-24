@@ -46,14 +46,16 @@ The `Workspace` module provides a consolidated loading mechanism that eliminates
 
 ## Format adapters
 
-| Export | Description |
-|--------|-------------|
-| `getAdapterForExtension(ext)` | Get the format adapter for a file extension. Returns `FormatAdapter \| null`. |
-| `mdxAdapter` | Built-in adapter for `.mdx` files (`export const meta = { ... }`). |
-| `mdAdapter` | Built-in adapter for `.md` files (YAML/JSON frontmatter). |
-| `jsonAdapter` | Built-in adapter for `.json` files. |
+| Export | Source | Description |
+|--------|--------|-------------|
+| `getAdapterForExtension(ext)` | `@contenz/core/api` | Get the registered format adapter for a file extension. Returns `FormatAdapter \| null`. |
+| `jsonAdapter` | `@contenz/core/api` | Built-in adapter for `.json` files. Registered automatically. |
+| `registerAdapters(adapters)` | `@contenz/core/api` | Register format adapters (called internally by `createWorkspace`). |
+| `mdxAdapter` | `@contenz/adapter-mdx` | External adapter for `.md` and `.mdx` files. Must be registered via `adapters` in config. |
 
 **FormatAdapter interface**: `extensions: string[]`, `extract(source, filePath)`, `serialize(meta, body?)`.
+
+Note: `mdxAdapter` handles both `.md` and `.mdx` files with dual syntax support (frontmatter and `export const meta`). It is **not** included in `@contenz/core` — install `@contenz/adapter-mdx` separately.
 
 ## Validation
 

@@ -134,8 +134,6 @@ Exit code is `0` when up to date, `1` when a build is needed. Useful in CI or sc
 
 ---
 
----
-
 ## view
 
 View a single content item by collection and slug. Returns the full metadata and body.
