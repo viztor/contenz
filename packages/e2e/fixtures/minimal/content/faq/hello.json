@@ -1,1 +1,4 @@
-{"question":"What is the minimum order quantity?","category":"products"}
+{
+  "question": "What is the minimum order quantity?",
+  "category": "INVALID"
+}

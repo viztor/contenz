@@ -88,18 +88,48 @@ const FIXTURES_WITH_SCHEMA = [
   "mixed-sources",
   "invalid-schema",
   "invalid-relation",
+  "centralized",
 ];
 
 beforeAll(() => {
+  const zodRoot = path.join(coreRoot, "node_modules", "zod");
   for (const name of FIXTURES_WITH_SCHEMA) {
     ensureSymlink(fixture(name), "@contenz/core", coreRoot);
     ensureSymlink(fixture(name), "@contenz/adapter-mdx", adapterMdxRoot);
   }
+  // Centralized fixture imports zod directly in contenz.config.ts
+  ensureSymlink(fixture("centralized"), "zod", zodRoot);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
 // CLI TESTS
 // ═══════════════════════════════════════════════════════════════════════════
+
+describe("cli: centralized (inline collections, no schema.ts)", () => {
+  const cwd = fixture("centralized");
+
+  it("lint exits 0 with inline schema", () => {
+    const r = runCli(["lint"], cwd);
+    expect(r.status).toBe(0);
+  });
+
+  it("build exits 0 and generates output", () => {
+    const r = runCli(["build"], cwd);
+    expect(r.status).toBe(0);
+    expect(fs.existsSync(path.join(cwd, "generated", "content", "notes.ts"))).toBe(true);
+  });
+
+  it("build output contains content data", () => {
+    runCli(["build", "--force"], cwd);
+    const output = fs.readFileSync(
+      path.join(cwd, "generated", "content", "notes.ts"),
+      "utf-8"
+    );
+    expect(output).toContain("groceries");
+    expect(output).toContain("reading");
+    expect(output).toContain("Buy groceries");
+  });
+});
 
 describe("cli: minimal (flat, no i18n)", () => {
   const cwd = fixture("minimal");

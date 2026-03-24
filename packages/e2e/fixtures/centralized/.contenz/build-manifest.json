@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "cwd": "/Users/viz/dev/contenz/packages/e2e/fixtures/centralized",
+  "outputDir": "generated/content",
+  "sources": [
+    "content/*"
+  ],
+  "configHash": "5e8a1a197624bb9601dcb526ee219df0ad9c6d914c76c1f42ef882bb03bb5cb2",
+  "generatedAt": "2026-03-24T19:37:46.927Z",
+  "collections": [
+    {
+      "name": "notes",
+      "inputHash": "504420fa953c827052c4f500ac0266a3ecd1b77b462d10b975c1519e2421dcc2",
+      "outputFiles": [
+        "notes.ts"
+      ],
+      "indexMeta": {
+        "name": "notes",
+        "hasI18n": false,
+        "metaTypeName": "NotesMeta"
+      }
+    }
+  ]
+}
