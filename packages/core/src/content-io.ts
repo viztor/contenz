@@ -1,14 +1,13 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { loadCollectionConfig, loadProjectConfig, resolveConfig } from "./config.js";
 import {
   type ContentExtension,
   parseContentFile,
   parseFileName,
   serializeContentFile,
 } from "./parser.js";
-import { discoverCollections, globContentFiles } from "./sources.js";
-import type { ParsedContent, ResolvedConfig } from "./types.js";
+import type { ParsedContent } from "./types.js";
+import { type CollectionContext, createWorkspace } from "./workspace.js";
 
 export interface ContentLocation {
   collectionName: string;
@@ -19,66 +18,38 @@ export interface ContentLocation {
   ext: ContentExtension;
 }
 
-/** Internal resolved context shared across read/write/update operations */
-interface ResolvedCollectionContext {
-  collectionPath: string;
-  config: ResolvedConfig;
-}
-
-/** Internal: load project + collection config + discover a collection */
-async function resolveCollection(
-  cwd: string,
-  collectionName: string
-): Promise<ResolvedCollectionContext | null> {
-  const projectConfig = await loadProjectConfig(cwd);
-  const discovery = await discoverCollections(cwd, projectConfig.sources ?? ["content/*"]);
-  const collection = discovery.collections.find((c) => c.name === collectionName);
-
-  if (!collection) return null;
-
-  const collectionConfig = await loadCollectionConfig(collection.collectionPath);
-  const config = resolveConfig(projectConfig, collectionConfig);
-
-  return { collectionPath: collection.collectionPath, config };
-}
-
 /**
- * Internal: find a content file by slug within an already-resolved collection.
- * Separated from resolveCollection so callers can load config once.
+ * Internal: find a content file by slug within an already-loaded collection context.
  */
-async function findContentFile(
-  ctx: ResolvedCollectionContext,
-  collectionName: string,
+function findContentFile(
+  col: CollectionContext,
   slug: string,
   locale?: string
-): Promise<ContentLocation | null> {
-  const { collectionPath, config } = ctx;
-  const contentFiles = await globContentFiles(collectionPath, config.extensions, config.ignore);
-
-  for (const file of contentFiles) {
-    const parsed = parseFileName(file, config.i18n, config.slugPattern);
+): ContentLocation | null {
+  for (const file of col.contentFiles) {
+    const parsed = parseFileName(file, col.config.i18n, col.config.slugPattern);
     if (!parsed || parsed.slug !== slug) continue;
 
-    if (config.i18n) {
+    if (col.config.i18n) {
       if (
         (locale && parsed.locale === locale) ||
-        (!locale && parsed.locale === config.resolvedI18n?.defaultLocale)
+        (!locale && parsed.locale === col.config.resolvedI18n?.defaultLocale)
       ) {
         return {
-          collectionName,
-          collectionPath,
+          collectionName: col.name,
+          collectionPath: col.collectionPath,
           slug: parsed.slug,
           locale: parsed.locale,
-          filePath: path.join(collectionPath, file),
+          filePath: path.join(col.collectionPath, file),
           ext: parsed.ext,
         };
       }
     } else {
       return {
-        collectionName,
-        collectionPath,
+        collectionName: col.name,
+        collectionPath: col.collectionPath,
         slug: parsed.slug,
-        filePath: path.join(collectionPath, file),
+        filePath: path.join(col.collectionPath, file),
         ext: parsed.ext,
       };
     }
@@ -89,7 +60,7 @@ async function findContentFile(
 
 /**
  * Resolves a slug to an existing file path within a collection.
- * Public API — loads config internally.
+ * Loads workspace (registers adapters) internally.
  */
 export async function resolveContentFile(
   cwd: string,
@@ -97,16 +68,17 @@ export async function resolveContentFile(
   slug: string,
   locale?: string
 ): Promise<ContentLocation | null> {
-  const ctx = await resolveCollection(cwd, collectionName);
-  if (!ctx) {
+  const ws = await createWorkspace({ cwd, collection: collectionName });
+  const col = ws.getCollection(collectionName);
+  if (!col) {
     throw new Error(`Collection not found: ${collectionName}`);
   }
-  return findContentFile(ctx, collectionName, slug, locale);
+  return findContentFile(col, slug, locale);
 }
 
 /**
  * Reads a content item by slug.
- * Loads config once — no double-loading.
+ * Loads workspace once — adapters are registered automatically.
  */
 export async function readContent(
   cwd: string,
@@ -114,13 +86,14 @@ export async function readContent(
   slug: string,
   locale?: string
 ): Promise<ParsedContent | null> {
-  const ctx = await resolveCollection(cwd, collectionName);
-  if (!ctx) return null;
+  const ws = await createWorkspace({ cwd, collection: collectionName });
+  const col = ws.getCollection(collectionName);
+  if (!col) return null;
 
-  const location = await findContentFile(ctx, collectionName, slug, locale);
+  const location = findContentFile(col, slug, locale);
   if (!location) return null;
 
-  return parseContentFile(location.filePath, ctx.config);
+  return parseContentFile(location.filePath, col.config);
 }
 
 export interface WriteContentOptions {
@@ -135,25 +108,26 @@ export interface WriteContentOptions {
 
 /**
  * Writes a new content item or overwrites an existing one completely.
+ * Loads workspace once — adapters are registered automatically.
  */
 export async function writeContent(options: WriteContentOptions): Promise<ContentLocation> {
-  const ctx = await resolveCollection(options.cwd, options.collectionName);
-  if (!ctx) {
+  const ws = await createWorkspace({ cwd: options.cwd, collection: options.collectionName });
+  const col = ws.getCollection(options.collectionName);
+  if (!col) {
     throw new Error(`Collection not found: ${options.collectionName}`);
   }
 
-  const { collectionPath, config } = ctx;
-  const ext = options.ext ?? (config.extensions[0] as ContentExtension) ?? "mdx";
+  const ext = options.ext ?? (col.config.extensions[0] as ContentExtension) ?? "mdx";
   let fileName = `${options.slug}.${ext}`;
-  if (config.i18n) {
-    const localeToUse = options.locale ?? config.resolvedI18n?.defaultLocale;
+  if (col.config.i18n) {
+    const localeToUse = options.locale ?? col.config.resolvedI18n?.defaultLocale;
     if (!localeToUse) {
       throw new Error("Locale is required when i18n is enabled");
     }
     fileName = `${options.slug}.${localeToUse}.${ext}`;
   }
 
-  const filePath = path.join(collectionPath, fileName);
+  const filePath = path.join(col.collectionPath, fileName);
   await fs.mkdir(path.dirname(filePath), { recursive: true });
 
   const content = serializeContentFile(options.meta, options.body ?? "", ext);
@@ -161,7 +135,7 @@ export async function writeContent(options: WriteContentOptions): Promise<Conten
 
   return {
     collectionName: options.collectionName,
-    collectionPath,
+    collectionPath: col.collectionPath,
     slug: options.slug,
     locale: options.locale,
     filePath,
@@ -171,7 +145,7 @@ export async function writeContent(options: WriteContentOptions): Promise<Conten
 
 /**
  * Surgically updates an existing content item, preserving body and format.
- * Loads config once — no double-loading. Returns updated state without re-reading from disk.
+ * Loads workspace once — adapters are registered, no double-loading.
  */
 export async function updateContent(
   cwd: string,
@@ -180,13 +154,14 @@ export async function updateContent(
   mutations: { set?: Record<string, unknown>; unset?: string[] },
   locale?: string
 ): Promise<ParsedContent | null> {
-  const ctx = await resolveCollection(cwd, collectionName);
-  if (!ctx) return null;
+  const ws = await createWorkspace({ cwd, collection: collectionName });
+  const col = ws.getCollection(collectionName);
+  if (!col) return null;
 
-  const location = await findContentFile(ctx, collectionName, slug, locale);
+  const location = findContentFile(col, slug, locale);
   if (!location) return null;
 
-  const current = await parseContentFile(location.filePath, ctx.config);
+  const current = await parseContentFile(location.filePath, col.config);
 
   // Apply mutations
   const newMeta = { ...current.meta };

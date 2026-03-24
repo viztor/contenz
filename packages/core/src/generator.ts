@@ -25,6 +25,7 @@ export type CollectionData = I18nCollectionData | FlatCollectionData;
  * Get the Zod type name from a schema (handles both old and new Zod versions).
  */
 function getZodTypeName(schema: ZodTypeAny): string | undefined {
+  // biome-ignore lint/suspicious/noExplicitAny: Zod internals — _def is not publicly typed in Zod 3.25
   const def = schema._def as any;
   // New Zod (v4+) uses _def.type as a string
   if (def?.type && typeof def.type === "string") {
@@ -39,6 +40,7 @@ function getZodTypeName(schema: ZodTypeAny): string | undefined {
  */
 function zodToTypeString(schema: ZodTypeAny, indent = 0): string {
   const pad = "  ".repeat(indent);
+  // biome-ignore lint/suspicious/noExplicitAny: Zod internals — _def is not publicly typed in Zod 3.25
   const def = schema._def as any;
   const typeName = getZodTypeName(schema);
 

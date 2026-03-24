@@ -4,19 +4,13 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
-import { loadCollectionConfig, loadProjectConfig, resolveConfig } from "./config.js";
 import {
   computeCollectionInputHash,
   computeConfigHash,
   getCachedInputHash,
   loadManifest,
 } from "./manifest.js";
-import {
-  type DiscoveredCollection,
-  discoverCollections,
-  globContentFiles,
-  normalizeLegacyContentDir,
-} from "./sources.js";
+import { createWorkspace } from "./workspace.js";
 
 export interface StatusResult {
   /** "up-to-date" if manifest matches current inputs and outputs exist; "needs-build" otherwise */
@@ -41,10 +35,10 @@ export interface StatusOptions {
  */
 export async function runStatus(options: StatusOptions): Promise<StatusResult> {
   const cwd = path.resolve(process.cwd(), options.cwd ?? ".");
-  const projectConfig = await loadProjectConfig(cwd);
-  let baseConfig: ReturnType<typeof resolveConfig>;
+
+  let ws: Awaited<ReturnType<typeof createWorkspace>>;
   try {
-    baseConfig = resolveConfig(projectConfig);
+    ws = await createWorkspace({ cwd, sources: options.sources, dir: options.dir });
   } catch {
     return {
       status: "needs-build",
@@ -54,63 +48,42 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
     };
   }
 
-  const sources =
-    options.sources ??
-    (options.dir ? [normalizeLegacyContentDir(options.dir)] : baseConfig.sources);
-  const outputDir = path.resolve(cwd, baseConfig.outputDir);
-
-  let collections: DiscoveredCollection[];
-  try {
-    const discovery = await discoverCollections(cwd, sources);
-    collections = discovery.collections;
-    if (discovery.errors.length > 0 || collections.length === 0) {
-      return {
-        status: "needs-build",
-        message:
-          collections.length === 0
-            ? "No collections found."
-            : "Discovery errors; run build for details.",
-        dirtyCollections: [],
-        freshCollections: [],
-      };
-    }
-  } catch {
+  if (ws.discoveryErrors.length > 0 || ws.collections.length === 0) {
     return {
       status: "needs-build",
-      message: "Failed to discover collections.",
+      message:
+        ws.collections.length === 0
+          ? "No collections found."
+          : "Discovery errors; run build for details.",
       dirtyCollections: [],
       freshCollections: [],
     };
   }
 
+  const outputDir = path.resolve(cwd, ws.resolvedConfig.outputDir);
   const manifest = await loadManifest(cwd);
-  const projectConfigHash = computeConfigHash(baseConfig as unknown as Record<string, unknown>);
+  const projectConfigHash = computeConfigHash(
+    ws.resolvedConfig as unknown as Record<string, unknown>
+  );
   const dirty: string[] = [];
   const fresh: string[] = [];
 
-  for (const collection of collections) {
-    const collectionConfig = await loadCollectionConfig(collection.collectionPath);
-    const config = resolveConfig(projectConfig, collectionConfig);
-    const contentFiles = await globContentFiles(
-      collection.collectionPath,
-      config.extensions,
-      config.ignore
-    );
+  for (const col of ws.collections) {
     const inputHash = await computeCollectionInputHash(
-      collection.collectionPath,
-      contentFiles,
-      config.extensions
+      col.collectionPath,
+      col.contentFiles,
+      col.config.extensions
     );
 
     const cachedHash = getCachedInputHash(
       manifest,
       cwd,
-      baseConfig.outputDir,
-      sources,
-      collection.name,
+      ws.resolvedConfig.outputDir,
+      ws.sources,
+      col.name,
       projectConfigHash
     );
-    const outputPath = path.join(outputDir, `${collection.name}.ts`);
+    const outputPath = path.join(outputDir, `${col.name}.ts`);
     let outputExists = false;
     try {
       await fs.access(outputPath);
@@ -120,9 +93,9 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
     }
 
     if (cachedHash === inputHash && outputExists) {
-      fresh.push(collection.name);
+      fresh.push(col.name);
     } else {
-      dirty.push(collection.name);
+      dirty.push(col.name);
     }
   }
 

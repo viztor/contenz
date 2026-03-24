@@ -183,9 +183,11 @@ export function extractRelations(
   const schema = schemaModule.meta;
 
   if (schema && "_def" in schema) {
-    const def = schema._def as { shape?: () => Record<string, unknown> };
-    if (typeof def.shape === "function") {
-      const shape = def.shape();
+    // biome-ignore lint/suspicious/noExplicitAny: Zod internals — _def.shape is a function in old Zod, plain object in Zod 3.25
+    const def = (schema as any)._def;
+    const shape =
+      typeof def?.shape === "function" ? def.shape() : (def?.shape as Record<string, unknown>);
+    if (shape && typeof shape === "object") {
       for (const fieldName of Object.keys(shape)) {
         // Match pattern: related{Collection} → collection
         const match = fieldName.match(/^related([A-Z][a-zA-Z]*)$/);

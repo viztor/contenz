@@ -115,9 +115,6 @@ export interface ViewResult {
 
 export async function runView(opts: ViewOptions): Promise<ContentOpResult<ViewResult>> {
   try {
-    // Load workspace first to register format adapters from config
-    await createWorkspace({ cwd: opts.cwd, collection: opts.collection });
-
     const result = await readContent(opts.cwd, opts.collection, opts.slug, opts.locale);
 
     if (!result) {
@@ -242,7 +239,7 @@ export async function runUpdate(opts: UpdateOptions): Promise<ContentOpResult<Up
       return { success: false, error: "No mutations specified. Use --set or --unset." };
     }
 
-    // Read the current content to compute the merged meta for validation
+    // Read current content (workspace loaded + adapters registered internally)
     const current = await readContent(opts.cwd, opts.collection, opts.slug, opts.locale);
     if (!current) {
       return { success: false, error: `Content not found: ${opts.collection}/${opts.slug}` };
@@ -261,14 +258,10 @@ export async function runUpdate(opts: UpdateOptions): Promise<ContentOpResult<Up
       }
     }
 
-    // Validate the merged meta against the schema
+    // Validate the merged meta against the schema (reuses cached workspace)
     const ws = await createWorkspace({ cwd: opts.cwd, collection: opts.collection });
     const col = ws.getCollection(opts.collection);
-    if (!col) {
-      return { success: false, error: `Collection not found: ${opts.collection}` };
-    }
-
-    if (col.schema?.meta) {
+    if (col?.schema?.meta) {
       const validation = validateMeta(
         mergedMeta,
         col.schema.meta,

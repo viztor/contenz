@@ -62,39 +62,25 @@ export async function runSearch(opts: SearchOptions): Promise<ContentOpResult<Se
       // Slug substring filter
       if (opts.query && !parsed.slug.includes(opts.query)) continue;
 
-      // If field filters are specified, we need to parse the file content
+      // Parse content (needed for meta regardless of field filters)
+      const filePath = path.join(col.collectionPath, file);
+      const content = await parseContentFile(filePath, col.config);
+
+      // Field-value filter
       if (opts.fields && Object.keys(opts.fields).length > 0) {
-        const filePath = path.join(col.collectionPath, file);
-        const content = await parseContentFile(filePath, col.config);
-
-        let matches = true;
-        for (const [field, expected] of Object.entries(opts.fields)) {
-          const actual = content.meta[field];
-          if (actual === undefined || String(actual) !== expected) {
-            matches = false;
-            break;
-          }
-        }
+        const matches = Object.entries(opts.fields).every(
+          ([field, expected]) =>
+            content.meta[field] !== undefined && String(content.meta[field]) === expected
+        );
         if (!matches) continue;
-
-        items.push({
-          slug: parsed.slug,
-          locale: parsed.locale ?? null,
-          file,
-          meta: content.meta,
-        });
-      } else {
-        // No field filters — just match on slug
-        const filePath = path.join(col.collectionPath, file);
-        const content = await parseContentFile(filePath, col.config);
-
-        items.push({
-          slug: parsed.slug,
-          locale: parsed.locale ?? null,
-          file,
-          meta: content.meta,
-        });
       }
+
+      items.push({
+        slug: parsed.slug,
+        locale: parsed.locale ?? null,
+        file,
+        meta: content.meta,
+      });
 
       if (items.length >= limit) break;
     }
