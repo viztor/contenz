@@ -6,7 +6,7 @@ const schema = z.object({
   category: z.enum(["products", "ordering"]),
 });
 
-export const { meta, metaSchema, relations } = defineCollection({
+export const { meta, relations } = defineCollection({
   schema,
 });
 

@@ -92,13 +92,13 @@ async function firstPassOneCollection(
     };
   }
 
-  const rawSchema = schemaModule.meta || (schemaModule as Record<string, unknown>).metaSchema;
+  const rawSchema = schemaModule.meta;
   if (!rawSchema) {
     diagnostics.push({
       code: "SCHEMA_EXPORT_MISSING",
       severity: "error",
       category: "schema",
-      message: "No meta or metaSchema export found.",
+      message: "No meta export found in schema module.",
       source: "lint",
       collection: collectionName,
     });

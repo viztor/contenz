@@ -38,7 +38,7 @@ contenz init
 This creates:
 - `contenz.config.ts` — project configuration
 - `content/pages/schema.ts` — starter collection schema
-- `content/pages/welcome.mdx` — sample content file
+- `content/pages/welcome.json` — sample content file
 
 ### Options
 
@@ -137,7 +137,7 @@ const schema = z.object({
   tags: z.array(z.string()).default([]),
 });
 
-export const { meta, metaSchema, relations } = defineCollection({ schema });
+export const { meta, relations } = defineCollection({ schema });
 ```
 
 For multi-type collections (e.g. terms + topics):
@@ -422,7 +422,7 @@ See [API reference](./API.md) for the complete list of exports and types.
 | `sources` | `string[]` | `["content/*"]` | Source patterns for collection discovery |
 | `outputDir` | `string` | `"generated/content"` | Generated output directory |
 | `i18n` | `boolean \| I18nConfigShape` | `false` | Enable locale detection |
-| `extensions` | `string[]` | `["md", "mdx"]` | Allowed file extensions |
+| `extensions` | `string[]` | `["md", "mdx", "json"]` | Allowed file extensions |
 | `ignore` | `string[]` | `["README.md", "_*"]` | Patterns to ignore |
 | `strict` | `boolean` | `false` | Fail on warnings |
 | `coveragePath` | `string` | `"contenz.coverage.md"` | Coverage report path |

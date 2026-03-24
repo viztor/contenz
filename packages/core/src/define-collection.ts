@@ -45,33 +45,28 @@ export function defineCollection(
 
 /**
  * Define a single-type content collection with one schema and optional relations.
- * Returns a SchemaModule-compatible object: meta, metaSchema, and relations.
+ * Returns a SchemaModule-compatible object: meta and relations.
  * @example
- * export const { meta, metaSchema, relations } = defineCollection({ schema: z.object({...}), relations: { relatedFaqs: "faq" } });
+ * export const { meta, relations } = defineCollection({ schema: z.object({...}), relations: { relatedFaqs: "faq" } });
  */
 export function defineCollection(
   options: DefineCollectionSingleOptions
-): SchemaModule & { meta: ZodSchema; metaSchema: ZodSchema; relations?: Relations };
+): SchemaModule & { meta: ZodSchema; relations?: Relations };
 
 export function defineCollection(
   options: DefineCollectionSingleOptions | DefineCollectionMultiOptions
 ): SchemaModule &
-  (
-    | { meta: ZodSchema; metaSchema: ZodSchema; relations?: Relations }
-    | Record<string, ZodSchema | Relations | undefined>
-  ) {
+  ({ meta: ZodSchema; relations?: Relations } | Record<string, ZodSchema | Relations | undefined>) {
   if ("schema" in options) {
     const { schema, relations } = options;
     const out: SchemaModule & Record<string, unknown> = {
       meta: schema,
-      metaSchema: schema,
     };
     if (relations && Object.keys(relations).length > 0) {
       out.relations = relations;
     }
     return out as unknown as SchemaModule & {
       meta: ZodSchema;
-      metaSchema: ZodSchema;
       relations?: Relations;
     };
   }

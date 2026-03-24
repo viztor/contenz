@@ -39,7 +39,7 @@ function renderConfigFile(contentDir: string, i18n: boolean): string {
 	fields.push('  // outputDir: "generated/content",');
 	fields.push('  // coveragePath: "contenz.coverage.md",');
 	fields.push("  // strict: false,");
-	fields.push('  // extensions: ["md", "mdx"],');
+	fields.push('  // extensions: ["md", "mdx", "json"],');
 	fields.push('  // ignore: ["README.md", "_*"],');
 
 	return `import type { ContenzConfig } from "@contenz/core";
@@ -61,7 +61,7 @@ const schema = z.object({
   summary: z.string(),
 });
 
-export const { meta, metaSchema, relations } = defineCollection({
+export const { meta, relations } = defineCollection({
   schema,
 });
 
@@ -71,22 +71,25 @@ export type ${typeName} = z.infer<typeof meta>;
 
 function renderContentFile(locale?: "en" | "zh"): string {
 	if (locale === "zh") {
-		return `export const meta = {
-  title: "欢迎使用 contenz",
-  summary: "编辑这个示例条目来开始建立你自己的内容模型。",
-};
-
-这个示例文件可以直接通过 \`contenz lint\` 和 \`contenz build\`。
-`;
+		return JSON.stringify(
+			{
+				title: "欢迎使用 contenz",
+				summary: "编辑这个示例条目来开始建立你自己的内容模型。",
+			},
+			null,
+			2,
+		);
 	}
 
-	return `export const meta = {
-  title: "Welcome to contenz",
-  summary: "Edit this starter entry to begin shaping your own content model.",
-};
-
-This starter file is here so \`contenz lint\` and \`contenz build\` work immediately.
-`;
+	return JSON.stringify(
+		{
+			title: "Welcome to contenz",
+			summary:
+				"Edit this starter entry to begin shaping your own content model.",
+		},
+		null,
+		2,
+	);
 }
 
 async function pathExists(targetPath: string): Promise<boolean> {
@@ -120,7 +123,7 @@ async function detectInstallCommand(cwd: string): Promise<string> {
 		if (packageJson.packageManager?.startsWith("bun")) {
 			return "bun add @contenz/core zod";
 		}
-	} catch {}
+	} catch { }
 
 	return "npm install @contenz/core zod";
 }
@@ -150,17 +153,17 @@ function getScaffoldFiles(options: {
 	if (options.i18n) {
 		files.push(
 			{
-				filePath: path.join(collectionDir, "welcome.en.mdx"),
+				filePath: path.join(collectionDir, "welcome.en.json"),
 				content: renderContentFile("en"),
 			},
 			{
-				filePath: path.join(collectionDir, "welcome.zh.mdx"),
+				filePath: path.join(collectionDir, "welcome.zh.json"),
 				content: renderContentFile("zh"),
 			},
 		);
 	} else {
 		files.push({
-			filePath: path.join(collectionDir, "welcome.mdx"),
+			filePath: path.join(collectionDir, "welcome.json"),
 			content: renderContentFile(),
 		});
 	}

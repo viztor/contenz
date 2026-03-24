@@ -6,7 +6,7 @@ const schema = z.object({
   summary: z.string(),
 });
 
-export const { meta, metaSchema, relations } = defineCollection({
+export const { meta, relations } = defineCollection({
   schema,
 });
 

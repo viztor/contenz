@@ -7,11 +7,11 @@
     "docs"
   ],
   "configHash": "2bbe2a784391ed0929eca1af48c0edf6a91dec42904d37e2db72324122737cf2",
-  "generatedAt": "2026-03-24T13:07:37.345Z",
+  "generatedAt": "2026-03-24T14:42:06.890Z",
   "collections": [
     {
       "name": "docs",
-      "inputHash": "e3064f9cbd30cc86a354585e7ec63cd56b580e1d411aed11764a98a3e9b86779",
+      "inputHash": "a9e961acbf5ece06f906a0ea8535a5d9b6a28f184c922c3ad7cd862c89b26569",
       "outputFiles": [
         "docs.ts"
       ],
@@ -23,7 +23,7 @@
     },
     {
       "name": "faq",
-      "inputHash": "5364ec2f268296e1a8ab9e033420da971e37e9291326cc6df5c158aba451b210",
+      "inputHash": "b595a322e3cd25ae16f43aa858f0cbabf38f9e6f59134311bdfa985861f3dbea",
       "outputFiles": [
         "faq.ts"
       ],
