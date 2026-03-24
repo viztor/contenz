@@ -224,23 +224,13 @@ Both entry points export overlapping symbols:
 - `@contenz/core` = schema helpers only (`defineCollection`, types)
 - `@contenz/core/api` = everything
 
-### 🟡 DRY: Duplicate Schema Resolution in run-build and run-lint
+### ✅ DONE: DRY Schema Resolution
 
-Both `run-build.ts:178` and `run-lint.ts:95` have identical blocks:
+Added `schemaLoadFailed()` and `schemaExportMissing()` diagnostic factory functions to `diagnostics.ts`. Updated `run-build.ts` and `run-lint.ts` to use them.
 
-```ts
-const rawSchema = schemaModule.meta || (schemaModule as Record<string, unknown>).metaSchema;
-if (!rawSchema) {
-  diagnostics.push({ code: "SCHEMA_EXPORT_MISSING", ... });
-  return ...;
-}
-```
+### ✅ DONE: DRY Diagnostic Factories
 
-**Fix:** Extract to a shared helper like `resolveDefaultSchema(schemaModule): ZodSchema | null` in `config.ts`.
-
-### 🟡 DRY: Duplicate Diagnostics Push in run-build and run-lint
-
-Both files push identical `SCHEMA_LOAD_FAILED` and `SCHEMA_EXPORT_MISSING` diagnostics. Extract to `diagnostics.ts` as factory functions.
+See above — consolidated into `diagnostics.ts` alongside the DRY schema resolution change.
 
 ### 🟠 CLEAN: `test-fixtures.ts` Fragile Import Rewriting
 
@@ -248,15 +238,13 @@ Both files push identical `SCHEMA_LOAD_FAILED` and `SCHEMA_EXPORT_MISSING` diagn
 
 **Alternative:** Use symlinks in `node_modules` (the pattern already used in e2e tests).
 
-### 🟠 CLEAN: `ContentExtension` Hardcoded Type
+### ✅ DONE: Hardcoded `ContentExtension` Type
 
-`parser.ts:6` defines `ContentExtension = "mdx" | "md" | "json"`. This is a closed union that doesn't support user-defined adapters.
+Widened `ContentExtension` from `"mdx" | "md" | "json"` union to `string`. Made parser filename patterns dynamic via `extensions` parameter instead of hardcoded `mdx|md|json` regex.
 
-**Fix:** Change to `string` and validate against registered adapters at runtime.
+### ✅ DONE: Hardcoded Parser Patterns
 
-### 🟠 CLEAN: Hardcoded Filename Patterns in parser.ts
-
-`I18N_PATTERN` and `NON_I18N_PATTERN` in `parser.ts` hardcode `mdx|md|json`. These should be derived from registered adapter extensions.
+See above — parser now uses `extAlternation(extensions)` to build regex dynamically.
 
 ### 🟠 CLEAN: `run-content-ops.ts` Has Mixed Responsibilities
 
