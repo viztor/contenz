@@ -10,7 +10,6 @@ import { listCommand } from "./commands/list.js";
 import { schemaCommand } from "./commands/schema.js";
 import { searchCommand } from "./commands/search.js";
 import { statusCommand } from "./commands/status.js";
-import { studioCommand } from "./commands/studio.js";
 import { updateCommand } from "./commands/update.js";
 import { viewCommand } from "./commands/view.js";
 import { watchCommand } from "./commands/watch.js";
@@ -30,7 +29,6 @@ const main = defineCommand({
 		build: buildCommand,
 		watch: watchCommand,
 		status: statusCommand,
-		studio: studioCommand,
 		// AI-native commands
 		view: viewCommand,
 		list: listCommand,

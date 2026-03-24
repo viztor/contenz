@@ -13,8 +13,7 @@ contenz/
 │   ├── core/          # @contenz/core — schema validation, codegen, workspace, introspection
 │   ├── cli/           # @contenz/cli — citty-based CLI (12 commands)
 │   ├── adapter-mdx/   # @contenz/adapter-mdx — MD/MDX format adapter (peer dep on core)
-│   ├── e2e/           # @contenz/e2e — integration tests (6 fixture projects)
-│   └── studio/        # ⚠ DEAD — empty dir, package deleted but directory remains
+│   └── e2e/           # @contenz/e2e — integration tests (6 fixture projects)
 ├── docs/              # Project documentation (8 files)
 ├── turbo.json         # Turborepo task config
 └── package.json       # Workspace root (npm workspaces)
@@ -25,7 +24,6 @@ contenz/
 ```
 adapter-mdx ──peer──▸ core
 cli ──────────dep───▸ core
-cli ──────────dep───▸ studio  ← ⚠ DEAD REFERENCE
 e2e ──────────dev───▸ core, cli, adapter-mdx
 ```
 
@@ -103,7 +101,7 @@ contenz.config.ts (user)
         │
         ▼
    createWorkspace()  ◀── CANONICAL ENTRY POINT
-   ┌────┼────────────┐
+   ┌────┼─────────────┐
    │    │             │
    │  resolveConfig() │  registerAdapters()
    │    │             │
@@ -140,7 +138,6 @@ All pipelines use `createWorkspace()` as the single config-loading path.
 | `update` | `commands/update.ts` | `runUpdate()` |
 | `search` | `commands/search.ts` | `runSearch()` |
 | `schema` | `commands/schema.ts` | `runSchema()` |
-| `studio` | `commands/studio.ts` | ⚠ Resolves deleted `@contenz/studio` |
 
 ### CLI Shared Utilities
 
@@ -196,17 +193,9 @@ Built-in defaults: `extensions: ["md", "mdx", "json"]`, `sources: ["content/*"]`
 
 Actionable items ordered by priority. Each is self-contained and can be executed independently.
 
-### 🔴 REMOVE: Dead Studio Package
+### ✅ DONE: Dead Studio Package
 
-The `packages/studio` directory was deleted but the empty dir and all references remain.
-
-**Files to change:**
-1. **Delete** `packages/studio/` directory
-2. **Remove** `"@contenz/studio": "*"` from `packages/cli/package.json` dependencies
-3. **Delete** `packages/cli/src/commands/studio.ts`
-4. **Remove** `studioCommand` import and subcommand from `packages/cli/src/cli.ts`
-5. **Delete** `docs/STUDIO.md`
-6. **Remove** studio references from `docs/ARCHITECTURE.md`, `docs/CLI.md`, `docs/USAGE.md`, `docs/README.md`
+Removed in this session: deleted `packages/studio/`, `commands/studio.ts`, `docs/STUDIO.md`, `@contenz/studio` dependency, and all doc references.
 
 ### 🔴 REMOVE: `metaSchema` Legacy Alias
 
@@ -288,14 +277,11 @@ This file contains 4 unrelated operations: `runList`, `runView`, `runCreate`, `r
 
 | File | Issue |
 |---|---|
-| `docs/STUDIO.md` | References deleted package — should be deleted |
-| `docs/ARCHITECTURE.md` | References studio package |
-| `docs/CLI.md` | Documents `studio` command |
 | `docs/CONFIGURATION.md` | May reference old defaults |
 | `Plan.md` (55KB) | Very large planning doc — consider archiving |
 | `Backlog.md` | May contain completed items |
 | `ROADMAP.md` | May contain completed milestones |
-| `README.md` (root) | May reference studio |
+| `README.md` (root) | May need updates |
 
 ### 🟠 CLEAN: Global Mutable Adapter Registry
 

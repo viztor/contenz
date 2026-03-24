@@ -9,7 +9,7 @@ contenz/
 ├── packages/
 │   ├── core/       # @contenz/core – schema helpers, types, build/lint/status API
 │   ├── cli/        # @contenz/cli – contenz binary and commands
-│   ├── studio/     # @contenz/studio – Next.js authoring app (used by `contenz studio`)
+│   ├── adapter-mdx/ # @contenz/adapter-mdx – MD/MDX format adapter
 │   └── e2e/        # E2E tests and fixtures (private, not published)
 ├── docs/           # This documentation set
 ├── contenz.config.ts
@@ -22,7 +22,7 @@ contenz/
 
 ### @contenz/core
 
-- **Role**: Core library. No CLI binary; used by the CLI, Studio, and by your schema/config files.
+- **Role**: Core library. No CLI binary; used by the CLI and by your schema/config files.
 - **Exports**:
   - Main entry: schema helpers (`defineCollection`, `defineMultiTypeCollection`), config types, format adapters, schema introspection.
   - API entry `@contenz/core/api`: config loading, discovery, parsing, validation, `runBuild`, `runLint`, `runStatus`, content operations (`runList`, `runView`, `runCreate`, `runUpdate`, `runSearch`, `runSchema`), workspace, diagnostics.
@@ -31,14 +31,13 @@ contenz/
 ### @contenz/cli
 
 - **Role**: Provides the `contenz` command.
-- **Commands**: `init`, `lint`, `build`, `watch`, `status`, `studio`, `view`, `list`, `create`, `update`, `search`, `schema`.
-- **Depends on**: `@contenz/core` for all content and config logic; `@contenz/studio` for the `studio` command (runs the Studio Next.js app with `CONTENZ_PROJECT_ROOT` set).
+- **Commands**: `init`, `lint`, `build`, `watch`, `status`, `view`, `list`, `create`, `update`, `search`, `schema`.
+- **Depends on**: `@contenz/core` for all content and config logic.
 
-### @contenz/studio
+### @contenz/adapter-mdx
 
-- **Role**: Web-based authoring UI over repo-backed content. Not published to npm as a standalone app; it is bundled and run via `contenz studio`.
-- **Stack**: Next.js 16, React 19, Tailwind CSS v4, shadcn/ui (Base UI), MDXEditor for body editing.
-- **Behavior**: Reads `CONTENZ_PROJECT_ROOT` to discover collections and documents; serves API routes for project config, documents, search, file tree; writes content back to the repo via the documents API.
+- **Role**: MD/MDX format adapter. Peer-depends on `@contenz/core`.
+- **Exports**: `mdxAdapter` — handles `.md` and `.mdx` files with frontmatter or `export const meta` syntax.
 
 ### packages/e2e
 
@@ -66,10 +65,7 @@ contenz/
    `runStatus({ cwd })` compares current input hashes to the manifest and reports whether a build is up to date or which collections would be rebuilt.
 
 7. **AI-native layer**
-   The bidirectional content operations (`runView`, `runList`, `runCreate`, `runUpdate`, `runSearch`, `runSchema`) form the AI-native interface. They use the same workspace and parsing primitives as lint/build but expose content through a structured JSON contract. This enables AI agents, scripts, and the Studio to safely introspect schemas, read content, create new items, and update existing items without touching raw files directly.
-
-8. **Studio**
-   The Studio app calls the same config and discovery APIs (via Next.js API routes) to list collections and documents, then uses the documents API to read/write content. Saves go back to the repo as file writes.
+   The bidirectional content operations (`runView`, `runList`, `runCreate`, `runUpdate`, `runSearch`, `runSchema`) form the AI-native interface. They use the same workspace and parsing primitives as lint/build but expose content through a structured JSON contract. This enables AI agents and scripts to safely introspect schemas, read content, create new items, and update existing items without touching raw files directly.
 
 ## Key invariants
 

@@ -12,7 +12,7 @@ Content files live under each collection directory. The parser infers **slug** a
 | `true` | `{slug}.{locale}.{ext}` | `moq.en.mdx`, `intro.zh.mdx` |
 
 - **ext**: From config `extensions` (default `md`, `mdx`).
-- **slug**: Used as the document key in generated output and in URLs (e.g. Studio doc view).
+- **slug**: Used as the document key in generated output and in URLs.
 - **locale**: Only used when project or collection config has `i18n` enabled. Affects generated shape and coverage.
 
 Custom extraction is possible via collection `config.slugPattern` (RegExp).

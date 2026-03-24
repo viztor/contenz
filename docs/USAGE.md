@@ -379,19 +379,7 @@ All commands return a consistent JSON envelope:
 
 ---
 
-## 7. Authoring studio
-
-```bash
-contenz studio                    # Start on port 3001
-contenz studio --port 3002        # Custom port
-contenz studio --cwd ./my-content # Different content root
-```
-
-The studio provides a web-based editing interface: browse collections, edit metadata and body, search content, and preview changes. See [Studio](./STUDIO.md) for details.
-
----
-
-## 8. Programmatic API
+## 7. Programmatic API
 
 Import from `@contenz/core/api` for scripting and tooling:
 
@@ -425,7 +413,7 @@ See [API reference](./API.md) for the complete list of exports and types.
 
 ---
 
-## 9. Configuration reference
+## 8. Configuration reference
 
 ### Project config (`contenz.config.ts`)
 
@@ -467,7 +455,7 @@ See [Configuration](./CONFIGURATION.md) for full details.
 
 ---
 
-## 10. Common commands cheat sheet
+## 9. Common commands cheat sheet
 
 | Task | Command |
 |------|---------|
@@ -476,7 +464,6 @@ See [Configuration](./CONFIGURATION.md) for full details.
 | Generate TypeScript | `contenz build` |
 | Watch for changes | `contenz watch` |
 | Check build status | `contenz status` |
-| Open studio | `contenz studio` |
 | List collections | `contenz list` |
 | View an item | `contenz view <collection> <slug>` |
 | Create an item | `contenz create <collection> <slug> --set key=value` |

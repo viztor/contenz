@@ -1,6 +1,6 @@
 # Core API reference
 
-This page summarizes the programmatic API from `@contenz/core/api`. Use it when building tooling, the Studio, or custom scripts on top of Contenz.
+This page summarizes the programmatic API from `@contenz/core/api`. Use it when building tooling or custom scripts on top of Contenz.
 
 **Entry point**: `@contenz/core/api` (not the default `@contenz/core` export, which is for schema helpers and types).
 

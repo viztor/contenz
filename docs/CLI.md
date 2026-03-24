@@ -11,7 +11,6 @@ The `contenz` CLI is provided by `@contenz/cli`. All commands accept `--cwd` to 
 | `contenz build` | Generate typed content files (incremental when possible) |
 | `contenz watch` | Watch content and config, run build on change |
 | `contenz status` | Report whether build is up to date or which collections would be rebuilt |
-| `contenz studio` | Start the Contenz Authoring Studio (Next.js app) |
 | `contenz view` | View a single content item by collection and slug |
 | `contenz list` | List collections or items within a collection |
 | `contenz create` | Create a new content item |
@@ -134,23 +133,6 @@ contenz status --cwd ./content-repo
 Exit code is `0` when up to date, `1` when a build is needed. Useful in CI or scripts to decide whether to run `contenz build`.
 
 ---
-
-## studio
-
-Start the Contenz Authoring Studio: a Next.js app that lets you browse collections, open documents, edit metadata and body, and search content. The app reads and writes content in the repo via `CONTENZ_PROJECT_ROOT`.
-
-```bash
-contenz studio
-contenz studio --cwd ./my-content
-contenz studio --port 3002
-```
-
-| Option | Default | Description |
-|--------|---------|-------------|
-| `--cwd` | `.` | Project root (content sources and `contenz.config`). Becomes `CONTENZ_PROJECT_ROOT`. |
-| `--port` | `3001` | Port for the studio dev server. |
-
-The CLI resolves `@contenz/studio`, sets `CONTENZ_PROJECT_ROOT` to the resolved `--cwd`, and runs the studio's `npm run dev` with the given port. Open the printed URL (e.g. http://localhost:3001). See [Studio](./STUDIO.md) for details.
 
 ---
 
