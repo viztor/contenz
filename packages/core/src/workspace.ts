@@ -5,6 +5,7 @@
  * Each pipeline calls `createWorkspace(cwd, sources?)` once and passes the result around.
  */
 
+import path from "node:path";
 import {
   loadCollectionConfig,
   loadProjectConfig,
@@ -18,7 +19,13 @@ import {
   globContentFiles,
   normalizeLegacyContentDir,
 } from "./sources.js";
-import type { CollectionConfig, ContenzConfig, ResolvedConfig, SchemaModule } from "./types.js";
+import type {
+  CollectionConfig,
+  CollectionDeclaration,
+  ContenzConfig,
+  ResolvedConfig,
+  SchemaModule,
+} from "./types.js";
 
 /**
  * Pre-loaded context for a single collection.
@@ -101,8 +108,8 @@ export async function createWorkspace(options: CreateWorkspaceOptions): Promise<
     discoveredCollections = discoveredCollections.filter((c) => c.name === options.collection);
   }
 
-  // Load each collection's config, schema, and content file list
-  const collections: CollectionContext[] = await Promise.all(
+  // Load each discovered collection's config, schema, and content file list
+  const discoveredContexts: CollectionContext[] = await Promise.all(
     discoveredCollections.map(async (dc: DiscoveredCollection) => {
       const collectionConfig = await loadCollectionConfig(dc.collectionPath);
       const config = resolveConfig(projectConfig, collectionConfig);
@@ -125,6 +132,45 @@ export async function createWorkspace(options: CreateWorkspaceOptions): Promise<
       };
     })
   );
+
+  // Merge inline declared collections (from config.collections)
+  const inlineEntries = projectConfig.collections ?? {};
+  const inlineContexts: CollectionContext[] = await Promise.all(
+    Object.entries(inlineEntries).map(async ([name, decl]: [string, CollectionDeclaration]) => {
+      const collectionPath = path.resolve(cwd, decl.path);
+      const collectionConfig = decl.config ?? (await loadCollectionConfig(collectionPath));
+      const config = resolveConfig(projectConfig, collectionConfig);
+
+      // Build schema module from inline schema or fall back to file
+      let schema: SchemaModule | null = null;
+      if (decl.schema) {
+        schema = { meta: decl.schema, relations: decl.relations };
+      } else {
+        schema = await loadSchemaModule(collectionPath);
+      }
+
+      const contentFiles = await globContentFiles(collectionPath, config.extensions, config.ignore);
+
+      return {
+        name,
+        collectionPath,
+        config,
+        collectionConfig,
+        schema,
+        contentFiles,
+      };
+    })
+  );
+
+  // Merge: inline declarations override filesystem-discovered collections
+  const collectionMap = new Map<string, CollectionContext>();
+  for (const ctx of discoveredContexts) {
+    collectionMap.set(ctx.name, ctx);
+  }
+  for (const ctx of inlineContexts) {
+    collectionMap.set(ctx.name, ctx); // inline wins
+  }
+  const collections = [...collectionMap.values()].sort((a, b) => a.name.localeCompare(b.name));
 
   return {
     cwd,

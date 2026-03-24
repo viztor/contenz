@@ -15,23 +15,74 @@ export const config: ContenzConfig = {
   coveragePath: "contenz.coverage.md",
   strict: false,
   i18n: false,
-  extensions: ["md", "mdx"],
+  extensions: ["md", "mdx", "json"],
   ignore: ["README.md", "_*"],
 };
 ```
+
+Contenz supports two collection discovery modes that can be used **independently or together**:
+
+1. **Filesystem discovery** (default) — collections are auto-discovered from `sources` patterns by finding `schema.ts` files
+2. **Centralized declaration** — collections are declared inline via the `collections` field with schemas provided directly
 
 ### Options
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `sources` | `string[]` | `["content/*"]` | Discovery patterns. `content/*` = direct child folders (e.g. `content/faq`). `docs` = treat `docs/` as one collection. |
+| `sources` | `string[]` | `["content/*"]` | Discovery patterns. `content/*` = direct child folders. `docs` = treat `docs/` as one collection. |
+| `collections` | `Record<string, CollectionDeclaration>` | `undefined` | Inline collection declarations — see [Centralized collections](#centralized-collections) below. |
 | `outputDir` | `string` | `"generated/content"` | Directory for generated TypeScript files. |
 | `coveragePath` | `string` | `"contenz.coverage.md"` | Path for the lint coverage report. |
 | `strict` | `boolean` | `false` | If true, fail build/lint on warnings (e.g. missing translations). |
 | `i18n` | `boolean \| I18nConfigShape` | `false` | Enable locale detection from filenames. See [Content model – i18n](./CONTENT-MODEL.md#internationalization). |
-| `extensions` | `string[]` | `["md", "mdx"]` | Allowed content file extensions. |
+| `extensions` | `string[]` | `["md", "mdx", "json"]` | Allowed content file extensions. |
 | `ignore` | `string[]` | `["README.md", "_*"]` | Glob patterns to ignore under each collection. |
+| `adapters` | `FormatAdapter[]` | `[]` | Format adapters for content file parsing. Register adapters for `.md`/`.mdx` (via `@contenz/adapter-mdx`). JSON is built-in. |
 | `contentDir` | `string` | *(deprecated)* | Use `sources: ["<contentDir>/*"]` instead. |
+
+### Centralized collections
+
+Instead of (or in addition to) filesystem discovery, declare collections inline:
+
+```ts
+import { z } from "zod";
+import type { ContenzConfig } from "@contenz/core";
+
+export const config: ContenzConfig = {
+  collections: {
+    faq: {
+      path: "content/faq",
+      schema: z.object({
+        question: z.string(),
+        category: z.enum(["products", "ordering"]),
+      }),
+    },
+    blog: {
+      path: "content/blog",
+      schema: z.object({
+        title: z.string(),
+        tags: z.array(z.string()).default([]),
+      }),
+      relations: { relatedFaqs: "faq" },
+    },
+  },
+};
+```
+
+Each entry in `collections` is a `CollectionDeclaration`:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `path` | `string` | ✅ | Directory containing content files (relative to project root). |
+| `schema` | `ZodSchema` | ❌ | Inline Zod schema. If omitted, falls back to `schema.ts` in the directory. |
+| `relations` | `Relations` | ❌ | Relation mapping for this collection. |
+| `config` | `CollectionConfig` | ❌ | Collection-level config overrides (`types`, `extensions`, `i18n`, etc.). |
+
+**Precedence rules:**
+- If `collections.faq` is declared **and** `content/faq/schema.ts` exists, the inline `schema` wins.
+- If `sources` discovers a collection with the same name as a `collections` entry, the inline declaration wins.
+- You can mix both: use `sources` for auto-discovered collections and `collections` for others.
+- If neither `sources` nor `collections` is set, the default `sources: ["content/*"]` applies.
 
 ## Collection config
 
@@ -77,11 +128,10 @@ const schema = z.object({
   category: z.enum(["products", "ordering"]),
 });
 
-export const { meta, metaSchema, relations } = defineCollection({ schema });
+export const { meta, relations } = defineCollection({ schema });
 ```
 
-- Use `meta` in your app or generated code if you need the runtime schema.
-- `metaSchema` is used internally for validation and generation.
+- `meta` is the Zod schema used for validation and generation.
 - `relations` can be left unexported if you rely on auto-detection (e.g. `relatedFaqs` → `faq`).
 
 ### Multi-type collection
@@ -161,8 +211,30 @@ See [Content model – Relations](./CONTENT-MODEL.md#relation-validation) for va
 ## Loading order
 
 1. Project config: `contenz.config.ts` (or `.mjs` / `.js`).
-2. Collection config: `content/<collection>/config.ts` (if present).
-3. Resolved config merges project and collection; collection overrides project for the fields it defines.
-4. Schema: `content/<collection>/schema.ts` is loaded when validating or building that collection.
+2. Inline collections from `config.collections` are pre-declared (schema provided directly).
+3. Filesystem discovery via `sources` patterns finds `schema.ts` files.
+4. If a collection exists in both `collections` and filesystem, the inline declaration wins.
+5. Collection config: `content/<collection>/config.ts` (if present) is merged.
+6. Resolved config merges project and collection; collection overrides project for the fields it defines.
+7. Schema: `schema.ts` or inline `schema` is loaded when validating or building.
+
+## Format adapters
+
+Contenz uses format adapters to parse and serialize content files. JSON is built-in. For MD/MDX files, register `@contenz/adapter-mdx`:
+
+```ts
+import { mdxAdapter } from "@contenz/adapter-mdx";
+import type { ContenzConfig } from "@contenz/core";
+
+export const config: ContenzConfig = {
+  adapters: [mdxAdapter],
+};
+```
+
+The MDX adapter handles both `.md` and `.mdx` files with **dual syntax support**:
+- **Frontmatter** (`---` YAML/JSON `---`) — works in both `.md` and `.mdx` files
+- **Export syntax** (`export const meta = { ... }`) — MDX-specific
+
+When both are present, frontmatter takes precedence.
 
 For filename patterns and generated output shape see [Content model](./CONTENT-MODEL.md).

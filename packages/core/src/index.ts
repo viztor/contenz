@@ -42,6 +42,7 @@ export {
 } from "./introspect.js";
 export type {
   CollectionConfig,
+  CollectionDeclaration,
   CollectionItem,
   CollectionStats,
   ConfigModule,

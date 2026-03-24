@@ -28,6 +28,22 @@ export interface ContentType {
 export type Relations = Record<string, string>;
 
 /**
+ * Inline collection declaration for centralized config.
+ * Allows defining collections directly in contenz.config.ts
+ * instead of (or alongside) filesystem discovery.
+ */
+export interface CollectionDeclaration {
+  /** Directory containing content files (relative to project root) */
+  path: string;
+  /** Inline Zod schema. If omitted, falls back to schema.ts in the directory. */
+  schema?: ZodSchema;
+  /** Inline relations mapping for this collection */
+  relations?: Relations;
+  /** Collection-level config overrides */
+  config?: CollectionConfig;
+}
+
+/**
  * Rich i18n configuration (v2).
  * When i18n is enabled, optional fallback, coverage, and staleness options apply.
  */
@@ -95,6 +111,23 @@ export interface ContenzConfig {
    * ```
    */
   adapters?: FormatAdapter[];
+  /**
+   * Inline collection declarations.
+   * Define collections centrally instead of (or alongside) filesystem discovery.
+   * If a collection name exists in both `collections` and filesystem discovery,
+   * the inline declaration wins.
+   *
+   * @example
+   * ```ts
+   * collections: {
+   *   faq: {
+   *     path: "content/faq",
+   *     schema: z.object({ question: z.string() }),
+   *   },
+   * }
+   * ```
+   */
+  collections?: Record<string, CollectionDeclaration>;
 }
 
 /**

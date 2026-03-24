@@ -72,7 +72,7 @@ function normalizeI18n(raw: boolean | I18nConfigShape | undefined): {
 }
 
 const BUILT_IN_DEFAULTS: Required<
-  Omit<ContenzConfig, "coveragePath" | "outputDir" | "contentDir">
+  Omit<ContenzConfig, "coveragePath" | "outputDir" | "contentDir" | "collections">
 > & {
   coveragePath: string;
   outputDir: string;

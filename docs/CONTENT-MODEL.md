@@ -11,23 +11,68 @@ Content files live under each collection directory. The parser infers **slug** a
 | `false` | `{slug}.{ext}` | `hello-world.mdx`, `faq.mdx` |
 | `true` | `{slug}.{locale}.{ext}` | `moq.en.mdx`, `intro.zh.mdx` |
 
-- **ext**: From config `extensions` (default `md`, `mdx`).
+- **ext**: From config `extensions` (default `md`, `mdx`, `json`).
 - **slug**: Used as the document key in generated output and in URLs.
 - **locale**: Only used when project or collection config has `i18n` enabled. Affects generated shape and coverage.
 
 Custom extraction is possible via collection `config.slugPattern` (RegExp).
 
-## File structure
+## Metadata formats
 
-Each content file can be:
+Each content file contains metadata (validated against the schema) and an optional body.
 
-- **Markdown/MDX with frontmatter**: metadata in YAML frontmatter, body after the first `---`.
-- **MDX with export**: `export const meta = { ... };` plus body. Supported for MDX; frontmatter is the more common pattern.
+### Markdown frontmatter (`.md`)
+
+```md
+---
+title: Welcome
+category: general
+---
+
+Content body goes here.
+```
+
+### MDX: dual syntax (`.mdx`)
+
+MDX files support **both** frontmatter and export syntax. The adapter auto-detects which one is in use:
+
+**Frontmatter** (recommended for compatibility):
+```mdx
+---
+title: Welcome
+category: general
+---
+
+Content body with <Component /> support.
+```
+
+**Export syntax** (MDX-specific):
+```mdx
+export const meta = {
+  title: "Welcome",
+  category: "general",
+};
+
+Content body with <Component /> support.
+```
+
+When a `.mdx` file starts with `---`, frontmatter parsing takes precedence over `export const meta`.
+
+### JSON (`.json`)
+
+Pure metadata, no body:
+
+```json
+{
+  "title": "Welcome",
+  "category": "general"
+}
+```
 
 The parser produces:
 
 - `meta`: key-value metadata (validated against the collection schema).
-- `body`: content after the meta block (raw string).
+- `body`: content after the meta block (raw string; empty for JSON).
 - `slug`, `locale`: from filename (and optional `slugPattern`).
 
 ## Generated output shape

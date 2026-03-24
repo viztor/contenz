@@ -22,12 +22,15 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "typescript": "^6.0.2",
     "@types/node": "^25.5.0",
-    "tsup": "^8.5.1"
+    "tsup": "^8.5.1",
+    "vitest": "^3.2.1"
   },
   "peerDependencies": {
     "@contenz/core": "*"
