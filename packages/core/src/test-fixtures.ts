@@ -6,8 +6,12 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..", "..", "..");
 const e2eFixturesDir = path.join(repoRoot, "packages", "e2e", "fixtures");
+// Point to define-collection.ts instead of index.ts so that fixture schema
+// files don't transitively pull in globby/unicorn-magic (ESM-only packages
+// that fail under Node 25 + tsx's CJS resolver).  Schema files only need
+// defineCollection / defineMultiTypeCollection which live in this module.
 const coreSourceImport = pathToFileURL(
-  path.join(repoRoot, "packages", "core", "src", "index.ts")
+  path.join(repoRoot, "packages", "core", "src", "define-collection.ts")
 ).href;
 
 async function rewriteFixtureImports(dir: string): Promise<void> {

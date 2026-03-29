@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "cwd": "/Users/viz/dev/contenz/packages/e2e/fixtures/minimal",
+  "outputDir": "generated/content",
+  "sources": [
+    "content/*"
+  ],
+  "configHash": "5e8a1a197624bb9601dcb526ee219df0ad9c6d914c76c1f42ef882bb03bb5cb2",
+  "generatedAt": "2026-03-29T09:57:03.163Z",
+  "collections": [
+    {
+      "name": "faq",
+      "inputHash": "caa5c2f212def13b2c7e5dc2f19b9109f5b5c4a92dd8d21de13486edb29736fa",
+      "outputFiles": [
+        "faq.ts"
+      ],
+      "indexMeta": {
+        "name": "faq",
+        "hasI18n": false,
+        "metaTypeName": "FaqMeta"
+      }
+    }
+  ]
+}

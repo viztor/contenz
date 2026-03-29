@@ -42,10 +42,39 @@ export function validateMeta(
 
   if (!parseResult.success) {
     for (const issue of parseResult.error.issues) {
+      const field = issue.path.join(".") || "root";
+      // Zod 4 provides `input` on the issue itself
+      const received = (issue as { input?: unknown }).input;
+
+      let message = issue.message;
+
+      // Enrich specific Zod issue types with the received value
+      switch (issue.code) {
+        case "invalid_value":
+          // Enum / literal mismatch: show what was received and what's allowed
+          message = `Invalid value ${JSON.stringify(received)} for "${field}": expected one of ${(issue as unknown as { values: unknown[] }).values.map((v) => JSON.stringify(v)).join(", ")}`;
+          break;
+        case "invalid_type":
+          message = `Expected ${(issue as unknown as { expected: string }).expected} for "${field}", received ${typeof received}${received !== undefined ? ` (${JSON.stringify(received)})` : ""}`;
+          break;
+        case "too_small":
+          message = `${issue.message}: "${field}" value ${JSON.stringify(received)} is below minimum of ${(issue as unknown as { minimum: number | bigint }).minimum}`;
+          break;
+        case "too_big":
+          message = `${issue.message}: "${field}" value ${JSON.stringify(received)} exceeds maximum of ${(issue as unknown as { maximum: number | bigint }).maximum}`;
+          break;
+        default:
+          // For other codes, append the received value if available
+          if (received !== undefined) {
+            message = `${issue.message} (received ${JSON.stringify(received)})`;
+          }
+          break;
+      }
+
       errors.push({
         file: filePath,
-        field: issue.path.join(".") || "root",
-        message: issue.message,
+        field,
+        message,
       });
     }
   }

@@ -6,5 +6,8 @@ export default defineConfig({
     globals: false,
     testTimeout: 20_000,
     hookTimeout: 10_000,
+    // Tests share mutable fixture dirs (manifests, generated output, temp files).
+    // Parallel execution causes races where concurrent builds overwrite manifests.
+    fileParallelism: false,
   },
 });
