@@ -32,7 +32,7 @@ describe("runLint", () => {
 
     const coverageOutput = await fs.readFile(path.join(cwd, "contenz.coverage.md"), "utf-8");
     expect(coverageOutput).toContain("# Content Coverage Report");
-    expect(coverageOutput).toContain("| faq | 2 | 2 | 2 | 2 | 100% |");
+    expect(coverageOutput).toContain("| faq | 1 | 1 | 1 | 1 | 100% |");
     expect(coverageOutput).toContain("All translations complete.");
   });
 
