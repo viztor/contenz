@@ -138,46 +138,7 @@ export function buildSearchDocument(
   return doc;
 }
 
-/**
- * Remove all documents belonging to a specific collection from the index.
- * MiniSearch requires the full stored document for removal, so we iterate
- * through all results and discard matching ones.
- */
-export function removeCollectionFromIndex(
-  index: MiniSearch<SearchDocument>,
-  collectionName: string
-): void {
-  // MiniSearch exposes all documents via internal _documentIds map indirectly.
-  // The cleanest approach: search with wildcard-like match, but MiniSearch
-  // doesn't support that. Instead, we search for the collection name in a
-  // stored field. Since we stored `collection`, we can iterate:
-  const allResults = index.search(collectionName, {
-    fields: ["slug"], // dummy search to enumerate
-    prefix: true,
-    fuzzy: false,
-    filter: (result) => {
-      const stored = result as unknown as { collection?: string };
-      return stored.collection === collectionName;
-    },
-  });
 
-  // This won't catch items whose slug doesn't match the collection name.
-  // Better approach: use the discard method to remove by id prefix.
-  // MiniSearch has `discard(id)` since v6+.
-  // We need to track document IDs per collection to do efficient removal.
-  //
-  // For correctness, we'll use a different strategy: when adding documents,
-  // we track which IDs belong to which collection externally (in the caller).
-  // The caller provides the IDs to remove.
-
-  // However, MiniSearch doesn't iterate stored docs. So the cleanest approach
-  // is to track doc IDs per collection at build time. Let's use `discard`.
-  // The caller will pass in the IDs.
-
-  // For now, this function is a no-op placeholder. The actual removal is done
-  // in runBuild by discarding specific IDs.
-  void allResults;
-}
 
 /**
  * Discard specific document IDs from the index.
