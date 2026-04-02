@@ -1,6 +1,6 @@
 {
   "name": "@contenz/cli",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "CLI for contenz (content validation and codegen)",
   "license": "MPL-2.0",
   "publishConfig": {
