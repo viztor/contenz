@@ -112,8 +112,25 @@ async function firstPassOneCollection(
     types: config.types?.length ? config.types : schemaModule.types,
   };
 
-  const relations: Relations =
-    schemaModule.relations ?? extractRelations(schemaModule, availableCollections);
+  let relations: Relations;
+  if (schemaModule.relations) {
+    relations = schemaModule.relations;
+  } else {
+    relations = extractRelations(schemaModule, availableCollections);
+    if (Object.keys(relations).length > 0) {
+      diagnostics.push({
+        code: "RELATION_AUTO_DETECT_DEPRECATED",
+        severity: "warning",
+        category: "relation",
+        message:
+          `Auto-detected relations ${JSON.stringify(relations)} from field names. ` +
+          `Use explicit \`relations\` in defineCollection() instead. ` +
+          `Auto-detection will be removed in a future major version.`,
+        source: "lint",
+        collection: collectionName,
+      });
+    }
+  }
 
   for (const file of contentFiles) {
     const filePath = path.join(collectionPath, file);
@@ -247,6 +264,7 @@ async function secondPassOneCollection(
 
   const relations: Relations =
     schemaModule.relations ?? extractRelations(schemaModule, availableCollections);
+  // Note: deprecation warning for auto-detection is emitted in firstPassOneCollection
   if (Object.keys(relations).length === 0) return { diagnostics, relationErrors: 0, missingRefs };
 
   for (const file of contentFiles) {

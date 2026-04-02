@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "cwd": "/Users/viz/dev/contenz/packages/e2e/fixtures/large-project",
+  "outputDir": "generated/content",
+  "sources": [
+    "content/*"
+  ],
+  "configHash": "fb9c39fa9187392555e4811b206aa72721db4aae024aed556ddbbccb93a7c64b",
+  "generatedAt": "2026-04-02T08:34:57.219Z",
+  "collections": [
+    {
+      "name": "blog",
+      "inputHash": "0d84301896ed94e323da5d3088b460cf3adff71a6ff2758948701427d95d2eec",
+      "outputFiles": [
+        "blog.ts"
+      ],
+      "indexMeta": {
+        "name": "blog",
+        "hasI18n": true,
+        "metaTypeName": "BlogMeta"
+      }
+    },
+    {
+      "name": "changelog",
+      "inputHash": "4c50bdb7e4b6efbc75e4759429f16f9bdd853f80039b24e5d2b27af022179272",
+      "outputFiles": [
+        "changelog.ts"
+      ],
+      "indexMeta": {
+        "name": "changelog",
+        "hasI18n": true,
+        "metaTypeName": "ChangelogMeta"
+      }
+    },
+    {
+      "name": "glossary",
+      "inputHash": "562a195a32da4b97335b577a91af079c7687c1d87814e000df30ae8334436ca4",
+      "outputFiles": [
+        "glossary.ts"
+      ],
+      "indexMeta": {
+        "name": "glossary",
+        "hasI18n": true,
+        "metaTypeName": "GlossaryMeta"
+      }
+    }
+  ]
+}

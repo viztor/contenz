@@ -49,19 +49,20 @@
     "knip": "knip"
   },
   "dependencies": {
-    "zod": "^4.3.6",
     "globby": "^16.1.1",
+    "minisearch": "^7.2.0",
+    "p-map": "^7.0.4",
     "picocolors": "^1.1.1",
     "tsx": "^4.21.0",
-    "p-map": "^7.0.4"
+    "zod": "^4.3.6"
   },
   "devDependencies": {
-    "typescript": "^6.0.2",
-    "@types/node": "^25.5.0",
-    "vitest": "^4.1.1",
-    "@vitest/coverage-istanbul": "^4.1.1",
     "@biomejs/biome": "^2.4.8",
+    "@types/node": "^25.5.0",
+    "@vitest/coverage-istanbul": "^4.1.1",
+    "knip": "^6.0.4",
     "tsup": "^8.5.1",
-    "knip": "^6.0.4"
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.1"
   }
 }

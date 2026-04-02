@@ -231,18 +231,19 @@ Relation validation rules:
 - self-reference: warning
 - circular reference: informational
 
-Fields matching `related{Collection}` are auto-detected:
-
-- `relatedTerms` -> `terms`
-- `relatedFaqs` -> `faq`
-
-For non-standard names, export explicit relations from the schema module:
+Define relations explicitly in `defineCollection()` using any field name:
 
 ```ts
-export const relations = {
-  featuredTerms: "terms",
-};
+export const { meta, relations } = defineCollection({
+  schema,
+  relations: {
+    glossaryLinks: "glossary",   // any field name → target collection
+    authorRef: "team",
+  },
+});
 ```
+
+> **Deprecated:** Auto-detection of `related{Collection}` fields (e.g. `relatedTerms` → `terms`) is deprecated. Use explicit `relations` instead.
 
 ## Import patterns
 

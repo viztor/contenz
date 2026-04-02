@@ -106,7 +106,15 @@ export async function loadProjectConfig(cwd: string): Promise<ContenzConfig> {
     try {
       const imported = await import(pathToFileURL(configPath).href);
       return imported.config ?? {};
-    } catch {}
+    } catch (err) {
+      // File not found — try next candidate
+      if (isModuleNotFoundError(err, configPath)) continue;
+      // File exists but failed to load — surface the error
+      throw new Error(
+        `Failed to load project config "${filename}": ${err instanceof Error ? err.message : err}`,
+        { cause: err }
+      );
+    }
   }
   return {};
 }
@@ -121,8 +129,12 @@ export async function loadCollectionConfig(
   try {
     const imported: ConfigModule = await import(pathToFileURL(configPath).href);
     return imported.config;
-  } catch {
-    return undefined;
+  } catch (err) {
+    if (isModuleNotFoundError(err, configPath)) return undefined;
+    throw new Error(
+      `Failed to load collection config "${configPath}": ${err instanceof Error ? err.message : err}`,
+      { cause: err }
+    );
   }
 }
 
@@ -134,9 +146,29 @@ export async function loadSchemaModule(collectionPath: string): Promise<SchemaMo
   try {
     const imported = await import(pathToFileURL(schemaPath).href);
     return imported;
-  } catch {
-    return null;
+  } catch (err) {
+    if (isModuleNotFoundError(err, schemaPath)) return null;
+    throw new Error(
+      `Failed to load schema "${schemaPath}": ${err instanceof Error ? err.message : err}`,
+      { cause: err }
+    );
   }
+}
+
+/**
+ * Check if an import error is a "module not found" error for the given path.
+ * Distinguishes missing files from syntax/runtime errors in existing files.
+ */
+function isModuleNotFoundError(err: unknown, filePath: string): boolean {
+  if (!(err instanceof Error)) return false;
+  const code = (err as NodeJS.ErrnoException).code;
+  // Node ESM: ERR_MODULE_NOT_FOUND; CJS: MODULE_NOT_FOUND
+  if (code === "ERR_MODULE_NOT_FOUND" || code === "MODULE_NOT_FOUND") {
+    // Only treat as "not found" if the error is about our file, not a dependency
+    const fileUrl = pathToFileURL(filePath).href;
+    return err.message.includes(fileUrl) || err.message.includes(filePath);
+  }
+  return false;
 }
 
 /**
@@ -167,7 +199,23 @@ export function resolveConfig(
 
 /**
  * Extract relations from schema module.
- * If no explicit relations export, auto-detect from field names matching `related{Collection}` pattern.
+ * If explicit relations are provided via `defineCollection({ relations })`, returns those.
+ * Otherwise, falls back to auto-detecting from field names matching `related{Collection}`.
+ *
+ * @deprecated The auto-detection fallback is deprecated. Use explicit `relations` in
+ * `defineCollection()` instead. Auto-detection will be removed in a future major version.
+ *
+ * @example
+ * ```ts
+ * // Preferred: explicit relations with any field name
+ * export const { meta, relations } = defineCollection({
+ *   schema,
+ *   relations: {
+ *     glossaryLinks: "glossary",   // custom field name
+ *     authorRef: "team",           // any name works
+ *   },
+ * });
+ * ```
  */
 export function extractRelations(
   schemaModule: SchemaModule,
@@ -178,7 +226,7 @@ export function extractRelations(
     return schemaModule.relations;
   }
 
-  // Auto-detect from schema fields
+  // Auto-detect from schema fields (DEPRECATED)
   const relations: Relations = {};
   const schema = schemaModule.meta;
 
@@ -200,6 +248,14 @@ export function extractRelations(
         }
       }
     }
+  }
+
+  if (Object.keys(relations).length > 0) {
+    console.warn(
+      `[contenz] Deprecation: Auto-detected relations ${JSON.stringify(relations)} from schema field names. ` +
+        `Please use explicit \`relations\` in defineCollection() instead. ` +
+        `Auto-detection of \`related{Collection}\` fields will be removed in a future major version.`
+    );
   }
 
   return relations;

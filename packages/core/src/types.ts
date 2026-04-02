@@ -14,15 +14,20 @@ export interface ContentType {
 
 /**
  * Relations mapping: field name → target collection name.
- * Validates that slugs in the field exist in the target collection.
+ * Validates that slugs referenced in the field exist in the target collection.
+ *
+ * Field names are fully user-defined — use any name that fits your schema.
  *
  * @example
  * ```ts
- * export const relations = {
- *   relatedTerms: "terms",    // validates against terms collection
- *   relatedFaqs: "faq",       // validates against faq collection
- *   featuredTerms: "terms",   // non-standard field name
- * };
+ * export const { meta, relations } = defineCollection({
+ *   schema,
+ *   relations: {
+ *     glossaryLinks: "glossary",   // any field name → target collection
+ *     authorRef: "team",           // single reference field
+ *     seeAlso: "faq",             // self-referencing relation
+ *   },
+ * });
  * ```
  */
 export type Relations = Record<string, string>;

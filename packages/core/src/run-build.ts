@@ -34,6 +34,16 @@ import {
   saveManifest,
 } from "./manifest.js";
 import { parseContentFile, parseFileName } from "./parser.js";
+import {
+  addDocumentsToIndex,
+  buildSearchDocument,
+  collectMetaFieldNames,
+  createSearchIndex,
+  discardDocuments,
+  loadSearchIndex,
+  type SearchDocument,
+  saveSearchIndex,
+} from "./search-index.js";
 import { validateMeta } from "./validator.js";
 import { type CollectionContext, createWorkspace } from "./workspace.js";
 
@@ -163,10 +173,12 @@ async function processOneCollection(
       diagnostics: Diagnostic[];
       inputHash: string;
       contentFiles: string[];
+      searchDocs: SearchDocument[];
     }
   | { ok: false; diagnostics: Diagnostic[] }
 > {
   const diagnostics: Diagnostic[] = [];
+  const searchDocs: SearchDocument[] = [];
   const { name: collectionName, collectionPath, config, schema: schemaModule, contentFiles } = ctx;
 
   if (!schemaModule) {
@@ -259,6 +271,18 @@ async function processOneCollection(
           meta: result.meta,
         } as FlatCollectionData);
       }
+
+      // Collect search document for this parsed content file
+      searchDocs.push(
+        buildSearchDocument(
+          collectionName,
+          parsed.slug,
+          parsed.locale,
+          file,
+          result.meta,
+          result.body
+        )
+      );
     } catch (error) {
       parseErrors++;
       diagnostics.push({
@@ -304,6 +328,7 @@ async function processOneCollection(
       diagnostics,
       inputHash,
       contentFiles,
+      searchDocs,
     };
   }
 
@@ -394,6 +419,7 @@ async function processOneCollection(
     diagnostics,
     inputHash,
     contentFiles,
+    searchDocs,
   };
 }
 
@@ -559,6 +585,7 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
       diagnostics: Diagnostic[];
       inputHash: string;
       contentFiles: string[];
+      searchDocs: SearchDocument[];
     } => r.ok
   );
 
@@ -601,6 +628,54 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
       projectConfigHash
     );
     await saveManifest(merged);
+
+    // ── Incremental search index update ──────────────────────────────
+    // Collect all new search documents from rebuilt collections
+    const allNewDocs = succeeded.flatMap((r) => r.searchDocs);
+    const allMetaFields = collectMetaFieldNames(allNewDocs);
+
+    // Try loading the existing index; if meta fields changed, rebuild from scratch
+    let searchIndex = await loadSearchIndex(cwd);
+    if (searchIndex) {
+      // Discard documents from collections that were rebuilt
+      const rebuiltCollections = new Set(succeeded.map((r) => r.indexMeta.name));
+      // Build list of IDs to discard: we know the pattern is collection:slug:locale
+      // Since we can't enumerate stored docs, discard by known IDs from new docs
+      // plus any old IDs. To be safe, search for each rebuilt collection.
+      for (const colName of rebuiltCollections) {
+        // Remove all docs with IDs starting with `colName:`
+        // MiniSearch doesn't support prefix-discard, so we search + discard
+        try {
+          const hits = searchIndex.search(colName, {
+            fields: ["slug"],
+            prefix: true,
+            fuzzy: false,
+          });
+          const idsToRemove = hits
+            .filter((h) => {
+              const stored = h as unknown as { collection?: string };
+              return stored.collection === colName;
+            })
+            .map((h) => String(h.id));
+          discardDocuments(searchIndex, idsToRemove);
+        } catch {
+          // If search fails, start fresh
+          searchIndex = null;
+          break;
+        }
+      }
+    }
+
+    if (!searchIndex) {
+      // No existing index or it was invalidated — rebuild from scratch
+      // We only have docs for the collections we just built.
+      // For a full index rebuild, we'd need to re-parse skipped collections.
+      // For now, create a new index with just what we have.
+      searchIndex = createSearchIndex(allMetaFields);
+    }
+
+    addDocumentsToIndex(searchIndex, allNewDocs);
+    await saveSearchIndex(cwd, searchIndex, allMetaFields);
   }
 
   const failedCount = results.length - succeeded.length;

@@ -156,15 +156,19 @@ export const { termMeta, topicMeta, meta, relations, types } = defineMultiTypeCo
 
 ### Relations
 
-Validate that slugs in relation fields exist in target collections:
+Validate that slugs in relation fields exist in target collections. Define relations explicitly in `defineCollection()` using any field name:
 
 ```ts
-// Auto-detected: `relatedTerms` → `terms`, `relatedFaqs` → `faq`
-// Explicit:
-export const relations = {
-  featuredTerms: "terms",
-};
+export const { meta, relations } = defineCollection({
+  schema,
+  relations: {
+    glossaryLinks: "glossary",   // any field name → target collection
+    authorRef: "team",
+  },
+});
 ```
+
+> **Deprecated:** Auto-detection of `related{Collection}` fields is deprecated. Use explicit `relations` instead.
 
 ---
 

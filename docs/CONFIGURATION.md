@@ -63,7 +63,7 @@ export const config: ContenzConfig = {
         title: z.string(),
         tags: z.array(z.string()).default([]),
       }),
-      relations: { relatedFaqs: "faq" },
+      relations: { faqLinks: "faq" },
     },
   },
 };
@@ -132,7 +132,7 @@ export const { meta, relations } = defineCollection({ schema });
 ```
 
 - `meta` is the Zod schema used for validation and generation.
-- `relations` can be left unexported if you rely on auto-detection (e.g. `relatedFaqs` → `faq`).
+- `relations` defines which fields reference other collections. Field names are user-defined — use any name that matches your schema.
 
 ### Multi-type collection
 
@@ -187,17 +187,20 @@ If both schema and config define types, **config.types wins** (config overrides)
 
 ### Relations
 
-Fields that reference other collections can be validated so slugs exist in the target collection.
-
-- **Auto-detected**: `related{Collection}` (e.g. `relatedTerms` → `terms`).
-- **Explicit**: Export `relations` from the schema module:
+Fields that reference other collections can be validated so slugs exist in the target collection. Define relations explicitly in `defineCollection()` using any field name:
 
 ```ts
-export const relations = {
-  featuredTerms: "terms",
-  relatedFaqs: "faq",
-};
+export const { meta, relations } = defineCollection({
+  schema,
+  relations: {
+    glossaryLinks: "glossary",   // any field name → target collection
+    authorRef: "team",
+    seeAlso: "faq",
+  },
+});
 ```
+
+> **Deprecated:** Auto-detection of `related{Collection}` field names (e.g. `relatedTerms` → `terms`) is deprecated. Use explicit `relations` instead.
 
 See [Content model – Relations](./CONTENT-MODEL.md#relation-validation) for validation rules.
 

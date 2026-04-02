@@ -76,6 +76,15 @@ export {
 } from "./run-search.js";
 export type { StatusOptions, StatusResult } from "./run-status.js";
 export { runStatus } from "./run-status.js";
+export {
+  createSearchIndex,
+  loadSearchIndex,
+  querySearchIndex,
+  type SearchDocument,
+  type SearchIndexHit,
+  type SearchIndexQuery,
+  saveSearchIndex,
+} from "./search-index.js";
 export type { DiscoveredCollection } from "./sources.js";
 export { discoverCollections, globContentFiles, resolveSourcePatterns } from "./sources.js";
 export type { ContenzConfig, SchemaModule } from "./types.js";

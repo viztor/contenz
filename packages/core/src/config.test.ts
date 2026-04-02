@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { resolveConfig } from "./config.js";
 import { discoverCollections, normalizeSourcePattern } from "./sources.js";
 import type { CollectionConfig, ContenzConfig, ResolvedConfig } from "./types.js";
@@ -203,7 +203,24 @@ describe("extractRelations", () => {
     });
   });
 
-  it("auto-detects relatedCollection fields from schema shape", async () => {
+  it("supports custom-named relation fields via explicit relations", async () => {
+    const { extractRelations } = await import("./config.js");
+    const module = {
+      relations: {
+        glossaryLinks: "glossary",
+        authorRef: "team",
+        seeAlso: "faq",
+      },
+    };
+    const result = extractRelations(module as never, ["glossary", "team", "faq"]);
+    expect(result).toEqual({
+      glossaryLinks: "glossary",
+      authorRef: "team",
+      seeAlso: "faq",
+    });
+  });
+
+  it("auto-detects relatedCollection fields from schema shape (deprecated)", async () => {
     const { extractRelations } = await import("./config.js");
     const shape = {
       relatedFaq: {},
@@ -214,9 +231,25 @@ describe("extractRelations", () => {
       _def: { shape: () => shape },
     };
     const module = { meta, relations: undefined };
+
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const result = extractRelations(module as never, ["faq", "term"]);
     expect(result.relatedFaq).toBe("faq");
     expect(result.relatedTerm).toBe("term");
     expect(result.title).toBeUndefined();
+    // Verify deprecation warning was emitted
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("Deprecation: Auto-detected relations")
+    );
+    warnSpy.mockRestore();
+  });
+
+  it("emits no warning when explicit relations are provided", async () => {
+    const { extractRelations } = await import("./config.js");
+    const module = { relations: { tags: "glossary" } };
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    extractRelations(module as never, ["glossary"]);
+    expect(warnSpy).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
   });
 });

@@ -124,10 +124,20 @@ import { faq } from "@/generated/content/faq";
 
 ## Relation validation
 
-Fields that reference other collections (e.g. slugs in `relatedTerms`) can be validated so that each slug exists in the target collection.
+Fields that reference other collections can be validated so that each referenced slug exists in the target collection. Define relations explicitly using any field name you choose:
 
-- **Auto-detected**: `related{Collection}` → target collection name (e.g. `relatedTerms` → `terms`, `relatedFaqs` → `faq`).
-- **Explicit**: Export `relations` from the schema module: `{ featuredTerms: "terms" }`.
+```ts
+export const { meta, relations } = defineCollection({
+  schema,
+  relations: {
+    glossaryLinks: "glossary",   // any field name → target collection
+    authorRef: "team",           // single reference field
+    seeAlso: "faq",             // self-referencing relation
+  },
+});
+```
+
+> **Deprecated:** Auto-detection of `related{Collection}` field names (e.g. `relatedTerms` → `terms`) is deprecated and will be removed in a future major version. Use explicit `relations` instead.
 
 Validation behavior:
 

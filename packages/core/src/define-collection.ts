@@ -7,7 +7,11 @@ import type { ContentType, Relations, SchemaModule } from "./types.js";
 export interface DefineCollectionSingleOptions {
   /** Zod schema for frontmatter / meta validation */
   schema: ZodSchema;
-  /** Cross-collection relations: field name → target collection name */
+  /**
+   * Cross-collection relations: field name → target collection name.
+   * Field names are user-defined — any name that matches a field in your schema works.
+   * @example `{ glossaryLinks: "glossary", authorRef: "team" }`
+   */
   relations?: Relations;
 }
 

@@ -1,0 +1,5 @@
+{
+  "term": "Schema",
+  "definition": "A formal description of the structure and constraints of data",
+  "seeAlso": ["cms"]
+}
