@@ -13,6 +13,9 @@ const e2eFixturesDir = path.join(repoRoot, "packages", "e2e", "fixtures");
 const coreSourceImport = pathToFileURL(
   path.join(repoRoot, "packages", "core", "src", "define-collection.ts")
 ).href;
+const adapterMdxSourceImport = pathToFileURL(
+  path.join(repoRoot, "packages", "adapter-mdx", "src", "index.ts")
+).href;
 
 async function rewriteFixtureImports(dir: string): Promise<void> {
   const entries = await fs.readdir(dir, { withFileTypes: true });
@@ -29,11 +32,12 @@ async function rewriteFixtureImports(dir: string): Promise<void> {
     }
 
     const source = await fs.readFile(entryPath, "utf-8");
-    if (!source.includes("@contenz/core")) {
+    if (!source.includes("@contenz/core") && !source.includes("@contenz/adapter-mdx")) {
       continue;
     }
 
-    const rewritten = source.replaceAll('"@contenz/core"', `"${coreSourceImport}"`);
+    let rewritten = source.replaceAll('"@contenz/core"', `"${coreSourceImport}"`);
+    rewritten = rewritten.replaceAll('"@contenz/adapter-mdx"', `"${adapterMdxSourceImport}"`);
     await fs.writeFile(entryPath, rewritten, "utf-8");
   }
 }
