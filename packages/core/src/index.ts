@@ -46,6 +46,17 @@ export {
   introspectSchema,
   type SchemaFieldType,
 } from "./introspect.js";
+export {
+  runWatch,
+  type WatchChangeEvent,
+  type WatchErrorEvent,
+  type WatchEvent,
+  type WatchEventMap,
+  type WatchHandle,
+  type WatchOptions,
+  type WatchReadyEvent,
+  type WatchRebuildEvent,
+} from "./run-watch.js";
 export type {
   CollectionConfig,
   CollectionDeclaration,

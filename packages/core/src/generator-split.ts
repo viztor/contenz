@@ -58,7 +58,7 @@ export async function generateSharedTypesFile(
 /**
  * Resolve locale with chained fallback support.
  */
-export function resolveLocaleChain(
+function resolveLocaleChain(
   locales: Record<string, { file: string; meta: Record<string, unknown> }>,
   locale: string,
   fallbackMap: Record<string, string>,
