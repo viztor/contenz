@@ -24,6 +24,10 @@ function extAlternation(extensions?: string[]): string {
   return exts.map((e) => e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
 }
 
+// ⚡ Bolt Performance Optimization:
+// Cache compiled Regular Expressions to avoid recompiling on every file parse
+const patternCache = new Map<string, RegExp>();
+
 /**
  * Parse filename to extract slug and optional locale.
  *
@@ -48,11 +52,22 @@ export function parseFileName(
     };
   }
 
-  const alt = extAlternation(extensions);
+  const extsKey = extensions?.length ? extensions.join(",") : "default";
+  const cacheKey = `${i18nEnabled ? "i18n" : "flat"}:${extsKey}`;
+
+  let pattern = patternCache.get(cacheKey);
+  if (!pattern) {
+    const alt = extAlternation(extensions);
+    pattern = i18nEnabled
+      ? new RegExp(`^(.+)\\.([a-z]{2}(?:-[A-Z]{2})?)\\.(${alt})$`)
+      : new RegExp(`^(.+)\\.(${alt})$`);
+    patternCache.set(cacheKey, pattern);
+  }
+
+  const match = fileName.match(pattern);
+  if (!match) return null;
 
   if (i18nEnabled) {
-    const match = fileName.match(new RegExp(`^(.+)\\.([a-z]{2}(?:-[A-Z]{2})?)\\.(${alt})$`));
-    if (!match) return null;
     return {
       slug: match[1],
       locale: match[2],
@@ -60,8 +75,6 @@ export function parseFileName(
     };
   }
 
-  const match = fileName.match(new RegExp(`^(.+)\\.(${alt})$`));
-  if (!match) return null;
   return {
     slug: match[1],
     ext: match[2],
