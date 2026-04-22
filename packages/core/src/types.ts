@@ -71,6 +71,12 @@ export interface I18nConfigShape {
   detectStale?: boolean;
   /** Include _fallback field in generated output when entry is from fallback locale */
   includeFallbackMetadata?: boolean;
+  /**
+   * Build output strategy for i18n collections.
+   * - "merged": All locales in a single file per collection (default, backward-compatible)
+   * - "split": Per-locale files with a unified entry point and locale() resolver
+   */
+  outputStrategy?: "merged" | "split";
 }
 
 /**
@@ -166,6 +172,8 @@ export interface ResolvedI18nConfig {
   coverageThreshold: number | null;
   detectStale: boolean;
   includeFallbackMetadata: boolean;
+  /** Build output strategy: "merged" (default) or "split" (per-locale files) */
+  outputStrategy: "merged" | "split";
 }
 
 /**

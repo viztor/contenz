@@ -41,6 +41,43 @@ describe("parseFileName", () => {
       });
     });
 
+    it("parses BCP 47 locale with script subtag", () => {
+      expect(parseFileName("intro.zh-Hant.mdx", true)).toEqual({
+        slug: "intro",
+        locale: "zh-Hant",
+        ext: "mdx",
+      });
+      expect(parseFileName("intro.zh-Hans.md", true)).toEqual({
+        slug: "intro",
+        locale: "zh-Hans",
+        ext: "md",
+      });
+    });
+
+    it("parses BCP 47 locale with script subtag and region", () => {
+      expect(parseFileName("guide.zh-Hans-CN.md", true)).toEqual({
+        slug: "guide",
+        locale: "zh-Hans-CN",
+        ext: "md",
+      });
+    });
+
+    it("parses three-letter language codes", () => {
+      expect(parseFileName("page.fil.mdx", true)).toEqual({
+        slug: "page",
+        locale: "fil",
+        ext: "mdx",
+      });
+    });
+
+    it("parses pt-BR style locale", () => {
+      expect(parseFileName("faq.pt-BR.json", true)).toEqual({
+        slug: "faq",
+        locale: "pt-BR",
+        ext: "json",
+      });
+    });
+
     it("returns null for non-i18n filename when i18n enabled", () => {
       expect(parseFileName("hello.mdx", true)).toBeNull();
     });

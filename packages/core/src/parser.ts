@@ -51,7 +51,9 @@ export function parseFileName(
   const alt = extAlternation(extensions);
 
   if (i18nEnabled) {
-    const match = fileName.match(new RegExp(`^(.+)\\.([a-z]{2}(?:-[A-Z]{2})?)\\.(${alt})$`));
+    // BCP 47 locale: xx, xxx, xx-XX, xx-Xxxx, xx-Xxxx-XX, etc.
+    const localePattern = "[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?";
+    const match = fileName.match(new RegExp(`^(.+)\\.(${localePattern})\\.(${alt})$`));
     if (!match) return null;
     return {
       slug: match[1],

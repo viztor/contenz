@@ -97,7 +97,7 @@ export async function saveSearchIndex(
     version: 1,
     generatedAt: new Date().toISOString(),
     _metaFields: metaFields,
-    index: JSON.parse(JSON.stringify(index)),
+    index: JSON.stringify(index),
   });
   await fs.writeFile(indexPath, payload, "utf-8");
 }
@@ -137,8 +137,6 @@ export function buildSearchDocument(
 
   return doc;
 }
-
-
 
 /**
  * Discard specific document IDs from the index.

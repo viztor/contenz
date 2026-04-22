@@ -1,14 +1,12 @@
 /**
  * Programmatic API for searching content across collections.
  *
- * When a search index exists (built by `contenz build`), uses MiniSearch
- * for fast prefix/fuzzy search. Falls back to O(n) file parsing when no
- * index is available (pre-build scenario).
+ * Uses O(n) file parsing for guaranteed correctness — always reflects the
+ * current filesystem state, including content added since the last build.
  */
 import path from "node:path";
 import { parseContentFile, parseFileName } from "./parser.js";
 import type { ContentOpResult } from "./run-content-ops.js";
-import { loadSearchIndex, querySearchIndex } from "./search-index.js";
 import { createWorkspace } from "./workspace.js";
 
 // ── Types ───────────────────────────────────────────────────────────────────
@@ -42,40 +40,7 @@ export interface SearchResultData {
   items: SearchResultItem[];
 }
 
-// ── Indexed search (fast path) ──────────────────────────────────────────────
-
-async function searchWithIndex(cwd: string, opts: SearchOptions): Promise<SearchResultData | null> {
-  const index = await loadSearchIndex(cwd);
-  if (!index) return null;
-
-  // MiniSearch requires query text; if only field filters, we need a fallback
-  if (!opts.query) return null;
-
-  const hits = querySearchIndex(index, {
-    query: opts.query,
-    collection: opts.collection,
-    locale: opts.locale,
-    fields: opts.fields,
-    limit: opts.limit,
-  });
-
-  if (hits.length === 0 && !opts.query) return null;
-
-  return {
-    collection: opts.collection,
-    query: opts.query ?? null,
-    filters: opts.fields ?? {},
-    total: hits.length,
-    items: hits.map((h) => ({
-      slug: h.slug,
-      locale: h.locale,
-      file: h.file,
-      meta: h.meta,
-    })),
-  };
-}
-
-// ── Brute-force search (fallback) ───────────────────────────────────────────
+// ── File-based search ───────────────────────────────────────────────────────
 
 async function searchBruteForce(opts: SearchOptions): Promise<SearchResultData> {
   const ws = await createWorkspace({ cwd: opts.cwd, collection: opts.collection });
@@ -134,13 +99,18 @@ async function searchBruteForce(opts: SearchOptions): Promise<SearchResultData> 
 
 export async function runSearch(opts: SearchOptions): Promise<ContentOpResult<SearchResultData>> {
   try {
-    // Try the fast indexed path first
-    const indexedResult = await searchWithIndex(path.resolve(process.cwd(), opts.cwd ?? "."), opts);
-    if (indexedResult) {
-      return { success: true, data: indexedResult };
+    const cwd = path.resolve(process.cwd(), opts.cwd ?? ".");
+
+    // Validate the collection exists before searching
+    const ws = await createWorkspace({ cwd, collection: opts.collection });
+    const col = ws.getCollection(opts.collection);
+    if (!col) {
+      return { success: false, error: `Collection not found: ${opts.collection}` };
     }
 
-    // Fall back to brute-force scan
+    // Always use brute-force (file-based) search for the programmatic API.
+    // The search index may be stale (missing recently created/modified content),
+    // so brute-force guarantees correctness by scanning the filesystem directly.
     const data = await searchBruteForce(opts);
     return { success: true, data };
   } catch (error) {

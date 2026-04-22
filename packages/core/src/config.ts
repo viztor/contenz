@@ -29,6 +29,7 @@ function normalizeI18n(raw: boolean | I18nConfigShape | undefined): {
         coverageThreshold: null,
         detectStale: false,
         includeFallbackMetadata: false,
+        outputStrategy: "merged",
       },
     };
   }
@@ -56,6 +57,7 @@ function normalizeI18n(raw: boolean | I18nConfigShape | undefined): {
       : null;
   const detectStale = shape.detectStale === true;
   const includeFallbackMetadata = shape.includeFallbackMetadata === true;
+  const outputStrategy = shape.outputStrategy === "split" ? "split" : "merged";
 
   return {
     enabled: true,
@@ -67,6 +69,7 @@ function normalizeI18n(raw: boolean | I18nConfigShape | undefined): {
       coverageThreshold,
       detectStale,
       includeFallbackMetadata,
+      outputStrategy,
     },
   };
 }

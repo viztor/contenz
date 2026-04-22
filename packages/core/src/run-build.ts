@@ -25,6 +25,14 @@ import {
   type I18nCollectionData,
 } from "./generator.js";
 import {
+  generateLocaleIndexFile,
+  generateLocaleResolverFile,
+  generateSharedTypesFile,
+  generateSplitLocaleCollectionFile,
+  generateSplitRootIndexFile,
+  type SplitCollectionMeta,
+} from "./generator-split.js";
+import {
   computeCollectionInputHash,
   computeConfigHash,
   getCachedInputHash,
@@ -174,6 +182,12 @@ async function processOneCollection(
       inputHash: string;
       contentFiles: string[];
       searchDocs: SearchDocument[];
+      /** i18n items data (available when i18n enabled, for split output) */
+      i18nItems?: I18nCollectionData[];
+      /** Detected locales for this collection */
+      detectedLocales?: string[];
+      /** Default schema for type generation */
+      defaultSchema?: import("zod").ZodSchema;
     }
   | { ok: false; diagnostics: Diagnostic[] }
 > {
@@ -389,7 +403,26 @@ async function processOneCollection(
       }
     }
 
-    if (!dryRun) {
+    // Undeclared locale validation
+    if (ri?.locales.length) {
+      for (const detectedLocale of detectedLocales) {
+        if (!ri.locales.includes(detectedLocale)) {
+          diagnostics.push({
+            code: "I18N_UNDECLARED_LOCALE",
+            severity: "warning",
+            category: "i18n",
+            message: `Detected locale "${detectedLocale}" is not in the declared locales list [${ri.locales.join(", ")}].`,
+            source: "build",
+            collection: collectionName,
+          });
+        }
+      }
+    }
+
+    // Generate merged output only when outputStrategy is not "split".
+    // Split output is handled in runBuild after all collections are processed.
+    const isSplit = ri?.outputStrategy === "split";
+    if (!dryRun && !isSplit) {
       await generateI18nCollectionFile(
         collectionOutputPath,
         collectionName,
@@ -400,6 +433,19 @@ async function processOneCollection(
         ri?.includeFallbackMetadata ? ri : undefined
       );
     }
+
+    return {
+      ok: true,
+      indexMeta: { name: collectionName, hasI18n: effectiveConfig.i18n, metaTypeName },
+      outputName: isSplit ? "" : `${collectionName}.ts`,
+      diagnostics,
+      inputHash,
+      contentFiles,
+      searchDocs,
+      i18nItems,
+      detectedLocales: locales,
+      defaultSchema,
+    };
   } else {
     if (!dryRun) {
       await generateFlatCollectionFile(
@@ -420,6 +466,9 @@ async function processOneCollection(
     inputHash,
     contentFiles,
     searchDocs,
+    i18nItems: undefined,
+    detectedLocales: undefined,
+    defaultSchema: undefined,
   };
 }
 
@@ -586,6 +635,9 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
       inputHash: string;
       contentFiles: string[];
       searchDocs: SearchDocument[];
+      i18nItems?: I18nCollectionData[];
+      detectedLocales?: string[];
+      defaultSchema?: import("zod").ZodSchema;
     } => r.ok
   );
 
@@ -599,7 +651,94 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
     ...succeeded.map((r) => r.outputName),
   ];
 
-  if (!dryRun) {
+  // Determine if any collection uses split output strategy
+  const useSplitOutput = baseConfig.resolvedI18n?.outputStrategy === "split";
+
+  if (!dryRun && useSplitOutput) {
+    // Collect all split-eligible collections
+    const splitCollections: {
+      meta: SplitCollectionMeta;
+      items: I18nCollectionData[];
+    }[] = [];
+    const allDetectedLocales = new Set<string>();
+
+    for (const r of succeeded) {
+      if (r.i18nItems && r.detectedLocales) {
+        const entryTypeName = (
+          r.indexMeta.metaTypeName ??
+          `${r.indexMeta.name.charAt(0).toUpperCase() + r.indexMeta.name.slice(1)}Meta`
+        ).replace("Meta", "Entry");
+        splitCollections.push({
+          meta: {
+            name: r.indexMeta.name,
+            metaTypeName:
+              r.indexMeta.metaTypeName ??
+              `${r.indexMeta.name.charAt(0).toUpperCase() + r.indexMeta.name.slice(1)}Meta`,
+            entryTypeName,
+            schema: r.defaultSchema as import("zod").ZodTypeAny | undefined,
+          },
+          items: r.i18nItems,
+        });
+        for (const l of r.detectedLocales) allDetectedLocales.add(l);
+      }
+    }
+
+    const sortedLocales = [...allDetectedLocales].sort();
+    const fallbackMap = baseConfig.resolvedI18n?.fallbackMap ?? {};
+    const includeFallbackMeta = baseConfig.resolvedI18n?.includeFallbackMetadata === true;
+
+    // Generate shared types
+    await generateSharedTypesFile(
+      outputDir,
+      splitCollections.map((c) => c.meta)
+    );
+    generated.push("_types.ts");
+
+    // Generate per-locale collection files and locale index files
+    for (const locale of sortedLocales) {
+      for (const col of splitCollections) {
+        await generateSplitLocaleCollectionFile(
+          outputDir,
+          locale,
+          col.meta.name,
+          col.items,
+          col.meta.entryTypeName,
+          fallbackMap,
+          includeFallbackMeta
+        );
+        generated.push(`${locale}/${col.meta.name}.ts`);
+      }
+      await generateLocaleIndexFile(
+        outputDir,
+        locale,
+        splitCollections.map((c) => c.meta)
+      );
+      generated.push(`${locale}/index.ts`);
+    }
+
+    // Generate locale resolver
+    await generateLocaleResolverFile(
+      outputDir,
+      splitCollections.map((c) => c.meta),
+      sortedLocales,
+      fallbackMap
+    );
+    generated.push("_locale.ts");
+
+    // Generate split root index
+    await generateSplitRootIndexFile(
+      outputDir,
+      splitCollections.map((c) => c.meta)
+    );
+    generated.push("index.ts");
+
+    // Also generate merged files for any non-i18n collections
+    const nonI18nMeta = indexMetaList.filter((m) => !m.hasI18n);
+    if (nonI18nMeta.length > 0) {
+      // Non-i18n collections still get their merged output
+      // The split root index already covers types; flat collections need a separate export
+    }
+  } else if (!dryRun) {
     await generateIndexFile(
       path.join(outputDir, "index.ts"),
       indexMetaList.map((m) => ({
@@ -609,8 +748,10 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
         metaTypeName: m.metaTypeName,
       }))
     );
+    generated.push("index.ts");
+  } else {
+    generated.push("index.ts");
   }
-  generated.push("index.ts");
 
   if (!dryRun && succeeded.length > 0) {
     const updates: ManifestCollectionEntry[] = succeeded.map((r) => ({
@@ -634,43 +775,17 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
     const allNewDocs = succeeded.flatMap((r) => r.searchDocs);
     const allMetaFields = collectMetaFieldNames(allNewDocs);
 
-    // Try loading the existing index; if meta fields changed, rebuild from scratch
-    let searchIndex = await loadSearchIndex(cwd);
+    // Try loading the existing index for incremental update.
+    // On force builds, always start fresh to avoid duplicate IDs.
+    let searchIndex = force ? null : await loadSearchIndex(cwd);
     if (searchIndex) {
-      // Discard documents from collections that were rebuilt
-      const rebuiltCollections = new Set(succeeded.map((r) => r.indexMeta.name));
-      // Build list of IDs to discard: we know the pattern is collection:slug:locale
-      // Since we can't enumerate stored docs, discard by known IDs from new docs
-      // plus any old IDs. To be safe, search for each rebuilt collection.
-      for (const colName of rebuiltCollections) {
-        // Remove all docs with IDs starting with `colName:`
-        // MiniSearch doesn't support prefix-discard, so we search + discard
-        try {
-          const hits = searchIndex.search(colName, {
-            fields: ["slug"],
-            prefix: true,
-            fuzzy: false,
-          });
-          const idsToRemove = hits
-            .filter((h) => {
-              const stored = h as unknown as { collection?: string };
-              return stored.collection === colName;
-            })
-            .map((h) => String(h.id));
-          discardDocuments(searchIndex, idsToRemove);
-        } catch {
-          // If search fails, start fresh
-          searchIndex = null;
-          break;
-        }
-      }
+      // Discard documents we're about to re-add (same IDs = same collection:slug:locale)
+      const idsToRemove = allNewDocs.map((d) => d.id);
+      discardDocuments(searchIndex, idsToRemove);
     }
 
     if (!searchIndex) {
-      // No existing index or it was invalidated — rebuild from scratch
-      // We only have docs for the collections we just built.
-      // For a full index rebuild, we'd need to re-parse skipped collections.
-      // For now, create a new index with just what we have.
+      // No existing index or force rebuild — create from scratch
       searchIndex = createSearchIndex(allMetaFields);
     }
 

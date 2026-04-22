@@ -34,6 +34,12 @@ export {
   registerAdapters,
 } from "./format-adapter.js";
 export {
+  negotiateLocale,
+  type ParsedLocaleURL,
+  type ParseLocaleFromURLOptions,
+  parseLocaleFromURL,
+} from "./i18n-utils.js";
+export {
   type IntrospectedField,
   type IntrospectedSchema,
   introspectField,

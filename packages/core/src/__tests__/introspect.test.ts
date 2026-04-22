@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { introspectField, introspectSchema } from "../introspect.js";
+import { introspectSchema } from "../introspect.js";
 
 describe("Schema Introspection", () => {
   describe("Primitives", () => {
