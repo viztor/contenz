@@ -10,6 +10,8 @@
  *   export const config: ContenzConfig = { adapters: [mdxAdapter] };
  */
 
+import vm from "node:vm";
+
 import type { FormatAdapter } from "@contenz/core";
 
 // ── Brace-Balanced Scanner (for `export const meta = { ... }`) ──────────────
@@ -104,8 +106,10 @@ function skipStringLiteral(
 
 function safeEvalObjectLiteral(objectStr: string): Record<string, unknown> {
 	try {
-		const fn = new Function(`"use strict"; return (${objectStr});`);
-		const result = fn();
+		const script = new vm.Script(`(${objectStr})`);
+		const result = script.runInNewContext(Object.create(null), {
+			timeout: 100,
+		});
 		if (typeof result === "object" && result !== null) {
 			return result as Record<string, unknown>;
 		}
