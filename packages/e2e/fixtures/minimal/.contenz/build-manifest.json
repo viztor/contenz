@@ -1,12 +1,12 @@
 {
   "version": 1,
-  "cwd": "/Users/viz/dev/contenz/packages/e2e/fixtures/minimal",
+  "cwd": "/app/packages/e2e/fixtures/minimal",
   "outputDir": "generated/content",
   "sources": [
     "content/*"
   ],
   "configHash": "5e8a1a197624bb9601dcb526ee219df0ad9c6d914c76c1f42ef882bb03bb5cb2",
-  "generatedAt": "2026-04-02T05:45:28.351Z",
+  "generatedAt": "2026-04-22T10:13:41.753Z",
   "collections": [
     {
       "name": "faq",

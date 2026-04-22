@@ -1,12 +1,12 @@
 {
   "version": 1,
-  "cwd": "/Users/viz/dev/contenz/packages/e2e/fixtures/large-project",
+  "cwd": "/app/packages/e2e/fixtures/large-project",
   "outputDir": "generated/content",
   "sources": [
     "content/*"
   ],
   "configHash": "fb9c39fa9187392555e4811b206aa72721db4aae024aed556ddbbccb93a7c64b",
-  "generatedAt": "2026-04-02T08:34:57.219Z",
+  "generatedAt": "2026-04-22T10:13:12.695Z",
   "collections": [
     {
       "name": "blog",

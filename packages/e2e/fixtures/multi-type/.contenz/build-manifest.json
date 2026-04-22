@@ -1,12 +1,12 @@
 {
   "version": 1,
-  "cwd": "/Users/viz/dev/contenz/packages/e2e/fixtures/multi-type",
+  "cwd": "/app/packages/e2e/fixtures/multi-type",
   "outputDir": "generated/content",
   "sources": [
     "content/*"
   ],
   "configHash": "fb9c39fa9187392555e4811b206aa72721db4aae024aed556ddbbccb93a7c64b",
-  "generatedAt": "2026-04-02T05:45:24.975Z",
+  "generatedAt": "2026-04-22T10:13:13.323Z",
   "collections": [
     {
       "name": "terms",
