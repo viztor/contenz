@@ -138,8 +138,6 @@ export function buildSearchDocument(
   return doc;
 }
 
-
-
 /**
  * Discard specific document IDs from the index.
  * Uses MiniSearch's `discard()` which marks documents as deleted
