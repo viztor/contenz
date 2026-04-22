@@ -14,6 +14,10 @@ const coreSourceImport = pathToFileURL(
   path.join(repoRoot, "packages", "core", "src", "define-collection.ts")
 ).href;
 
+const adapterMdxSourceImport = pathToFileURL(
+  path.join(repoRoot, "packages", "adapter-mdx", "src", "index.ts")
+).href;
+
 async function rewriteFixtureImports(dir: string): Promise<void> {
   const entries = await fs.readdir(dir, { withFileTypes: true });
 
@@ -29,12 +33,17 @@ async function rewriteFixtureImports(dir: string): Promise<void> {
     }
 
     const source = await fs.readFile(entryPath, "utf-8");
-    if (!source.includes("@contenz/core")) {
-      continue;
+    let rewritten = source;
+    if (rewritten.includes("@contenz/core")) {
+      rewritten = rewritten.replaceAll('"@contenz/core"', `"${coreSourceImport}"`);
+    }
+    if (rewritten.includes("@contenz/adapter-mdx")) {
+      rewritten = rewritten.replaceAll('"@contenz/adapter-mdx"', `"${adapterMdxSourceImport}"`);
     }
 
-    const rewritten = source.replaceAll('"@contenz/core"', `"${coreSourceImport}"`);
-    await fs.writeFile(entryPath, rewritten, "utf-8");
+    if (rewritten !== source) {
+      await fs.writeFile(entryPath, rewritten, "utf-8");
+    }
   }
 }
 
