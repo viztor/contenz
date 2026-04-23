@@ -1,6 +1,6 @@
 {
   "name": "@contenz/core",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Content validation and codegen from MDX/Markdown with Zod",
   "license": "MPL-2.0",
   "publishConfig": {
