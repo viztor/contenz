@@ -215,7 +215,9 @@ describe("save and load search index", () => {
     const loaded = await loadSearchIndex(tempDir);
     expect(loaded).not.toBeNull();
 
-    const hits = querySearchIndex(loaded!, { query: "moq" });
+    if (!loaded) throw new Error("Expected index to be loaded");
+
+    const hits = querySearchIndex(loaded, { query: "moq" });
     expect(hits.length).toBeGreaterThan(0);
     expect(hits[0].slug).toBe("moq");
   });

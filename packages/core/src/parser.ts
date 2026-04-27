@@ -14,7 +14,9 @@ export interface ParseFileNameResult {
 
 /** Default extensions used when no config-level extensions are specified. */
 const DEFAULT_EXTENSIONS = ["mdx", "md", "json"];
-const DEFAULT_EXTENSIONS_ALT = DEFAULT_EXTENSIONS.map((e) => e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+const DEFAULT_EXTENSIONS_ALT = DEFAULT_EXTENSIONS.map((e) =>
+  e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+).join("|");
 
 /** Cache for compiled regex patterns */
 const patternCache = new Map<string, RegExp>();
@@ -53,7 +55,7 @@ export function parseFileName(
   }
 
   const alt = extAlternation(extensions);
-  const cacheKey = `${i18nEnabled ? '1' : '0'}:${alt}`;
+  const cacheKey = `${i18nEnabled ? "1" : "0"}:${alt}`;
 
   let regex = patternCache.get(cacheKey);
   if (!regex) {
