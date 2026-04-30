@@ -1,6 +1,6 @@
 {
   "name": "@contenz/adapter-mdx",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Unified MD/MDX format adapter for contenz",
   "license": "MPL-2.0",
   "publishConfig": {

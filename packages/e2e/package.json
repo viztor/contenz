@@ -13,5 +13,5 @@
     "@types/node": "^25.5.0",
     "vitest": "^4.1.1"
   },
-  "version": "0.0.1"
+  "version": "0.0.2"
 }
