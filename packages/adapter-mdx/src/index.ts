@@ -11,6 +11,7 @@
  */
 
 import type { FormatAdapter } from "@contenz/core";
+import { runInNewContext } from "node:vm";
 
 // ── Brace-Balanced Scanner (for `export const meta = { ... }`) ──────────────
 
@@ -104,8 +105,7 @@ function skipStringLiteral(
 
 function safeEvalObjectLiteral(objectStr: string): Record<string, unknown> {
 	try {
-		const fn = new Function(`"use strict"; return (${objectStr});`);
-		const result = fn();
+		const result = runInNewContext(`(${objectStr})`, Object.create(null), { timeout: 50 });
 		if (typeof result === "object" && result !== null) {
 			return result as Record<string, unknown>;
 		}
