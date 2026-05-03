@@ -1,0 +1,3 @@
+## 2024-05-03 - Colorized CLI Outputs for Better Readability
+**Learning:** Raw JSON-like text in the terminal is difficult for users to parse quickly. Key names and error fields blend into the surrounding text, causing slower debugging and reduced readability. Applying a consistent color schema (e.g., cyan for keys, red for errors, yellow for fields) significantly improves the scannability of CLI outputs, helping users identify structural differences and error origins much faster.
+**Action:** When printing structured data or error diagnostics to the terminal, prioritize applying semantic color highlighting (via tools like `picocolors`) to distinguish structural keys and critical information from values and plain text.
