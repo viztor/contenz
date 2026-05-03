@@ -1,12 +1,12 @@
 {
   "version": 1,
-  "cwd": "/Users/viz/dev/contenz/packages/e2e/fixtures/i18n",
+  "cwd": "/app/packages/e2e/fixtures/i18n",
   "outputDir": "generated/content",
   "sources": [
     "content/*"
   ],
   "configHash": "43657560482e92fe2b96835e4e8fc6b08e6540c63353771376055662f8e0944c",
-  "generatedAt": "2026-04-22T13:22:32.263Z",
+  "generatedAt": "2026-05-03T08:03:22.993Z",
   "collections": [
     {
       "name": "faq",
