@@ -16,7 +16,9 @@ export interface ParseFileNameResult {
 const DEFAULT_EXTENSIONS = ["mdx", "md", "json"];
 
 /** Pre-computed alternation for default extensions to avoid recalculating on every file parse */
-const DEFAULT_EXT_ALTERNATION = DEFAULT_EXTENSIONS.map((e) => e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+const DEFAULT_EXT_ALTERNATION = DEFAULT_EXTENSIONS.map((e) =>
+  e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+).join("|");
 
 /**
  * Build a regex alternation pattern from an array of extensions.
