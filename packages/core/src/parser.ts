@@ -15,14 +15,22 @@ export interface ParseFileNameResult {
 /** Default extensions used when no config-level extensions are specified. */
 const DEFAULT_EXTENSIONS = ["mdx", "md", "json"];
 
+/** Pre-computed alternation for default extensions to avoid recalculating on every file parse */
+const DEFAULT_EXT_ALTERNATION = DEFAULT_EXTENSIONS.map((e) =>
+  e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+).join("|");
+
 /**
  * Build a regex alternation pattern from an array of extensions.
  * e.g. ["md", "mdx", "json"] → "md|mdx|json"
  */
 function extAlternation(extensions?: string[]): string {
-  const exts = extensions?.length ? extensions : DEFAULT_EXTENSIONS;
-  return exts.map((e) => e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+  if (!extensions || extensions.length === 0) return DEFAULT_EXT_ALTERNATION;
+  return extensions.map((e) => e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
 }
+
+/** Cache for compiled RegExp objects used in file parsing to prevent re-compilation in hot loops */
+const patternCache = new Map<string, RegExp>();
 
 /**
  * Parse filename to extract slug and optional locale.
@@ -50,11 +58,25 @@ export function parseFileName(
 
   const alt = extAlternation(extensions);
 
+  // Create a unique cache key based on i18n state and the extension alternation string
+  const cacheKey = `${i18nEnabled ? "i18n" : "no-i18n"}:${alt}`;
+
+  let pattern = patternCache.get(cacheKey);
+  if (!pattern) {
+    if (i18nEnabled) {
+      // BCP 47 locale: xx, xxx, xx-XX, xx-Xxxx, xx-Xxxx-XX, etc.
+      const localePattern = "[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?";
+      pattern = new RegExp(`^(.+)\\.(${localePattern})\\.(${alt})$`);
+    } else {
+      pattern = new RegExp(`^(.+)\\.(${alt})$`);
+    }
+    patternCache.set(cacheKey, pattern);
+  }
+
+  const match = fileName.match(pattern);
+  if (!match) return null;
+
   if (i18nEnabled) {
-    // BCP 47 locale: xx, xxx, xx-XX, xx-Xxxx, xx-Xxxx-XX, etc.
-    const localePattern = "[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?";
-    const match = fileName.match(new RegExp(`^(.+)\\.(${localePattern})\\.(${alt})$`));
-    if (!match) return null;
     return {
       slug: match[1],
       locale: match[2],
@@ -62,8 +84,6 @@ export function parseFileName(
     };
   }
 
-  const match = fileName.match(new RegExp(`^(.+)\\.(${alt})$`));
-  if (!match) return null;
   return {
     slug: match[1],
     ext: match[2],
