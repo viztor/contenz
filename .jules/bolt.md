@@ -1,0 +1,3 @@
+## 2025-02-20 - [Avoid Dynamic RegExp Construction in Hot Loops]
+**Learning:** Constructing `RegExp` objects dynamically via `new RegExp(...)` within hot loops (like file parsing for hundreds of content files) is a significant performance bottleneck. The JavaScript engine must parse and compile the regular expression pattern on every invocation, causing unnecessary overhead.
+**Action:** Always pre-compile regular expressions and cache them. For dynamic patterns, use a `Map` keyed by the dynamic input (e.g., file extensions or flags) to store and reuse compiled `RegExp` objects outside the execution hot loop.
