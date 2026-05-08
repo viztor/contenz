@@ -1,0 +1,3 @@
+## 2026-05-08 - [RegExp Compilation in Hot Loops]
+**Learning:** Instantiating `new RegExp` objects and mapping string arrays on every file iteration creates a significant performance bottleneck during parsing phases. Specifically, filename parsing functions that execute repeatedly over thousands of files can suffer drastically from continuous regex reconstruction.
+**Action:** Always pre-compute static default string operations (like joining default extensions) and utilize a `Map` cache for dynamically generated compiled `RegExp` objects based on input flags (e.g., `i18nEnabled:extensions`). Extract this logic outside the hot loop functions.
