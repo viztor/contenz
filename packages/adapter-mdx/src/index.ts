@@ -10,6 +10,8 @@
  *   export const config: ContenzConfig = { adapters: [mdxAdapter] };
  */
 
+import vm from "node:vm";
+
 import type { FormatAdapter } from "@contenz/core";
 
 // ── Brace-Balanced Scanner (for `export const meta = { ... }`) ──────────────
@@ -104,8 +106,15 @@ function skipStringLiteral(
 
 function safeEvalObjectLiteral(objectStr: string): Record<string, unknown> {
 	try {
-		const fn = new Function(`"use strict"; return (${objectStr});`);
-		const result = fn();
+		// Security: Prevent Arbitrary Code Execution (ACE)
+		// Instead of using new Function() which exposes global scope, we use node:vm
+		// with an empty context (Object.create(null)) and an execution timeout.
+		const result = vm.runInNewContext(
+			`(${objectStr})`,
+			Object.create(null),
+			{ timeout: 100 }
+		);
+
 		if (typeof result === "object" && result !== null) {
 			return result as Record<string, unknown>;
 		}
