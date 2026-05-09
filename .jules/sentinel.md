@@ -1,0 +1,4 @@
+## 2024-10-24 - [CRITICAL] Arbitrary Code Execution in MDX Meta Parsing
+**Vulnerability:** The MDX adapter (`packages/adapter-mdx/src/index.ts`) was using `new Function` to parse and evaluate MDX meta block objects (`export const meta = { ... };`). This allowed arbitrary code execution if an attacker could control the MDX file content.
+**Learning:** `new Function` should never be used to evaluate potentially untrusted input, even with `"use strict"`. It executes code in the global scope and has full access to the Node.js environment.
+**Prevention:** Use `runInNewContext` from the `node:vm` module instead. When evaluating dynamic Javascript or object literals for security reasons, create an empty context (`Object.create(null)`) and set a `timeout` (e.g., `{ timeout: 1000 }`) to mitigate arbitrary code execution and infinite loop risks. When introducing node APIs, remember to update `tsconfig.json` with `"types": ["node"]`.
