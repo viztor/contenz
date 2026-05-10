@@ -17,7 +17,10 @@ category: general
 
 Body content here.`;
 			const result = mdxAdapter.extract(source, "hello.md");
-			expect(result.meta).toEqual({ title: "Hello World", category: "general" });
+			expect(result.meta).toEqual({
+				title: "Hello World",
+				category: "general",
+			});
 			expect(result.body).toBe("Body content here.");
 		});
 

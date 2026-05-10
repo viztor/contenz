@@ -1,0 +1,4 @@
+## 2024-05-18 - [CRITICAL] Arbitrary Code Execution in MDX Parsing
+**Vulnerability:** The `safeEvalObjectLiteral` function in `@contenz/adapter-mdx` used `new Function` to parse the `export const meta = { ... }` block from MDX files. This allowed for Arbitrary Code Execution (ACE) if an attacker could supply a malicious `.mdx` file, as the code within `new Function` is executed in the global context with full access.
+**Learning:** Even for simple object literal evaluation, `new Function` and `eval` are dangerous. The assumption that the input string only contains a plain object literal is easily broken if the input comes from an untrusted source.
+**Prevention:** Always use `node:vm`'s `runInNewContext` with an empty context (`Object.create(null)`) and an execution timeout to safely evaluate dynamic JavaScript or object literals, preventing ACE and DoS vulnerabilities.
