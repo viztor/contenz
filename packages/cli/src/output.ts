@@ -4,6 +4,7 @@
  */
 
 import type { ContentOpResult } from "@contenz/core/api";
+import pc from "picocolors";
 
 /**
  * Print the result and exit with appropriate code.
@@ -15,10 +16,12 @@ export function printAndExit(result: ContentOpResult, format: string): never {
 		if (result.success && result.data) {
 			prettyPrint(result.data);
 		} else {
-			console.error(`Error: ${result.error ?? "Unknown error"}`);
+			console.error(pc.red(`Error: ${result.error ?? "Unknown error"}`));
 			if (result.diagnostics?.length) {
 				for (const d of result.diagnostics) {
-					console.error(`  ${d.field ? `${d.field}: ` : ""}${d.message}`);
+					console.error(
+						`  ${d.field ? `${pc.yellow(d.field)}: ` : ""}${d.message}`,
+					);
 				}
 			}
 		}
@@ -42,21 +45,27 @@ function prettyPrint(data: unknown, indent = 0): void {
 		for (const [key, value] of Object.entries(
 			data as Record<string, unknown>,
 		)) {
+			const formattedKey = pc.cyan(key);
 			if (
 				typeof value === "object" &&
 				value !== null &&
 				!Array.isArray(value)
 			) {
-				console.log(`${pad}${key}:`);
+				console.log(`${pad}${formattedKey}:`);
 				prettyPrint(value, indent + 1);
 			} else if (Array.isArray(value)) {
-				console.log(`${pad}${key}: ${value.join(", ")}`);
+				const formattedArray = value
+					.map((v) => (typeof v === "string" ? pc.green(v) : v))
+					.join(", ");
+				console.log(`${pad}${formattedKey}: ${formattedArray}`);
 			} else {
-				console.log(`${pad}${key}: ${value}`);
+				const formattedValue =
+					typeof value === "string" ? pc.green(value) : value;
+				console.log(`${pad}${formattedKey}: ${formattedValue}`);
 			}
 		}
 		return;
 	}
 
-	console.log(`${pad}${data}`);
+	console.log(`${pad}${typeof data === "string" ? pc.green(data) : data}`);
 }
