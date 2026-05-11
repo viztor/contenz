@@ -1,0 +1,4 @@
+## 2026-05-11 - [Prevent Arbitrary Code Execution in MDX Adapter]
+**Vulnerability:** Use of `new Function` to evaluate dynamic JavaScript (object literals extracted from MDX files), which can lead to Arbitrary Code Execution (ACE) if malicious MDX files are parsed.
+**Learning:** Parsing MDX files involves extracting `export const meta = { ... }` blocks and executing them. While the intention was to only evaluate object literals, using `new Function` runs the string in the global context, making it trivial for malicious payload injection (e.g. `export const meta = (function() { return require('child_process').execSync('id').toString(); })()`).
+**Prevention:** Use `node:vm`'s `runInNewContext` with an execution timeout and an empty context (`Object.create(null)`) instead of `new Function` or `eval` when evaluating dynamic JavaScript or object literals to securely sandbox the execution environment and prevent ACE and DoS attacks.
