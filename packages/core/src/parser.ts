@@ -14,14 +14,35 @@ export interface ParseFileNameResult {
 
 /** Default extensions used when no config-level extensions are specified. */
 const DEFAULT_EXTENSIONS = ["mdx", "md", "json"];
+const DEFAULT_EXT_ALT = DEFAULT_EXTENSIONS.map((e) =>
+  e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+).join("|");
 
 /**
  * Build a regex alternation pattern from an array of extensions.
  * e.g. ["md", "mdx", "json"] → "md|mdx|json"
  */
 function extAlternation(extensions?: string[]): string {
-  const exts = extensions?.length ? extensions : DEFAULT_EXTENSIONS;
-  return exts.map((e) => e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+  if (!extensions?.length) return DEFAULT_EXT_ALT;
+  return extensions.map((e) => e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+}
+
+const patternCache = new Map<string, RegExp>();
+
+function getPattern(i18nEnabled: boolean, alt: string): RegExp {
+  const cacheKey = `${i18nEnabled}:${alt}`;
+  let pattern = patternCache.get(cacheKey);
+  if (!pattern) {
+    if (i18nEnabled) {
+      // BCP 47 locale: xx, xxx, xx-XX, xx-Xxxx, xx-Xxxx-XX, etc.
+      const localePattern = "[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?";
+      pattern = new RegExp(`^(.+)\\.(${localePattern})\\.(${alt})$`);
+    } else {
+      pattern = new RegExp(`^(.+)\\.(${alt})$`);
+    }
+    patternCache.set(cacheKey, pattern);
+  }
+  return pattern;
 }
 
 /**
@@ -49,12 +70,12 @@ export function parseFileName(
   }
 
   const alt = extAlternation(extensions);
+  const pattern = getPattern(i18nEnabled, alt);
+  const match = fileName.match(pattern);
+
+  if (!match) return null;
 
   if (i18nEnabled) {
-    // BCP 47 locale: xx, xxx, xx-XX, xx-Xxxx, xx-Xxxx-XX, etc.
-    const localePattern = "[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?";
-    const match = fileName.match(new RegExp(`^(.+)\\.(${localePattern})\\.(${alt})$`));
-    if (!match) return null;
     return {
       slug: match[1],
       locale: match[2],
@@ -62,8 +83,6 @@ export function parseFileName(
     };
   }
 
-  const match = fileName.match(new RegExp(`^(.+)\\.(${alt})$`));
-  if (!match) return null;
   return {
     slug: match[1],
     ext: match[2],
