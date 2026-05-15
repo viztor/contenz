@@ -4,6 +4,7 @@
  */
 
 import type { ContentOpResult } from "@contenz/core/api";
+import pc from "picocolors";
 
 /**
  * Print the result and exit with appropriate code.
@@ -15,15 +16,24 @@ export function printAndExit(result: ContentOpResult, format: string): never {
 		if (result.success && result.data) {
 			prettyPrint(result.data);
 		} else {
-			console.error(`Error: ${result.error ?? "Unknown error"}`);
+			console.error(pc.red(`Error: ${result.error ?? "Unknown error"}`));
 			if (result.diagnostics?.length) {
 				for (const d of result.diagnostics) {
-					console.error(`  ${d.field ? `${d.field}: ` : ""}${d.message}`);
+					console.error(`  ${d.field ? `${pc.yellow(d.field)}: ` : ""}${d.message}`);
 				}
 			}
 		}
 	}
 	process.exit(result.success ? 0 : 1);
+}
+
+function colorizeValue(value: unknown): string {
+	if (typeof value === "string") return pc.green(value);
+	if (typeof value === "number") return pc.yellow(String(value));
+	if (typeof value === "boolean") return pc.magenta(String(value));
+	if (value === null) return pc.gray("null");
+	if (value === undefined) return pc.gray("undefined");
+	return String(value);
 }
 
 function prettyPrint(data: unknown, indent = 0): void {
@@ -47,16 +57,17 @@ function prettyPrint(data: unknown, indent = 0): void {
 				value !== null &&
 				!Array.isArray(value)
 			) {
-				console.log(`${pad}${key}:`);
+				console.log(`${pad}${pc.cyan(key)}:`);
 				prettyPrint(value, indent + 1);
 			} else if (Array.isArray(value)) {
-				console.log(`${pad}${key}: ${value.join(", ")}`);
+				const coloredValues = value.map(v => colorizeValue(v)).join(", ");
+				console.log(`${pad}${pc.cyan(key)}: [${coloredValues}]`);
 			} else {
-				console.log(`${pad}${key}: ${value}`);
+				console.log(`${pad}${pc.cyan(key)}: ${colorizeValue(value)}`);
 			}
 		}
 		return;
 	}
 
-	console.log(`${pad}${data}`);
+	console.log(`${pad}${colorizeValue(data)}`);
 }
