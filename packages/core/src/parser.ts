@@ -24,6 +24,19 @@ function extAlternation(extensions?: string[]): string {
   return exts.map((e) => e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
 }
 
+// ⚡ Bolt: Cache compiled RegExp objects to prevent repeated compilation in the hot loop
+// during parsing. Reduces GC pressure and improves parsing performance for large collections.
+const patternCache = new Map<string, RegExp>();
+
+function getCachedRegExp(pattern: string): RegExp {
+  let regex = patternCache.get(pattern);
+  if (!regex) {
+    regex = new RegExp(pattern);
+    patternCache.set(pattern, regex);
+  }
+  return regex;
+}
+
 /**
  * Parse filename to extract slug and optional locale.
  *
@@ -53,7 +66,8 @@ export function parseFileName(
   if (i18nEnabled) {
     // BCP 47 locale: xx, xxx, xx-XX, xx-Xxxx, xx-Xxxx-XX, etc.
     const localePattern = "[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?";
-    const match = fileName.match(new RegExp(`^(.+)\\.(${localePattern})\\.(${alt})$`));
+    const pattern = `^(.+)\\.(${localePattern})\\.(${alt})$`;
+    const match = fileName.match(getCachedRegExp(pattern));
     if (!match) return null;
     return {
       slug: match[1],
@@ -62,7 +76,8 @@ export function parseFileName(
     };
   }
 
-  const match = fileName.match(new RegExp(`^(.+)\\.(${alt})$`));
+  const pattern = `^(.+)\\.(${alt})$`;
+  const match = fileName.match(getCachedRegExp(pattern));
   if (!match) return null;
   return {
     slug: match[1],
