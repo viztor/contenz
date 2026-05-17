@@ -4,6 +4,19 @@
  */
 
 import type { ContentOpResult } from "@contenz/core/api";
+import pc from "picocolors";
+
+/**
+ * Format primitive values with semantic colors.
+ */
+function formatPrimitive(value: unknown): string {
+	if (value === null) return pc.dim("null");
+	if (value === undefined) return pc.dim("undefined");
+	if (typeof value === "string") return pc.green(`"${value}"`);
+	if (typeof value === "number") return pc.yellow(String(value));
+	if (typeof value === "boolean") return pc.magenta(String(value));
+	return String(value);
+}
 
 /**
  * Print the result and exit with appropriate code.
@@ -15,10 +28,11 @@ export function printAndExit(result: ContentOpResult, format: string): never {
 		if (result.success && result.data) {
 			prettyPrint(result.data);
 		} else {
-			console.error(`Error: ${result.error ?? "Unknown error"}`);
+			console.error(pc.red(`Error: ${result.error ?? "Unknown error"}`));
 			if (result.diagnostics?.length) {
 				for (const d of result.diagnostics) {
-					console.error(`  ${d.field ? `${d.field}: ` : ""}${d.message}`);
+					const fieldPrefix = d.field ? pc.bold(`${d.field}: `) : "";
+					console.error(`  ${fieldPrefix}${d.message}`);
 				}
 			}
 		}
@@ -42,21 +56,23 @@ function prettyPrint(data: unknown, indent = 0): void {
 		for (const [key, value] of Object.entries(
 			data as Record<string, unknown>,
 		)) {
+			const styledKey = pc.cyan(key);
 			if (
 				typeof value === "object" &&
 				value !== null &&
 				!Array.isArray(value)
 			) {
-				console.log(`${pad}${key}:`);
+				console.log(`${pad}${styledKey}:`);
 				prettyPrint(value, indent + 1);
 			} else if (Array.isArray(value)) {
-				console.log(`${pad}${key}: ${value.join(", ")}`);
+				const formattedArray = value.map(formatPrimitive).join(", ");
+				console.log(`${pad}${styledKey}: [${formattedArray}]`);
 			} else {
-				console.log(`${pad}${key}: ${value}`);
+				console.log(`${pad}${styledKey}: ${formatPrimitive(value)}`);
 			}
 		}
 		return;
 	}
 
-	console.log(`${pad}${data}`);
+	console.log(`${pad}${formatPrimitive(data)}`);
 }
