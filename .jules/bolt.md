@@ -1,0 +1,3 @@
+## 2024-05-18 - [RegExp Compilation inside Hot Loops]
+**Learning:** Compiling dynamic Regular Expressions (`new RegExp(...)`) in hot loop functions (like file parsers that run on every content file) significantly impacts execution speed.
+**Action:** Always cache compiled `RegExp` objects based on their construction parameters, ideally outside the function or in a `Map` keyed by those parameters when they are dynamic.
