@@ -1,0 +1,3 @@
+## 2024-05-19 - Cache dynamically generated RegExp objects in hot loops
+**Learning:** During the build process, `parseFileName` is called repeatedly for every content file. Recreating dynamic `RegExp` objects inside hot loops using `new RegExp()` introduces a performance bottleneck and memory pressure due to repeated compilation.
+**Action:** When regular expressions need to be built dynamically using variables (e.g. dynamic extension lists and locale formats), use a `Map` to cache the compiled `RegExp` object keyed by the unique input parameters to skip recompilation on subsequent calls. Pre-calculate static arrays mapping strings as well.
