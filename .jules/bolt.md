@@ -1,0 +1,3 @@
+## 2024-05-22 - Regex Instantiation in Hot Loops
+**Learning:** Instantiating `RegExp` objects inside frequently called functions (like `parseFileName` which processes every content file during build/indexing) creates a significant CPU overhead and garbage collection pressure in this codebase's architecture. The native regex engine spends too much time compiling the pattern on every invocation.
+**Action:** When working in hot loops that process content files in `@contenz/core`, always cache compiled `RegExp` patterns outside the function or in a `Map` keyed by deterministic inputs (like extensions or i18n settings) to achieve O(1) retrieval.
