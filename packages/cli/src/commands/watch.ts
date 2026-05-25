@@ -83,11 +83,15 @@ export const watchCommand = defineCommand({
 		const watchers: fs.FSWatcher[] = [];
 		for (const root of watchRoots) {
 			try {
-				const w = fs.watch(root, { recursive: true }, (eventType, filename) => {
-					if (!filename) return;
-					const relative = path.relative(root, path.join(root, filename));
-					if (isRelevantFile(relative)) run();
-				});
+				const w = fs.watch(
+					root,
+					{ recursive: true },
+					(_eventType, filename) => {
+						if (!filename) return;
+						const relative = path.relative(root, path.join(root, filename));
+						if (isRelevantFile(relative)) run();
+					},
+				);
 				watchers.push(w);
 			} catch (err) {
 				console.warn(`Could not watch ${root}:`, err);

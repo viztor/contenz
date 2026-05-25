@@ -123,7 +123,7 @@ async function detectInstallCommand(cwd: string): Promise<string> {
 		if (packageJson.packageManager?.startsWith("bun")) {
 			return "bun add @contenz/core zod";
 		}
-	} catch { }
+	} catch {}
 
 	return "npm install @contenz/core zod";
 }
