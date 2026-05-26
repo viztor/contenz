@@ -3,6 +3,7 @@
  * Handles JSON envelope vs pretty-print formatting in one place.
  */
 
+import { inspect } from "node:util";
 import type { ContentOpResult } from "@contenz/core/api";
 
 /**
@@ -47,16 +48,21 @@ function prettyPrint(data: unknown, indent = 0): void {
 				value !== null &&
 				!Array.isArray(value)
 			) {
-				console.log(`${pad}${key}:`);
+				console.log(`${pad}\x1b[36m${key}\x1b[39m:`);
 				prettyPrint(value, indent + 1);
 			} else if (Array.isArray(value)) {
-				console.log(`${pad}${key}: ${value.join(", ")}`);
+				const formattedArray = value.map((v) => formatValue(v)).join(", ");
+				console.log(`${pad}\x1b[36m${key}\x1b[39m: ${formattedArray}`);
 			} else {
-				console.log(`${pad}${key}: ${value}`);
+				console.log(`${pad}\x1b[36m${key}\x1b[39m: ${formatValue(value)}`);
 			}
 		}
 		return;
 	}
 
-	console.log(`${pad}${data}`);
+	console.log(`${pad}${formatValue(data)}`);
+}
+
+function formatValue(value: unknown): string {
+	return inspect(value, { colors: true, depth: null });
 }
