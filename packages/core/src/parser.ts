@@ -78,8 +78,12 @@ export function parseFileName(
  *
  * @deprecated Use FormatAdapter.extract() instead. Kept for backward compatibility.
  */
-export function extractBodyFromSource(source: string, ext: ContentExtension): string {
-  const adapter = getAdapterForExtension(ext);
+export function extractBodyFromSource(
+  source: string,
+  ext: ContentExtension,
+  adapters: import("./format-adapter.js").FormatAdapter[]
+): string {
+  const adapter = getAdapterForExtension(ext, adapters);
   if (!adapter) return source;
   const result = adapter.extract(source, "");
   return result.body ?? "";
@@ -94,9 +98,10 @@ export function extractBodyFromSource(source: string, ext: ContentExtension): st
 export function serializeContentFile(
   meta: Record<string, unknown>,
   body: string,
-  ext: ContentExtension
+  ext: ContentExtension,
+  adapters: import("./format-adapter.js").FormatAdapter[]
 ): string {
-  const adapter = getAdapterForExtension(ext);
+  const adapter = getAdapterForExtension(ext, adapters);
   if (!adapter) {
     // Fallback for unknown extensions — mdx style
     const metaBlock = `export const meta = ${JSON.stringify(meta, null, 2)};\n\n`;
@@ -128,7 +133,7 @@ export async function parseContentFile(
   }
 
   const source = await fs.readFile(filePath, "utf-8");
-  const adapter = getAdapterForExtension(parsed.ext);
+  const adapter = getAdapterForExtension(parsed.ext, config.adapters);
 
   if (!adapter) {
     throw new Error(`No format adapter registered for extension: .${parsed.ext}`);

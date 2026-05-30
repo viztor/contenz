@@ -42,24 +42,23 @@ export const jsonAdapter: FormatAdapter = {
 
 // ── Adapter Registry ────────────────────────────────────────────────────────
 
-const adapterRegistry: FormatAdapter[] = [jsonAdapter];
-
 /**
- * Register external format adapters (e.g. from @contenz/adapter-mdx).
- * Called during workspace creation with adapters from ContenzConfig.
- * New adapters are prepended so they take priority over built-ins.
+ * Build a list of format adapters, prepending custom adapters to the built-ins.
+ * Prepending ensures custom adapters take priority over built-ins for the same extension.
  */
-export function registerAdapters(adapters: FormatAdapter[]): void {
-  for (const adapter of adapters) {
+export function buildAdapterList(customAdapters: FormatAdapter[] = []): FormatAdapter[] {
+  const adapters = [jsonAdapter];
+  for (const adapter of customAdapters) {
     // Avoid duplicates: remove existing adapters with overlapping extensions
     for (const ext of adapter.extensions) {
-      const existing = adapterRegistry.findIndex((a) => a.extensions.includes(ext));
+      const existing = adapters.findIndex((a) => a.extensions.includes(ext));
       if (existing !== -1) {
-        adapterRegistry.splice(existing, 1);
+        adapters.splice(existing, 1);
       }
     }
-    adapterRegistry.unshift(adapter);
+    adapters.unshift(adapter);
   }
+  return adapters;
 }
 
 /**
@@ -67,9 +66,12 @@ export function registerAdapters(adapters: FormatAdapter[]): void {
  * Returns the first adapter whose extensions include the given ext.
  * Returns null if no adapter is registered for the extension.
  */
-export function getAdapterForExtension(ext: string): FormatAdapter | null {
+export function getAdapterForExtension(
+  ext: string,
+  adapters: FormatAdapter[]
+): FormatAdapter | null {
   const normalized = ext.startsWith(".") ? ext.slice(1) : ext;
-  for (const adapter of adapterRegistry) {
+  for (const adapter of adapters) {
     if (adapter.extensions.includes(normalized)) {
       return adapter;
     }

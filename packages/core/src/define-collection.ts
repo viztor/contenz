@@ -13,6 +13,11 @@ export interface DefineCollectionSingleOptions {
    * @example `{ glossaryLinks: "glossary", authorRef: "team" }`
    */
   relations?: Relations;
+  /** Computed fields derived from raw content or metadata */
+  computed?: Record<
+    string,
+    (item: import("./types.js").ParsedContent) => unknown | Promise<unknown>
+  >;
 }
 
 /** Schema plus optional filename pattern for multi-type; first matching pattern wins. */
@@ -35,6 +40,11 @@ export interface DefineCollectionMultiOptions {
   schemas: Record<string, ZodSchema | SchemaWithPattern>;
   /** Cross-collection relations: field name → target collection name */
   relations?: Relations;
+  /** Computed fields derived from raw content or metadata */
+  computed?: Record<
+    string,
+    (item: import("./types.js").ParsedContent) => unknown | Promise<unknown>
+  >;
 }
 
 /**
@@ -69,9 +79,16 @@ export function defineCollection(
     if (relations && Object.keys(relations).length > 0) {
       out.relations = relations;
     }
+    if (options.computed && Object.keys(options.computed).length > 0) {
+      out.computed = options.computed;
+    }
     return out as unknown as SchemaModule & {
       meta: ZodSchema;
       relations?: Relations;
+      computed?: Record<
+        string,
+        (item: import("./types.js").ParsedContent) => unknown | Promise<unknown>
+      >;
     };
   }
 
@@ -99,6 +116,9 @@ export function defineCollection(
   if (first) result.meta = first;
   if (relations && Object.keys(relations).length > 0) {
     result.relations = relations;
+  }
+  if (options.computed && Object.keys(options.computed).length > 0) {
+    result.computed = options.computed;
   }
   if (types.length > 0) result.types = types;
 

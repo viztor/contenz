@@ -1,0 +1,51 @@
+{
+  "name": "@contenz/client",
+  "version": "0.1.0",
+  "description": "Client-side query builder and helpers for Contenz generated output",
+  "license": "MPL-2.0",
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "content",
+    "query",
+    "client"
+  ],
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check src",
+    "lint:fix": "biome check src --write",
+    "format": "biome format --write src",
+    "check": "biome check src",
+    "knip": "knip"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@biomejs/biome": "^1.8.3",
+    "@types/node": "^22.0.0",
+    "tsup": "^8.2.3",
+    "typescript": "^6.0.2",
+    "vitest": "^2.0.5"
+  }
+}

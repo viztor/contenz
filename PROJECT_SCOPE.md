@@ -110,27 +110,17 @@ The layer that makes contenz the perfect bridge between AI agents and project co
 - **Skill Generation:** `contenz skill` teaches AI coding assistants (Cursor, Copilot, Gemini) exactly how to manage content in a specific repo
 - **Schema Presets:** Pre-built, best-practice schemas that can be extended or used as-is
 
-### 4. Authoring Studio
+### 4. Preview & Review UI
 
-A deployable authoring interface over repo-backed content.
+A deployable, read-only visual interface over repo-backed content.
 
-The studio should be:
+Rather than building a heavy, monolithic Authoring Studio (with forms and edit state), Contenz leans fully into its AI-Native CLI foundation: AI agents handle the *authoring* and *editing*.
 
-- schema-driven
-- locale-aware
-- validation-aware
-- review-oriented
-- built for writer/developer collaboration, not CMS-style dynamic content management
-
-The studio should eventually provide:
-
-- forms instead of raw metadata editing
-- relation pickers instead of manual slug entry
-- rich body editing
-- preview
-- draft and review states
-- PR-oriented collaboration
-- validation messages mapped to real fields and content blocks
+The Preview UI simply:
+- renders content and schema validation status beautifully
+- provides a visual "Diff/PR" viewer for non-technical stakeholders
+- allows human reviewers (like Legal or Marketing) to inspect what the AI drafted without touching GitHub Markdown diffs
+- is built for writer/developer collaboration, not CMS-style dynamic content management
 
 ### 5. Site Starters
 
@@ -238,7 +228,7 @@ The project should deliver these major outcomes over time:
 3. A truly internationalized content model with fallback, coverage, and workflow support.
 4. An **AI-native CLI** that allows agents to safely inspect, create, and update content.
 5. A runtime and integration layer for apps (query API).
-6. A deployable authoring studio for writers and localization teams.
+6. A deployable Preview & Review UI for stakeholders to visually inspect AI-drafted content.
 7. Opinionated site starters for teams that want a one-command documentation/helpdesk website.
 8. An extensibility model for hooks, transforms, plugins, and future adapters.
 

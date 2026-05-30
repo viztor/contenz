@@ -7,7 +7,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 import pMap from "p-map";
-import { getContentType, getSchemaForType } from "./config.js";
+import { getContentType, getSchemaForType, resolveConfig } from "./config.js";
 import {
   type Diagnostic,
   type DiagnosticFormat,
@@ -172,7 +172,8 @@ export const ${typeName}s: Record<string, ${pascalName}Entry> = `;
 async function processOneCollection(
   ctx: CollectionContext,
   outputDir: string,
-  dryRun: boolean
+  dryRun: boolean,
+  hooks?: import("./types.js").ContenzConfig["hooks"]
 ): Promise<
   | {
       ok: true;
@@ -234,6 +235,32 @@ async function processOneCollection(
     }
     try {
       const result = await parseContentFile(filePath, effectiveConfig);
+
+      // Hooks
+      if (hooks?.transformItem) {
+        await hooks.transformItem(result, collectionName);
+      }
+
+      // Compute fields
+      if (schemaModule.computed) {
+        for (const [key, computeFn] of Object.entries(schemaModule.computed)) {
+          try {
+            result.meta[key] = await computeFn(result);
+          } catch (err) {
+            parseErrors++;
+            diagnostics.push({
+              code: "COMPUTED_FIELD_FAILED",
+              severity: "error",
+              category: "content",
+              message: `Failed to compute field "${key}": ${err instanceof Error ? err.message : String(err)}`,
+              source: "build",
+              collection: collectionName,
+              file,
+            });
+          }
+        }
+      }
+
       const contentType = getContentType(file, effectiveConfig) ?? defaultTypeName;
       const schema =
         contentType !== defaultTypeName
@@ -540,6 +567,10 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
     };
   }
 
+  if (workspace.projectConfig.hooks?.beforeBuild) {
+    await workspace.projectConfig.hooks.beforeBuild(workspace);
+  }
+
   if (collections.length === 0) {
     diagnostics.push({
       code: "DISCOVERY_NO_COLLECTIONS",
@@ -616,9 +647,13 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
     }
   }
 
-  const results = await pMap(toBuild, ({ ctx }) => processOneCollection(ctx, outputDir, dryRun), {
-    concurrency: BUILD_CONCURRENCY,
-  });
+  const results = await pMap(
+    toBuild,
+    ({ ctx }) => processOneCollection(ctx, outputDir, dryRun, workspace.projectConfig.hooks),
+    {
+      concurrency: BUILD_CONCURRENCY,
+    }
+  );
 
   for (const r of results) {
     diagnostics.push(...r.diagnostics);
@@ -775,54 +810,65 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
     const allNewDocs = succeeded.flatMap((r) => r.searchDocs);
     const allMetaFields = collectMetaFieldNames(allNewDocs);
 
-    // Try loading the existing index for incremental update.
-    // On force builds, always start fresh to avoid duplicate IDs.
-    let searchIndex = force ? null : await loadSearchIndex(cwd);
-    if (searchIndex) {
-      // Discard documents we're about to re-add (same IDs = same collection:slug:locale)
-      const idsToRemove = allNewDocs.map((d) => d.id);
-      discardDocuments(searchIndex, idsToRemove);
-    }
+    // --- 8. Update Search Index ---
+    const projectConfig = resolveConfig(workspace.projectConfig);
+    if (projectConfig.buildSearchIndex) {
+      if (force || allNewDocs.length > 0 || results.length - succeeded.length > 0) {
+        // On force builds, always start fresh to avoid duplicate IDs.
+        let searchIndex = force ? null : await loadSearchIndex(cwd);
+        if (searchIndex) {
+          // Discard documents we're about to re-add (same IDs = same collection:slug:locale)
+          const idsToRemove = allNewDocs.map((d) => d.id);
+          await discardDocuments(searchIndex, idsToRemove);
+        }
 
-    if (!searchIndex) {
-      // No existing index or force rebuild — create from scratch
-      searchIndex = createSearchIndex(allMetaFields);
-    }
+        if (!searchIndex) {
+          // Create fresh
+          searchIndex = await createSearchIndex(allMetaFields);
+        }
 
-    addDocumentsToIndex(searchIndex, allNewDocs);
-    await saveSearchIndex(cwd, searchIndex, allMetaFields);
+        await addDocumentsToIndex(searchIndex, allNewDocs);
+        await saveSearchIndex(cwd, searchIndex, allMetaFields);
+      }
+    }
   }
 
   const failedCount = results.length - succeeded.length;
-  if (failedCount > 0) {
-    return {
-      success: false,
-      errors: failedCount,
-      report: formatDiagnosticsReport({
-        diagnostics,
-        format,
-        title: "Build diagnostics",
-        success: false,
-        metadata: { generated },
-        footer: `Sources: ${sources.join(", ")}\nOutput: ${path.relative(cwd, outputDir)}/`,
-      }),
-      diagnostics,
-      generated,
-    };
+
+  const buildResult: BuildResult =
+    failedCount > 0
+      ? {
+          success: false,
+          errors: failedCount,
+          report: formatDiagnosticsReport({
+            diagnostics,
+            format,
+            title: "Build diagnostics",
+            success: false,
+            metadata: { generated },
+            footer: `Sources: ${sources.join(", ")}\nOutput: ${path.relative(cwd, outputDir)}/`,
+          }),
+          diagnostics,
+          generated,
+        }
+      : {
+          success: true,
+          errors: 0,
+          report: formatDiagnosticsReport({
+            diagnostics,
+            format,
+            title: "Build diagnostics",
+            success: true,
+            metadata: { generated },
+            footer: `Sources: ${sources.join(", ")}\nOutput: ${path.relative(cwd, outputDir)}/`,
+          }),
+          diagnostics,
+          generated,
+        };
+
+  if (workspace.projectConfig.hooks?.afterBuild) {
+    await workspace.projectConfig.hooks.afterBuild(buildResult);
   }
 
-  return {
-    success: true,
-    errors: 0,
-    report: formatDiagnosticsReport({
-      diagnostics,
-      format,
-      title: "Build diagnostics",
-      success: true,
-      metadata: { generated },
-      footer: `Sources: ${sources.join(", ")}\nOutput: ${path.relative(cwd, outputDir)}/`,
-    }),
-    diagnostics,
-    generated,
-  };
+  return buildResult;
 }

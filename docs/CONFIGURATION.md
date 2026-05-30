@@ -38,6 +38,7 @@ Contenz supports two collection discovery modes that can be used **independently
 | `extensions` | `string[]` | `["md", "mdx", "json"]` | Allowed content file extensions. |
 | `ignore` | `string[]` | `["README.md", "_*"]` | Glob patterns to ignore under each collection. |
 | `adapters` | `FormatAdapter[]` | `[]` | Format adapters for content file parsing. Register adapters for `.md`/`.mdx` (via `@contenz/adapter-mdx`). JSON is built-in. |
+| `hooks` | `object` | `undefined` | Extension hooks for tapping into the build lifecycle (`beforeBuild`, `transformItem`, `afterBuild`). |
 | `contentDir` | `string` | *(deprecated)* | Use `sources: ["<contentDir>/*"]` instead. |
 
 ### Centralized collections
@@ -128,11 +129,18 @@ const schema = z.object({
   category: z.enum(["products", "ordering"]),
 });
 
-export const { meta, relations } = defineCollection({ schema });
+export const { meta, relations, computed } = defineCollection({ 
+  schema,
+  computed: {
+    readingTime: (item) => Math.ceil((item.body || "").split(" ").length / 200),
+    permalink: (item) => `/faq/${item.slug}`,
+  }
+});
 ```
 
 - `meta` is the Zod schema used for validation and generation.
 - `relations` defines which fields reference other collections. Field names are user-defined — use any name that matches your schema.
+- `computed` allows you to derive properties at build time (e.g. `readingTime`) dynamically before schema validation occurs.
 
 ### Multi-type collection
 

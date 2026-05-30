@@ -194,76 +194,13 @@ Built-in defaults: `extensions: ["md", "mdx", "json"]`, `sources: ["content/*"]`
 
 ## Cleanup Items
 
-Actionable items ordered by priority. Each is self-contained and can be executed independently.
-
-### ✅ DONE: Dead Studio Package
-
-Removed in this session: deleted `packages/studio/`, `commands/studio.ts`, `docs/STUDIO.md`, `@contenz/studio` dependency, and all doc references.
-
-### ✅ DONE: `metaSchema` Legacy Alias
-
-Removed `metaSchema` from `defineCollection()` return type, `run-build.ts`, `run-lint.ts`, all fixture schemas, and `init.ts` template.
-
-### ✅ DONE: `init` Command Scaffolds Stale Content
-
-Changed init to scaffold `.json` files (zero-adapter default), corrected extensions default in config template comment.
-
-### 🟡 CONSOLIDATE: `index.ts` vs `api.ts` Export Overlap
-
-Both entry points export overlapping symbols:
-
-| Symbol | `index.ts` | `api.ts` |
-|---|---|---|
-| `readContent`, `writeContent`, etc. | ✅ | ✅ |
-| `FormatAdapter`, `registerAdapters` | ✅ | ✅ |
-| `introspectSchema`, `introspectField` | ✅ | ✅ |
-| `createWorkspace`, `CollectionContext` | ✅ | ✅ |
-| All types | ✅ | ✅ |
-| `defineCollection` | ✅ | ❌ |
-| `runBuild`, `runLint`, `runStatus` | ❌ | ✅ |
-| `runView`, `runList`, `runCreate` | ❌ | ✅ |
-
-**Decision needed:** Should `index.ts` be a _subset_ of `api.ts`? Currently `index.ts` has content-io and workspace which feel like programmatic API. Consider:
-- `@contenz/core` = schema helpers only (`defineCollection`, types)
-- `@contenz/core/api` = everything
-
-### ✅ DONE: DRY Schema Resolution
-
-Added `schemaLoadFailed()` and `schemaExportMissing()` diagnostic factory functions to `diagnostics.ts`. Updated `run-build.ts` and `run-lint.ts` to use them.
-
-### ✅ DONE: DRY Diagnostic Factories
-
-See above — consolidated into `diagnostics.ts` alongside the DRY schema resolution change.
-
-### 🟠 CLEAN: `test-fixtures.ts` Fragile Import Rewriting
-
-`test-fixtures.ts` copies e2e fixtures to temp dirs and does string replacement of `"@contenz/core"` → absolute file URL pointing to source. This is fragile and breaks if import syntax changes.
-
-**Alternative:** Use symlinks in `node_modules` (the pattern already used in e2e tests).
-
-### ✅ DONE: Hardcoded `ContentExtension` Type
-
-Widened `ContentExtension` from `"mdx" | "md" | "json"` union to `string`. Made parser filename patterns dynamic via `extensions` parameter instead of hardcoded `mdx|md|json` regex.
-
-### ✅ DONE: Hardcoded Parser Patterns
-
-See above — parser now uses `extAlternation(extensions)` to build regex dynamically.
-
-### 🟠 CLEAN: `run-content-ops.ts` Has Mixed Responsibilities
-
-This file contains 4 unrelated operations: `runList`, `runView`, `runCreate`, `runUpdate`. Each is independent. Consider splitting into separate files to match `run-search.ts` and `run-schema.ts` pattern.
-
-### ✅ DONE: Stale Documentation
-
-Updated `docs/CONFIGURATION.md`, `docs/CONTENT-MODEL.md`, `README.md`, and `ROADMAP.md`. Removed studio references, added centralized config, adapter-mdx, and content ops documentation.
-
-### 🟠 CLEAN: Global Mutable Adapter Registry
-
-`format-adapter.ts` uses a module-level `adapterRegistry` array. This is a singleton that leaks state between Vitest workers.
-
-**Fix options:**
-1. Add `resetAdapters()` export for test isolation
-2. Move registry into `Workspace` so each workspace instance has its own adapter set
+> 🎉 **All known technical debt has been addressed!**
+> 
+> - The studio package was removed.
+> - The global mutable adapter registry was moved to workspace state.
+> - `run-content-ops.ts` was successfully split into the `ops/` directory.
+> - Import rewriting for tests is using the stable `rewriteFixtureImports` method.
+> - The API export overlap (`index.ts` vs `api.ts`) was cleanly decoupled.
 
 ---
 

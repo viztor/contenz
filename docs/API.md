@@ -2,7 +2,35 @@
 
 This page summarizes the programmatic API from `@contenz/core/api`. Use it when building tooling or custom scripts on top of Contenz.
 
-**Entry point**: `@contenz/core/api` (not the default `@contenz/core` export, which is for schema helpers and types).
+**Entry points**:
+- `@contenz/core/api` (All programmatic pipelines: schema helpers, build, lint, content ops)
+- `@contenz/client` (Runtime query builder for consuming output in apps)
+
+## Client Query API (`@contenz/client`)
+
+When building frontend applications (e.g., Next.js, Nuxt), use `@contenz/client` to filter, sort, and paginate your generated JSON content. This package is completely decoupled from Node APIs.
+
+| Export | Description |
+|--------|-------------|
+| `query(collection)` | Create a new `QueryBuilder` over an array or object of items. |
+| `.where(field, op, val)` | Filter items. Operators: `==`, `!=`, `<`, `<=`, `>`, `>=`, `in`, `not-in`, `contains`. |
+| `.orderBy(field, dir)` | Sort items by a key (`asc` or `desc`). |
+| `.paginate({ page, limit })`| Returns a `PaginatedResult` with `items`, `total`, `page`, `limit`, and `totalPages`. |
+| `.limit(count)` | Restrict result count. |
+| `.offset(count)` | Skip a number of results. |
+| `.first()` | Returns the first item or undefined. |
+| `.all()` | Returns all matched items. |
+
+**Example:**
+```ts
+import { query } from "@contenz/client";
+import { blog } from "./generated/content/blog.js";
+
+const recentPosts = query(blog)
+  .where("draft", "==", false)
+  .orderBy("date", "desc")
+  .paginate({ page: 1, limit: 10 });
+```
 
 ## Config and discovery
 

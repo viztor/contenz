@@ -4,6 +4,7 @@ import { defineCommand } from "citty";
 
 const DEFAULT_CONTENT_DIR = "content";
 const DEFAULT_COLLECTION = "pages";
+const DEFAULT_PRESET = "minimal";
 
 interface ScaffoldFile {
 	filePath: string;
@@ -50,9 +51,28 @@ ${fields.join("\n")}
 `;
 }
 
-function renderSchemaFile(collection: string): string {
+function renderSchemaFile(collection: string, preset: string): string {
 	const typeName = `${toPascalCase(collection)}Meta`;
 
+	if (preset === "blog") {
+		return `import { defineCollection } from "@contenz/core";
+import { z } from "zod";
+
+const schema = z.object({
+  title: z.string().describe("The post title"),
+  date: z.date().describe("Publish date"),
+  tags: z.array(z.string()).optional().describe("Tags for the post"),
+});
+
+export const { meta, relations } = defineCollection({
+  schema,
+});
+
+export type ${typeName} = z.infer<typeof meta>;
+`;
+	}
+
+	// Minimal preset
 	return `import { defineCollection } from "@contenz/core";
 import { z } from "zod";
 
@@ -69,7 +89,31 @@ export type ${typeName} = z.infer<typeof meta>;
 `;
 }
 
-function renderContentFile(locale?: "en" | "zh"): string {
+function renderContentFile(preset: string, locale?: "en" | "zh"): string {
+	if (preset === "blog") {
+		if (locale === "zh") {
+			return JSON.stringify(
+				{
+					title: "我的第一篇博客",
+					date: new Date().toISOString().split("T")[0],
+					tags: ["更新", "欢迎"],
+				},
+				null,
+				2,
+			);
+		}
+		return JSON.stringify(
+			{
+				title: "My First Blog Post",
+				date: new Date().toISOString().split("T")[0],
+				tags: ["update", "welcome"],
+			},
+			null,
+			2,
+		);
+	}
+
+	// Minimal preset
 	if (locale === "zh") {
 		return JSON.stringify(
 			{
@@ -132,6 +176,7 @@ function getScaffoldFiles(options: {
 	cwd: string;
 	contentDir: string;
 	collection: string;
+	preset: string;
 	i18n: boolean;
 }): ScaffoldFile[] {
 	const collectionDir = path.join(
@@ -146,7 +191,7 @@ function getScaffoldFiles(options: {
 		},
 		{
 			filePath: path.join(collectionDir, "schema.ts"),
-			content: renderSchemaFile(options.collection),
+			content: renderSchemaFile(options.collection, options.preset),
 		},
 	];
 
@@ -154,17 +199,17 @@ function getScaffoldFiles(options: {
 		files.push(
 			{
 				filePath: path.join(collectionDir, "welcome.en.json"),
-				content: renderContentFile("en"),
+				content: renderContentFile(options.preset, "en"),
 			},
 			{
 				filePath: path.join(collectionDir, "welcome.zh.json"),
-				content: renderContentFile("zh"),
+				content: renderContentFile(options.preset, "zh"),
 			},
 		);
 	} else {
 		files.push({
 			filePath: path.join(collectionDir, "welcome.json"),
-			content: renderContentFile(),
+			content: renderContentFile(options.preset),
 		});
 	}
 
@@ -190,8 +235,13 @@ export const initCommand = defineCommand({
 		},
 		collection: {
 			type: "string",
-			description: "Starter collection name",
-			default: DEFAULT_COLLECTION,
+			description: "Starter collection name (defaults to 'blog' if preset=blog, else 'pages')",
+			required: false,
+		},
+		preset: {
+			type: "string",
+			description: "Starter schema preset: minimal, blog",
+			default: DEFAULT_PRESET,
 		},
 		i18n: {
 			type: "boolean",
@@ -207,8 +257,19 @@ export const initCommand = defineCommand({
 	},
 	async run({ args }) {
 		const cwd = path.resolve(args.cwd);
-		const collection = args.collection.trim();
-		const contentDir = args.dir.trim();
+		const preset = args.preset.trim();
+		let collection = args.collection?.trim();
+		let contentDir = args.dir?.trim();
+
+		// Framework detection for default dir
+		if (!contentDir || contentDir === DEFAULT_CONTENT_DIR) {
+			const hasSrc = await pathExists(path.join(cwd, "src"));
+			contentDir = hasSrc ? "src/content" : "content";
+		}
+
+		if (!collection) {
+			collection = preset === "blog" ? "blog" : "pages";
+		}
 
 		if (!isRelativeProjectPath(contentDir)) {
 			console.error(
@@ -241,6 +302,7 @@ export const initCommand = defineCommand({
 			cwd,
 			contentDir,
 			collection,
+			preset,
 			i18n: args.i18n,
 		});
 

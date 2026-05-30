@@ -9,10 +9,12 @@ import { lintCommand } from "./commands/lint.js";
 import { listCommand } from "./commands/list.js";
 import { schemaCommand } from "./commands/schema.js";
 import { searchCommand } from "./commands/search.js";
+import { skillCommand } from "./commands/skill.js";
 import { statusCommand } from "./commands/status.js";
 import { updateCommand } from "./commands/update.js";
 import { viewCommand } from "./commands/view.js";
 import { watchCommand } from "./commands/watch.js";
+import { previewCommand } from "./commands/preview.js";
 
 const require = createRequire(import.meta.url);
 const pkg = require("../package.json") as { version: string };
@@ -28,6 +30,9 @@ const main = defineCommand({
 		lint: lintCommand,
 		build: buildCommand,
 		watch: watchCommand,
+		preview: previewCommand,
+		schema: schemaCommand,
+		skill: skillCommand,
 		status: statusCommand,
 		// AI-native commands
 		view: viewCommand,
@@ -35,7 +40,6 @@ const main = defineCommand({
 		create: createCommand,
 		update: updateCommand,
 		search: searchCommand,
-		schema: schemaCommand,
 	},
 });
 

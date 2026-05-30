@@ -9,7 +9,7 @@ describe("runSearch", () => {
   it("searches content by slug substring (brute-force)", async () => {
     const cwd = await prepareFixture("minimal");
     // List collections first to find a valid one
-    const { runList } = await import("../run-content-ops.js");
+    const { runList } = await import("../ops/index.js");
     const listResult = await runList({ cwd });
     const cols = (listResult.data as { collections: Array<{ name: string }> }).collections;
 
@@ -34,7 +34,7 @@ describe("runSearch", () => {
 
   it("returns empty results for non-matching query", async () => {
     const cwd = await prepareFixture("minimal");
-    const { runList } = await import("../run-content-ops.js");
+    const { runList } = await import("../ops/index.js");
     const listResult = await runList({ cwd });
     const cols = (listResult.data as { collections: Array<{ name: string }> }).collections;
 
@@ -60,7 +60,7 @@ describe("runSearch", () => {
 
   it("respects limit parameter", async () => {
     const cwd = await prepareFixture("minimal");
-    const { runList } = await import("../run-content-ops.js");
+    const { runList } = await import("../ops/index.js");
     const listResult = await runList({ cwd });
     const cols = (listResult.data as { collections: Array<{ name: string }> }).collections;
 
@@ -77,7 +77,7 @@ describe("runSearch", () => {
 
   it("searches i18n collection", async () => {
     const cwd = await prepareFixture("i18n");
-    const { runList } = await import("../run-content-ops.js");
+    const { runList } = await import("../ops/index.js");
     const listResult = await runList({ cwd });
     const cols = (listResult.data as { collections: Array<{ name: string }> }).collections;
     const i18nCol = cols[0]; // i18n fixture has at least one collection

@@ -1,5 +1,5 @@
 /**
- * Unit tests for the MiniSearch-based search index.
+ * Unit tests for the Orama-based search index.
  */
 import fs from "node:fs/promises";
 import os from "node:os";
@@ -71,8 +71,8 @@ describe("buildSearchDocument", () => {
 });
 
 describe("createSearchIndex + add + query", () => {
-  it("indexes documents and finds them by slug", () => {
-    const index = createSearchIndex(["title"]);
+  it("indexes documents and finds them by slug", async () => {
+    const index = await createSearchIndex(["title"]);
     const doc = buildSearchDocument(
       "faq",
       "moq",
@@ -81,51 +81,51 @@ describe("createSearchIndex + add + query", () => {
       { title: "Minimum Order" },
       ""
     );
-    addDocumentsToIndex(index, [doc]);
+    await addDocumentsToIndex(index, [doc]);
 
-    const hits = querySearchIndex(index, { query: "moq" });
+    const hits = await querySearchIndex(index, { query: "moq" });
     expect(hits.length).toBeGreaterThan(0);
     expect(hits[0].slug).toBe("moq");
   });
 
-  it("finds documents by meta field content", () => {
-    const index = createSearchIndex(["title"]);
-    addDocumentsToIndex(index, [
+  it("finds documents by meta field content", async () => {
+    const index = await createSearchIndex(["title"]);
+    await addDocumentsToIndex(index, [
       buildSearchDocument("faq", "moq", "en", "f1", { title: "Minimum Order Quantity" }, ""),
       buildSearchDocument("faq", "lead", "en", "f2", { title: "Lead Time" }, ""),
     ]);
 
-    const hits = querySearchIndex(index, { query: "minimum" });
+    const hits = await querySearchIndex(index, { query: "minimum" });
     expect(hits.length).toBe(1);
     expect(hits[0].slug).toBe("moq");
   });
 
-  it("filters by collection", () => {
-    const index = createSearchIndex(["title"]);
-    addDocumentsToIndex(index, [
+  it("filters by collection", async () => {
+    const index = await createSearchIndex(["title"]);
+    await addDocumentsToIndex(index, [
       buildSearchDocument("faq", "moq", "en", "f1", { title: "MOQ" }, ""),
       buildSearchDocument("glossary", "moq", "en", "f2", { title: "MOQ term" }, ""),
     ]);
 
-    const hits = querySearchIndex(index, { query: "moq", collection: "faq" });
+    const hits = await querySearchIndex(index, { query: "moq", collection: "faq" });
     expect(hits.every((h) => h.meta.title !== "MOQ term")).toBe(true);
   });
 
-  it("filters by locale", () => {
-    const index = createSearchIndex(["title"]);
-    addDocumentsToIndex(index, [
+  it("filters by locale", async () => {
+    const index = await createSearchIndex(["title"]);
+    await addDocumentsToIndex(index, [
       buildSearchDocument("faq", "moq", "en", "f1", { title: "MOQ" }, ""),
       buildSearchDocument("faq", "moq", "zh", "f2", { title: "最小订购量" }, ""),
     ]);
 
-    const hits = querySearchIndex(index, { query: "moq", locale: "en" });
+    const hits = await querySearchIndex(index, { query: "moq", locale: "en" });
     expect(hits.length).toBe(1);
     expect(hits[0].locale).toBe("en");
   });
 
-  it("applies field filters", () => {
-    const index = createSearchIndex(["title", "category"]);
-    addDocumentsToIndex(index, [
+  it("applies field filters", async () => {
+    const index = await createSearchIndex(["title", "category"]);
+    await addDocumentsToIndex(index, [
       buildSearchDocument("faq", "moq", "en", "f1", { title: "MOQ", category: "products" }, ""),
       buildSearchDocument(
         "faq",
@@ -137,46 +137,51 @@ describe("createSearchIndex + add + query", () => {
       ),
     ]);
 
-    const hits = querySearchIndex(index, { query: "moq lead", fields: { category: "products" } });
+    const hits = await querySearchIndex(index, {
+      query: "moq lead",
+      fields: { category: "products" },
+    });
     expect(hits.every((h) => h.meta.category === "products")).toBe(true);
   });
 
-  it("respects limit", () => {
-    const index = createSearchIndex(["title"]);
+  it("respects limit", async () => {
+    const index = await createSearchIndex(["title"]);
     const docs = Array.from({ length: 20 }, (_, i) =>
       buildSearchDocument("faq", `item-${i}`, "en", `f${i}`, { title: `Item ${i}` }, "common text")
     );
-    addDocumentsToIndex(index, docs);
+    await addDocumentsToIndex(index, docs);
 
-    const hits = querySearchIndex(index, { query: "item", limit: 3 });
+    const hits = await querySearchIndex(index, { query: "item", limit: 3 });
     expect(hits.length).toBeLessThanOrEqual(3);
   });
 
-  it("returns empty when no query and no fields", () => {
-    const index = createSearchIndex(["title"]);
-    addDocumentsToIndex(index, [
+  it("returns empty when no query and no fields", async () => {
+    const index = await createSearchIndex(["title"]);
+    await addDocumentsToIndex(index, [
       buildSearchDocument("faq", "moq", "en", "f1", { title: "MOQ" }, ""),
     ]);
-    const hits = querySearchIndex(index, {});
+    const hits = await querySearchIndex(index, {});
     expect(hits).toEqual([]);
   });
 });
 
 describe("discardDocuments", () => {
-  it("removes documents from the index", () => {
-    const index = createSearchIndex(["title"]);
+  it("removes documents from the index", async () => {
+    const index = await createSearchIndex(["title"]);
     const doc = buildSearchDocument("faq", "moq", "en", "f", { title: "MOQ" }, "");
-    addDocumentsToIndex(index, [doc]);
+    await addDocumentsToIndex(index, [doc]);
 
-    expect(querySearchIndex(index, { query: "moq" }).length).toBeGreaterThan(0);
+    expect((await querySearchIndex(index, { query: "moq" })).length).toBeGreaterThan(0);
 
-    discardDocuments(index, ["faq:moq:en"]);
-    expect(querySearchIndex(index, { query: "moq" })).toEqual([]);
+    await discardDocuments(index, ["faq:moq:en"]);
+    expect(await querySearchIndex(index, { query: "moq" })).toEqual([]);
   });
 
-  it("silently ignores nonexistent IDs", () => {
-    const index = createSearchIndex([]);
-    expect(() => discardDocuments(index, ["nonexistent:id:_"])).not.toThrow();
+  it("silently ignores nonexistent IDs", async () => {
+    const index = await createSearchIndex([]);
+    // Orama handles non-existent removes gracefully in latest versions,
+    // but just in case we wrap it in a try-catch in the implementation if needed.
+    await expect(discardDocuments(index, ["nonexistent:id:_"])).resolves.not.toThrow();
   });
 });
 
@@ -206,8 +211,8 @@ describe("collectMetaFieldNames", () => {
 describe("save and load search index", () => {
   it("round-trips an index through disk", async () => {
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "contenz-search-"));
-    const index = createSearchIndex(["title"]);
-    addDocumentsToIndex(index, [
+    const index = await createSearchIndex(["title"]);
+    await addDocumentsToIndex(index, [
       buildSearchDocument("faq", "moq", "en", "f1", { title: "MOQ" }, "body"),
     ]);
 
@@ -215,7 +220,7 @@ describe("save and load search index", () => {
     const loaded = await loadSearchIndex(tempDir);
     expect(loaded).not.toBeNull();
 
-    const hits = querySearchIndex(loaded!, { query: "moq" });
+    const hits = await querySearchIndex(loaded!, { query: "moq" });
     expect(hits.length).toBeGreaterThan(0);
     expect(hits[0].slug).toBe("moq");
   });

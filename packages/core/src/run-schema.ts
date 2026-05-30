@@ -4,7 +4,7 @@
  */
 
 import { type IntrospectedSchema, introspectSchema } from "./introspect.js";
-import type { ContentOpResult } from "./run-content-ops.js";
+import type { ContentOpResult } from "./ops/index.js";
 import { createWorkspace } from "./workspace.js";
 
 // ── Types ───────────────────────────────────────────────────────────────────

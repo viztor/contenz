@@ -130,7 +130,7 @@ export async function writeContent(options: WriteContentOptions): Promise<Conten
   const filePath = path.join(col.collectionPath, fileName);
   await fs.mkdir(path.dirname(filePath), { recursive: true });
 
-  const content = serializeContentFile(options.meta, options.body ?? "", ext);
+  const content = serializeContentFile(options.meta, options.body ?? "", ext, col.config.adapters);
   await fs.writeFile(filePath, content, "utf-8");
 
   return {
@@ -178,7 +178,12 @@ export async function updateContent(
     }
   }
 
-  const newContent = serializeContentFile(newMeta, current.body ?? "", location.ext);
+  const newContent = serializeContentFile(
+    newMeta,
+    current.body ?? "",
+    location.ext,
+    col.config.adapters
+  );
   await fs.writeFile(location.filePath, newContent, "utf-8");
 
   return {

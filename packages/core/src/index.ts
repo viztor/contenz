@@ -6,57 +6,14 @@
  */
 
 export {
-  type ContentLocation,
-  readContent,
-  resolveContentFile,
-  updateContent,
-  type WriteContentOptions,
-  writeContent,
-} from "./content-io.js";
-export {
   type DefineCollectionMultiOptions,
   type DefineCollectionSingleOptions,
   defineCollection,
   defineMultiTypeCollection,
   type SchemaWithPattern,
 } from "./define-collection.js";
-export type {
-  Diagnostic,
-  DiagnosticCategory,
-  DiagnosticFormat,
-  DiagnosticSeverity,
-  DiagnosticSummary,
-} from "./diagnostics.js";
-export {
-  type FormatAdapter,
-  getAdapterForExtension,
-  jsonAdapter,
-  registerAdapters,
-} from "./format-adapter.js";
-export {
-  negotiateLocale,
-  type ParsedLocaleURL,
-  type ParseLocaleFromURLOptions,
-  parseLocaleFromURL,
-} from "./i18n-utils.js";
-export {
-  type IntrospectedField,
-  type IntrospectedSchema,
-  introspectField,
-  introspectSchema,
-  type SchemaFieldType,
-} from "./introspect.js";
-export {
-  runWatch,
-  type WatchChangeEvent,
-  type WatchErrorEvent,
-  type WatchEvent,
-  type WatchEventMap,
-  type WatchHandle,
-  type WatchOptions,
-  type WatchReadyEvent,
-  type WatchRebuildEvent,
-} from "./run-watch.js";
+export type { FormatAdapter } from "./format-adapter.js";
+export { presets } from "./presets.js";
 export type {
   CollectionConfig,
   CollectionDeclaration,
@@ -72,9 +29,3 @@ export type {
   ResolvedI18nConfig,
   SchemaModule,
 } from "./types.js";
-export {
-  type CollectionContext,
-  type CreateWorkspaceOptions,
-  createWorkspace,
-  type Workspace,
-} from "./workspace.js";

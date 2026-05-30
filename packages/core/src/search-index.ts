@@ -1,17 +1,15 @@
 /**
- * Search index built on MiniSearch for fast content queries.
+ * Search index built on Orama for fast content queries.
  *
  * The index is built incrementally during `contenz build` and persisted to
  * `.contenz/search-index.json`. When available, `runSearch` loads it for
- * O(1) startup + fast prefix/fuzzy queries instead of O(n) file parsing.
- *
- * Collection-level incremental updates: on rebuild, only changed collections
- * have their documents removed and re-added. Unchanged collections are untouched.
+ * fast prefix/fuzzy queries.
  */
 
 import fs from "node:fs/promises";
 import path from "node:path";
-import MiniSearch from "minisearch";
+import { create, insertMultiple, type Orama, remove, search } from "@orama/orama";
+import { persistToFile, restoreFromFile } from "@orama/plugin-data-persistence/server";
 
 const CONTENZ_DIR = ".contenz";
 const INDEX_FILENAME = "search-index.json";
@@ -32,50 +30,50 @@ export interface SearchDocument {
   [field: string]: unknown;
 }
 
-// ── Index fields configuration ──────────────────────────────────────────────
-
-/** Fields that are always indexed and always searchable */
-const CORE_FIELDS = ["slug", "body"] as const;
-
-/** Fields stored but not searched */
-const STORED_FIELDS = ["collection", "slug", "locale", "file", "_metaJson"] as const;
-
-/**
- * Build the MiniSearch options. We register a superset of known fields;
- * MiniSearch silently skips missing fields on individual documents.
- *
- * @param metaFields - extra meta field names to make searchable
- */
-function buildOptions(metaFields: string[] = []) {
-  const searchFields = [...CORE_FIELDS, ...metaFields];
-  return {
-    fields: searchFields,
-    storeFields: [...STORED_FIELDS] as string[],
-    idField: "id" as const,
-  };
-}
-
 // ── Index lifecycle ─────────────────────────────────────────────────────────
 
 /**
- * Create a fresh, empty MiniSearch index.
+ * Build the Orama schema.
  */
-export function createSearchIndex(metaFields: string[] = []): MiniSearch<SearchDocument> {
-  return new MiniSearch<SearchDocument>(buildOptions(metaFields));
+function buildSchema(metaFields: string[] = []) {
+  const schema: Record<string, "string"> = {
+    id: "string",
+    collection: "string",
+    slug: "string",
+    locale: "string",
+    file: "string",
+    body: "string",
+    _metaJson: "string",
+  };
+
+  for (const field of metaFields) {
+    if (!schema[field]) {
+      schema[field] = "string";
+    }
+  }
+
+  return schema;
+}
+
+export type ContenzSearchIndex = Orama<any>;
+
+/**
+ * Create a fresh, empty Orama index.
+ */
+export async function createSearchIndex(metaFields: string[] = []): Promise<ContenzSearchIndex> {
+  return await create({
+    schema: buildSchema(metaFields),
+  });
 }
 
 /**
  * Load a previously serialized search index from `.contenz/search-index.json`.
- * Returns null if the file does not exist or is invalid.
  */
-export async function loadSearchIndex(cwd: string): Promise<MiniSearch<SearchDocument> | null> {
+export async function loadSearchIndex(cwd: string): Promise<ContenzSearchIndex | null> {
   const indexPath = path.join(cwd, CONTENZ_DIR, INDEX_FILENAME);
   try {
-    const raw = await fs.readFile(indexPath, "utf-8");
-    const parsed = JSON.parse(raw);
-    const metaFields = Array.isArray(parsed._metaFields) ? parsed._metaFields : [];
-    const opts = buildOptions(metaFields);
-    return MiniSearch.loadJSON<SearchDocument>(parsed.index, opts);
+    const db = await restoreFromFile("json", indexPath);
+    return db as ContenzSearchIndex;
   } catch {
     return null;
   }
@@ -83,30 +81,21 @@ export async function loadSearchIndex(cwd: string): Promise<MiniSearch<SearchDoc
 
 /**
  * Save a search index to `.contenz/search-index.json`.
- * Stores the index JSON alongside the meta field names needed to reload it.
  */
 export async function saveSearchIndex(
   cwd: string,
-  index: MiniSearch<SearchDocument>,
-  metaFields: string[]
+  index: ContenzSearchIndex,
+  _metaFields: string[] // Kept for API compat
 ): Promise<void> {
   const dir = path.join(cwd, CONTENZ_DIR);
   await fs.mkdir(dir, { recursive: true });
   const indexPath = path.join(dir, INDEX_FILENAME);
-  const payload = JSON.stringify({
-    version: 1,
-    generatedAt: new Date().toISOString(),
-    _metaFields: metaFields,
-    index: JSON.stringify(index),
-  });
-  await fs.writeFile(indexPath, payload, "utf-8");
+
+  await persistToFile(index, "json", indexPath);
 }
 
 // ── Document operations ─────────────────────────────────────────────────────
 
-/**
- * Build a SearchDocument from parsed content.
- */
 export function buildSearchDocument(
   collection: string,
   slug: string,
@@ -126,7 +115,7 @@ export function buildSearchDocument(
     _metaJson: JSON.stringify(meta),
   };
 
-  // Spread string meta fields so MiniSearch can index them
+  // Spread string meta fields so Orama can index them
   for (const [key, value] of Object.entries(meta)) {
     if (typeof value === "string") {
       doc[key] = value;
@@ -138,35 +127,19 @@ export function buildSearchDocument(
   return doc;
 }
 
-/**
- * Discard specific document IDs from the index.
- * Uses MiniSearch's `discard()` which marks documents as deleted
- * without rebuilding the entire index.
- */
-export function discardDocuments(index: MiniSearch<SearchDocument>, ids: string[]): void {
+export async function discardDocuments(index: ContenzSearchIndex, ids: string[]): Promise<void> {
   for (const id of ids) {
-    try {
-      index.discard(id);
-    } catch {
-      // ID not in index — skip silently
-    }
+    await remove(index, id);
   }
 }
 
-/**
- * Add documents to the index.
- */
-export function addDocumentsToIndex(
-  index: MiniSearch<SearchDocument>,
+export async function addDocumentsToIndex(
+  index: ContenzSearchIndex,
   docs: SearchDocument[]
-): void {
-  index.addAll(docs);
+): Promise<void> {
+  await insertMultiple(index, docs as any[]);
 }
 
-/**
- * Collect all unique string-valued meta field names from a set of documents.
- * Used to register searchable meta fields in the index configuration.
- */
 export function collectMetaFieldNames(docs: SearchDocument[]): string[] {
   const fields = new Set<string>();
   for (const doc of docs) {
@@ -201,85 +174,62 @@ export interface SearchIndexHit {
   score: number;
 }
 
-/**
- * Query the search index. Returns ranked results with metadata.
- */
-export function querySearchIndex(
-  index: MiniSearch<SearchDocument>,
+export async function querySearchIndex(
+  index: ContenzSearchIndex,
   opts: SearchIndexQuery
-): SearchIndexHit[] {
+): Promise<SearchIndexHit[]> {
   const limit = opts.limit ?? 50;
 
-  // If no query text, do an exhaustive scan via wildcard prefix search
-  // on a very short term to match broadly, then filter.
-  // MiniSearch requires at least some query text. If none provided,
-  // we fall back to listing all docs in the collection.
   if (!opts.query && !opts.fields) {
-    // No search criteria — fall back to brute force (caller should handle)
     return [];
   }
 
   const queryText = opts.query ?? "";
 
-  // If we have query text, use MiniSearch's native search
   if (queryText.length > 0) {
-    const raw = index.search(queryText, {
-      prefix: true,
-      fuzzy: 0.2,
-      boost: { slug: 3 },
-      filter: (result) => {
-        const doc = result as unknown as SearchDocument;
-        if (opts.collection && doc.collection !== opts.collection) return false;
-        if (opts.locale && doc.locale !== opts.locale && doc.locale !== "_") return false;
-        return true;
+    const { hits } = await search(index, {
+      term: queryText,
+      limit,
+      where: {
+        ...(opts.collection ? { collection: opts.collection } : {}),
+        ...(opts.locale ? { locale: opts.locale } : {}),
+        ...(opts.fields ? opts.fields : {}),
       },
     });
 
-    const hits: SearchIndexHit[] = [];
-    for (const result of raw) {
-      if (hits.length >= limit) break;
-
-      const stored = result as unknown as {
-        collection?: string;
-        slug?: string;
-        locale?: string;
-        file?: string;
-        _metaJson?: string;
+    return hits.map((hit) => {
+      const doc = hit.document as unknown as SearchDocument;
+      return {
+        slug: doc.slug,
+        locale: doc.locale === "_" ? null : doc.locale,
+        file: doc.file,
+        meta: JSON.parse(doc._metaJson),
+        score: hit.score,
       };
-
-      const meta = stored._metaJson ? JSON.parse(stored._metaJson) : {};
-
-      // Apply field filters
-      if (opts.fields && Object.keys(opts.fields).length > 0) {
-        const matches = Object.entries(opts.fields).every(
-          ([field, expected]) => meta[field] !== undefined && String(meta[field]) === expected
-        );
-        if (!matches) continue;
-      }
-
-      hits.push({
-        slug: stored.slug ?? "",
-        locale: stored.locale === "_" ? null : (stored.locale ?? null),
-        file: stored.file ?? "",
-        meta,
-        score: result.score,
-      });
-    }
-
-    return hits;
+    });
   }
 
-  // Query text is empty but we have field filters — use autoSuggest trick:
-  // search for every field value as a query
+  // If no query text but has fields
   if (opts.fields && Object.keys(opts.fields).length > 0) {
-    // Build a combined query from all field values
-    const combinedQuery = Object.values(opts.fields).join(" ");
-    if (combinedQuery.length === 0) return [];
+    const { hits } = await search(index, {
+      term: "",
+      limit,
+      where: {
+        ...(opts.collection ? { collection: opts.collection } : {}),
+        ...(opts.locale ? { locale: opts.locale } : {}),
+        ...(opts.fields ? opts.fields : {}),
+      },
+    });
 
-    return querySearchIndex(index, {
-      ...opts,
-      query: combinedQuery,
-      fields: opts.fields,
+    return hits.map((hit) => {
+      const doc = hit.document as unknown as SearchDocument;
+      return {
+        slug: doc.slug,
+        locale: doc.locale === "_" ? null : doc.locale,
+        file: doc.file,
+        meta: JSON.parse(doc._metaJson),
+        score: hit.score,
+      };
     });
   }
 

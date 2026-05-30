@@ -3,7 +3,7 @@
  */
 import fs from "node:fs/promises";
 import { afterEach, describe, expect, it } from "vitest";
-import { runCreate, runList, runUpdate, runView } from "../run-content-ops.js";
+import { runCreate, runList, runUpdate, runView } from "../ops/index.js";
 import { prepareFixture } from "../test-fixtures.js";
 
 let cwd: string;

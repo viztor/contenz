@@ -12,7 +12,8 @@ import {
   loadSchemaModule,
   resolveConfig,
 } from "./config.js";
-import { registerAdapters } from "./format-adapter.js";
+import { parseFileName } from "./parser.js";
+// format-adapter.ts is no longer imported here for registerAdapters
 import {
   type DiscoveredCollection,
   discoverCollections,
@@ -91,10 +92,7 @@ export async function createWorkspace(options: CreateWorkspaceOptions): Promise<
   const projectConfig = await loadProjectConfig(cwd);
   const resolvedConfig = resolveConfig(projectConfig);
 
-  // Register external format adapters from config (e.g. @contenz/adapter-mdx)
-  if (projectConfig.adapters?.length) {
-    registerAdapters(projectConfig.adapters);
-  }
+  // Adapters are now resolved directly into projectConfig and passed through resolvedConfig
 
   const sources =
     options.sources ??
@@ -122,6 +120,8 @@ export async function createWorkspace(options: CreateWorkspaceOptions): Promise<
         config.ignore
       );
 
+      detectSlugCollisions(dc.name, contentFiles, config);
+
       return {
         name: dc.name,
         collectionPath: dc.collectionPath,
@@ -144,12 +144,14 @@ export async function createWorkspace(options: CreateWorkspaceOptions): Promise<
       // Build schema module from inline schema or fall back to file
       let schema: SchemaModule | null = null;
       if (decl.schema) {
-        schema = { meta: decl.schema, relations: decl.relations };
+        schema = { meta: decl.schema, relations: decl.relations, computed: decl.computed };
       } else {
         schema = await loadSchemaModule(collectionPath);
       }
 
       const contentFiles = await globContentFiles(collectionPath, config.extensions, config.ignore);
+
+      detectSlugCollisions(name, contentFiles, config);
 
       return {
         name,
@@ -183,4 +185,32 @@ export async function createWorkspace(options: CreateWorkspaceOptions): Promise<
       return collections.find((c) => c.name === name);
     },
   };
+}
+
+function detectSlugCollisions(
+  collectionName: string,
+  contentFiles: string[],
+  config: ResolvedConfig
+): void {
+  const slugMap = new Map<string, string[]>();
+  for (const file of contentFiles) {
+    const fileName = path.basename(file);
+    const parsed = parseFileName(fileName, config.i18n, config.slugPattern, config.extensions);
+    if (!parsed) continue;
+
+    const key = config.i18n ? `${parsed.slug}.${parsed.locale}` : parsed.slug;
+    const existing = slugMap.get(key) || [];
+    existing.push(file);
+    slugMap.set(key, existing);
+  }
+
+  for (const [key, files] of slugMap.entries()) {
+    if (files.length > 1) {
+      throw new Error(
+        `Slug collision detected in collection "${collectionName}": Files ${files.join(
+          ", "
+        )} resolve to the same slug${config.i18n ? " and locale" : ""} ("${key}").`
+      );
+    }
+  }
 }

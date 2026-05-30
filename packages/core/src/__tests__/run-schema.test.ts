@@ -9,7 +9,7 @@ describe("runSchema", () => {
   it("introspects schema for a valid collection", async () => {
     const cwd = await prepareFixture("minimal");
     // Get first collection name
-    const { runList } = await import("../run-content-ops.js");
+    const { runList } = await import("../ops/index.js");
     const listResult = await runList({ cwd });
     const cols = (listResult.data as { collections: Array<{ name: string }> }).collections;
 
@@ -45,7 +45,7 @@ describe("runSchema", () => {
 
   it("returns relations when available", async () => {
     const cwd = await prepareFixture("minimal");
-    const { runList } = await import("../run-content-ops.js");
+    const { runList } = await import("../ops/index.js");
     const listResult = await runList({ cwd });
     const cols = (listResult.data as { collections: Array<{ name: string }> }).collections;
 

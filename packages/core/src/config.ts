@@ -1,5 +1,6 @@
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { buildAdapterList } from "./format-adapter.js";
 import { resolveSourcePatterns } from "./sources.js";
 import type {
   CollectionConfig,
@@ -88,6 +89,8 @@ const BUILT_IN_DEFAULTS: Required<
   extensions: ["md", "mdx", "json"],
   ignore: ["README.md", "_*"],
   adapters: [],
+  hooks: {},
+  buildSearchIndex: true,
 };
 
 const CONFIG_FILENAMES = [
@@ -193,8 +196,10 @@ export function resolveConfig(
     strict: project.strict ?? BUILT_IN_DEFAULTS.strict,
     i18n: i18nEnabled,
     resolvedI18n,
+    adapters: buildAdapterList(project.adapters),
     extensions: collection?.extensions ?? project.extensions ?? BUILT_IN_DEFAULTS.extensions,
     ignore: collection?.ignore ?? project.ignore ?? BUILT_IN_DEFAULTS.ignore,
+    buildSearchIndex: project.buildSearchIndex ?? BUILT_IN_DEFAULTS.buildSearchIndex,
     types: collection?.types,
     slugPattern: collection?.slugPattern,
   };

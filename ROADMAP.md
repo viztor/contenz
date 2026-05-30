@@ -8,7 +8,7 @@ This roadmap is the milestone-level delivery plan. It should stay readable, depe
 - Current command surface is `init`, `lint`, `build`, `watch`, `status`, `view`, `list`, `create`, `update`, `search`, `schema`
 - Milestones 1–3 are complete
 - Documentation Gate is complete
-- Milestone 4: Phase 4a complete, Phase 4b partially complete
+- Milestone 4: Complete
 - Packages published to npm as `@contenz/core`, `@contenz/adapter-mdx`, `@contenz/cli` (v0.1.0)
 
 ## Milestone 1: Shared Pipeline Core And Diagnostics
@@ -74,58 +74,46 @@ Outcome:
 
 ### Phase 4b: Format Adapters & Schema Presets
 
-Status: **in progress**
+Status: **complete**
 
 Completed:
 - ✅ Format adapter pipeline (`FormatAdapter` interface, `registerAdapters()`)
 - ✅ JSON content adapter (built-in, first-class `.json` support)
 - ✅ `@contenz/adapter-mdx` — MD/MDX format adapter with both frontmatter and `export const meta`
 - ✅ Centralized inline collection config (`collections` field in `contenz.config.ts`)
-
-Remaining:
-- ❌ Schema presets (`presets.blogPost`, `presets.faq`, etc.)
-- ❌ Global constraints / slug group collision detection
-
-Exit criteria not yet met:
-- Users cannot yet bootstrap a collection using built-in presets
-- `contenz lint` does not yet catch slug collisions across collections
+- ✅ Schema presets (`presets.blogPost`, `presets.faq`, etc.)
+- ✅ Global constraints / slug group collision detection
 
 ### Phase 4c: Workspace Integration & Skills
 
-Status: **not started**
+Status: **complete**
 
 Deliverables:
 - **Smart Init:** `contenz init` detects Next.js, offers preset selection, scaffolds route handlers
 - **Skill Generator:** `contenz skill` generates AI agent skill files tailored to the project's actual schema
 
-Exit criteria:
-- A developer can run `contenz init`, pick presets, and have a working Next.js content route in 30 seconds
-- `contenz skill` generates markdown that teaches AI agents how to edit the project's collections
-
 ---
 
 ## Milestone 5: Consumption & Extensibility (v1.0 Candidate)
 
+Status: **complete**
+
 **Goal:** Make generated content robust to query, and establish stable extension hooks.
 
 **Deliverables:**
-- **Query API:** Type-safe helpers for filtering, sorting, pagination, and relation joins
-- **Extension Hooks:** Lifecycle hooks, transform pipeline, validation plugins
-- **Computed Fields:** Fields derived from other content at build time
-
-**Exit Criteria:**
-- Next.js server components can cleanly query content with relations fully typed
-- Hooks and plugins are covered by integration tests
+- **Query API:** `@contenz/client` type-safe helpers for filtering, sorting, pagination, and relation joins
+- **Extension Hooks:** Lifecycle hooks (`beforeBuild`, `transformItem`, `afterBuild`)
+- **Computed Fields:** Fields dynamically derived from other content at build time
 
 ---
 
-## Future Product Track: Authoring Studio
+## Future Product Track: Preview & Review UI
 
 This is not the current milestone focus, but it is part of the intended product scope.
 
-**Goal:** Provide a deployable, git-backed authoring interface so content teams can work visually without dealing with raw files or CLI commands.
+**Goal:** Provide a lightweight, deployable dashboard that renders the repo-backed content and its schema validation status in a beautiful way, providing a visual "Diff/PR" viewer for non-technical stakeholders to review what AI agents have authored.
 
-**Prerequisite:** The core data model, schema introspection, and Content I/O layer (M4a) must be rock solid. The studio relies on the same I/O and introspection primitives as the CLI.
+**Prerequisite:** The core data model, schema introspection, and Content I/O layer (M4a) are rock solid, allowing the Preview UI to render content effortlessly without needing to handle the complex state of a full GUI editor.
 
 ---
 

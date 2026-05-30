@@ -5,8 +5,8 @@
  * current filesystem state, including content added since the last build.
  */
 import path from "node:path";
+import type { ContentOpResult } from "./ops/index.js";
 import { parseContentFile, parseFileName } from "./parser.js";
-import type { ContentOpResult } from "./run-content-ops.js";
 import { createWorkspace } from "./workspace.js";
 
 // ── Types ───────────────────────────────────────────────────────────────────

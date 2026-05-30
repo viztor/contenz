@@ -85,4 +85,22 @@ describe("createWorkspace", () => {
     const sorted = [...names].sort();
     expect(names).toEqual(sorted);
   });
+
+  it("throws an error when a slug collision is detected", async () => {
+    // We use the minimal fixture which has content/faq/hello.json
+    const cwd = await prepareFixture("minimal");
+    const fs = await import("node:fs/promises");
+    const path = await import("node:path");
+
+    // Create a colliding file: hello.mdx
+    await fs.writeFile(
+      path.join(cwd, "content", "faq", "hello.mdx"),
+      "---\ntitle: Hello\nsummary: Collision\n---\nHello body"
+    );
+
+    // Now creating workspace should throw
+    await expect(createWorkspace({ cwd })).rejects.toThrow(
+      /Slug collision detected in collection "faq": Files .* resolve to the same slug \("hello"\)/
+    );
+  });
 });

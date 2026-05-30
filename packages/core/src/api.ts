@@ -25,10 +25,10 @@ export type {
   DiagnosticSummary,
 } from "./diagnostics.js";
 export {
+  buildAdapterList,
   type FormatAdapter,
   getAdapterForExtension,
   jsonAdapter,
-  registerAdapters,
 } from "./format-adapter.js";
 export {
   negotiateLocale,
@@ -44,14 +44,6 @@ export {
   type SchemaFieldType,
 } from "./introspect.js";
 export {
-  extractBodyFromSource,
-  parseContentFile,
-  parseFileName,
-  serializeContentFile,
-} from "./parser.js";
-export type { BuildOptions, BuildResult } from "./run-build.js";
-export { runBuild } from "./run-build.js";
-export {
   type CollectionInfo,
   type ContentOpResult,
   type CreateOptions,
@@ -66,7 +58,15 @@ export {
   type UpdateResult,
   type ViewOptions,
   type ViewResult,
-} from "./run-content-ops.js";
+} from "./ops/index.js";
+export {
+  extractBodyFromSource,
+  parseContentFile,
+  parseFileName,
+  serializeContentFile,
+} from "./parser.js";
+export type { BuildOptions, BuildResult } from "./run-build.js";
+export { runBuild } from "./run-build.js";
 export type { LintOptions, LintResult } from "./run-lint.js";
 export { runLint } from "./run-lint.js";
 export {
@@ -80,8 +80,8 @@ export {
   type SearchResultData,
   type SearchResultItem,
 } from "./run-search.js";
-export type { StatusOptions, StatusResult } from "./run-status.js";
-export { runStatus } from "./run-status.js";
+export { type RunSkillResult, runSkill } from "./run-skill.js";
+export { runStatus, type StatusOptions, type StatusResult } from "./run-status.js";
 export {
   createSearchIndex,
   loadSearchIndex,
