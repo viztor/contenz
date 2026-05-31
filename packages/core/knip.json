@@ -28,6 +28,13 @@
     "src/validator.ts": [
       "exports",
       "types"
+    ],
+    "src/index.ts": [
+      "unlisted"
     ]
-  }
+  },
+  "ignore": [
+    "src/run-watch.ts",
+    "index.ts"
+  ]
 }

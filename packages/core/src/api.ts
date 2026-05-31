@@ -83,6 +83,7 @@ export {
 export { type RunSkillResult, runSkill } from "./run-skill.js";
 export { runStatus, type StatusOptions, type StatusResult } from "./run-status.js";
 export {
+  ContenzSearchIndex,
   createSearchIndex,
   loadSearchIndex,
   querySearchIndex,
