@@ -22,7 +22,7 @@ export interface PaginatedResult<T> {
 	totalPages: number;
 }
 
-export class QueryBuilder<T extends Record<string, any>> {
+export class QueryBuilder<T extends Record<string, unknown>> {
 	private items: T[];
 
 	constructor(collection: Record<string, T> | T[]) {
@@ -31,7 +31,7 @@ export class QueryBuilder<T extends Record<string, any>> {
 			: Object.values(collection);
 	}
 
-	where<K extends keyof T>(field: K, op: Operator, value: any): this {
+	where<K extends keyof T>(field: K, op: Operator, value: unknown): this {
 		this.items = this.items.filter((item) => {
 			const itemValue = item[field];
 			switch (op) {
@@ -109,7 +109,7 @@ export class QueryBuilder<T extends Record<string, any>> {
 	}
 }
 
-export function query<T extends Record<string, any>>(
+export function query<T extends Record<string, unknown>>(
 	collection: Record<string, T> | T[],
 ): QueryBuilder<T> {
 	return new QueryBuilder(collection);
