@@ -22,7 +22,7 @@ export interface PaginatedResult<T> {
 	totalPages: number;
 }
 
-export class QueryBuilder<T extends Record<string, any>> {
+export class QueryBuilder<T extends Record<string, unknown>> {
 	private items: T[];
 
 	constructor(collection: Record<string, T> | T[]) {
@@ -31,22 +31,26 @@ export class QueryBuilder<T extends Record<string, any>> {
 			: Object.values(collection);
 	}
 
-	where<K extends keyof T>(field: K, op: Operator, value: any): this {
+	where<K extends keyof T>(field: K, op: Operator, value: unknown): this {
 		this.items = this.items.filter((item) => {
-			const itemValue = item[field];
+			const itemValue = item[field] as unknown;
 			switch (op) {
 				case "==":
 					return itemValue === value;
 				case "!=":
 					return itemValue !== value;
 				case "<":
-					return itemValue < value;
+					// biome-ignore lint/suspicious/noExplicitAny: generic comparison requires any
+					return (itemValue as any) < (value as any);
 				case "<=":
-					return itemValue <= value;
+					// biome-ignore lint/suspicious/noExplicitAny: generic comparison requires any
+					return (itemValue as any) <= (value as any);
 				case ">":
-					return itemValue > value;
+					// biome-ignore lint/suspicious/noExplicitAny: generic comparison requires any
+					return (itemValue as any) > (value as any);
 				case ">=":
-					return itemValue >= value;
+					// biome-ignore lint/suspicious/noExplicitAny: generic comparison requires any
+					return (itemValue as any) >= (value as any);
 				case "in":
 					return Array.isArray(value) && value.includes(itemValue);
 				case "not-in":
@@ -65,8 +69,10 @@ export class QueryBuilder<T extends Record<string, any>> {
 		direction: "asc" | "desc" = "asc",
 	): this {
 		this.items.sort((a, b) => {
-			const aVal = a[field];
-			const bVal = b[field];
+			// biome-ignore lint/suspicious/noExplicitAny: generic comparison requires any
+			const aVal = a[field] as any;
+			// biome-ignore lint/suspicious/noExplicitAny: generic comparison requires any
+			const bVal = b[field] as any;
 			if (aVal < bVal) return direction === "asc" ? -1 : 1;
 			if (aVal > bVal) return direction === "asc" ? 1 : -1;
 			return 0;
@@ -109,7 +115,7 @@ export class QueryBuilder<T extends Record<string, any>> {
 	}
 }
 
-export function query<T extends Record<string, any>>(
+export function query<T extends Record<string, unknown>>(
 	collection: Record<string, T> | T[],
 ): QueryBuilder<T> {
 	return new QueryBuilder(collection);
