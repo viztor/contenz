@@ -5,7 +5,9 @@ import { LayoutDashboard, Folder, FileText, AlertCircle, CheckCircle2, ChevronRi
 // --- Types ---
 type CollectionInfo = { name: string; path: string; count: number };
 type ListItemInfo = { slug: string; path: string; locale?: string };
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ViewResult = { slug: string; locale?: string; file: string; meta: any; body?: string };
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type LintResult = { success: boolean; diagnostics: any[]; errors: number; warnings: number };
 type StatusResult = { status: 'up-to-date' | 'needs-build'; dirtyCollections: string[] };
 
