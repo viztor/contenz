@@ -40,12 +40,16 @@ export class QueryBuilder<T extends Record<string, unknown>> {
 				case "!=":
 					return itemValue !== value;
 				case "<":
+					// biome-ignore lint/suspicious/noExplicitAny: This is an untyped query builder comparison and explicit any casting is required for compilation.
 					return (itemValue as any) < (value as any);
 				case "<=":
+					// biome-ignore lint/suspicious/noExplicitAny: This is an untyped query builder comparison and explicit any casting is required for compilation.
 					return (itemValue as any) <= (value as any);
 				case ">":
+					// biome-ignore lint/suspicious/noExplicitAny: This is an untyped query builder comparison and explicit any casting is required for compilation.
 					return (itemValue as any) > (value as any);
 				case ">=":
+					// biome-ignore lint/suspicious/noExplicitAny: This is an untyped query builder comparison and explicit any casting is required for compilation.
 					return (itemValue as any) >= (value as any);
 				case "in":
 					return Array.isArray(value) && value.includes(itemValue);
