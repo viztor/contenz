@@ -40,12 +40,16 @@ export class QueryBuilder<T extends Record<string, unknown>> {
 				case "!=":
 					return itemValue !== value;
 				case "<":
+					// @ts-expect-error Type coercion for comparison
 					return itemValue < value;
 				case "<=":
+					// @ts-expect-error Type coercion for comparison
 					return itemValue <= value;
 				case ">":
+					// @ts-expect-error Type coercion for comparison
 					return itemValue > value;
 				case ">=":
+					// @ts-expect-error Type coercion for comparison
 					return itemValue >= value;
 				case "in":
 					return Array.isArray(value) && value.includes(itemValue);
