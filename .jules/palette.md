@@ -1,0 +1,3 @@
+## 2024-06-01 - Semantic Color Highlighting in CLI
+**Learning:** For terminal-based CLI outputs, semantic color highlighting (e.g., coloring errors red, fields yellow, keys bold) significantly improves text scannability and readability. Using Node's native `util.inspect` with `{ colors: true }` provides built-in, rich formatting for complex objects without needing external dependencies like `picocolors`.
+**Action:** When adding CLI tools that print data structures, wrap object keys in bold ANSI codes and rely on `util.inspect` for values to provide a rich, visually structured interface that reduces cognitive load without blooming the dependency tree.
