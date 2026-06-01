@@ -1,0 +1,3 @@
+## 2026-06-01 - Cache compiled RegExp objects and pre-compute invariants in hot loops
+**Learning:** In the core content parser (`packages/core/src/parser.ts`), creating `new RegExp(...)` on every file parse is a significant performance bottleneck, particularly for large sites. Additionally, computing alternating regex string structures for static default lists leads to unnecessary array operations.
+**Action:** When working on parsing loops, always cache compiled `RegExp` objects (e.g., using a `Map` keyed by dynamic inputs or a module-level variable) outside the hot function. Also, pre-compute invariants like default array transformations to eliminate runtime overhead.
