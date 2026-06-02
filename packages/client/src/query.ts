@@ -22,7 +22,7 @@ export interface PaginatedResult<T> {
 	totalPages: number;
 }
 
-export class QueryBuilder<T extends Record<string, any>> {
+export class QueryBuilder<T extends Record<string, unknown>> {
 	private items: T[];
 
 	constructor(collection: Record<string, T> | T[]) {
@@ -31,22 +31,23 @@ export class QueryBuilder<T extends Record<string, any>> {
 			: Object.values(collection);
 	}
 
-	where<K extends keyof T>(field: K, op: Operator, value: any): this {
+	where<K extends keyof T>(field: K, op: Operator, value: unknown): this {
 		this.items = this.items.filter((item) => {
-			const itemValue = item[field];
+			const itemValue = item[field] as number | string;
+			const compareValue = value as number | string;
 			switch (op) {
 				case "==":
 					return itemValue === value;
 				case "!=":
 					return itemValue !== value;
 				case "<":
-					return itemValue < value;
+					return itemValue < compareValue;
 				case "<=":
-					return itemValue <= value;
+					return itemValue <= compareValue;
 				case ">":
-					return itemValue > value;
+					return itemValue > compareValue;
 				case ">=":
-					return itemValue >= value;
+					return itemValue >= compareValue;
 				case "in":
 					return Array.isArray(value) && value.includes(itemValue);
 				case "not-in":
@@ -109,7 +110,7 @@ export class QueryBuilder<T extends Record<string, any>> {
 	}
 }
 
-export function query<T extends Record<string, any>>(
+export function query<T extends Record<string, unknown>>(
 	collection: Record<string, T> | T[],
 ): QueryBuilder<T> {
 	return new QueryBuilder(collection);
