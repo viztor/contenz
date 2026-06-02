@@ -1,0 +1,3 @@
+## 2024-05-18 - Optimize collection lookup in build process
+**Learning:** In the core build loop of `packages/core/src/run-build.ts`, collection lookup against the loaded cache manifest (`manifest?.collections.find(...)`) was an O(N^2) operation because the array `.find()` method was called for every collection inside the loop iterating through `collections`.
+**Action:** When working with potentially large lists that are repeatedly queried (such as collections inside a loop), convert arrays into a `Map` prior to iterating (creating an O(1) lookup structure) to avoid O(N^2) iteration bottlenecks, as demonstrated with `manifestCollectionsByName`.

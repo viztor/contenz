@@ -1,0 +1,1 @@
+{ "ignoreBinaries": ["tsup", "tsc", "vitest", "knip"], "ignore": ["dist/**"] }
