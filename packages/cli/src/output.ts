@@ -3,6 +3,7 @@
  * Handles JSON envelope vs pretty-print formatting in one place.
  */
 
+import { inspect } from "node:util";
 import type { ContentOpResult } from "@contenz/core/api";
 
 /**
@@ -26,37 +27,7 @@ export function printAndExit(result: ContentOpResult, format: string): never {
 	process.exit(result.success ? 0 : 1);
 }
 
-function prettyPrint(data: unknown, indent = 0): void {
+function prettyPrint(data: unknown): void {
 	if (data === null || data === undefined) return;
-	const pad = "  ".repeat(indent);
-
-	if (Array.isArray(data)) {
-		for (const item of data) {
-			prettyPrint(item, indent);
-			if (typeof item === "object") console.log();
-		}
-		return;
-	}
-
-	if (typeof data === "object") {
-		for (const [key, value] of Object.entries(
-			data as Record<string, unknown>,
-		)) {
-			if (
-				typeof value === "object" &&
-				value !== null &&
-				!Array.isArray(value)
-			) {
-				console.log(`${pad}${key}:`);
-				prettyPrint(value, indent + 1);
-			} else if (Array.isArray(value)) {
-				console.log(`${pad}${key}: ${value.join(", ")}`);
-			} else {
-				console.log(`${pad}${key}: ${value}`);
-			}
-		}
-		return;
-	}
-
-	console.log(`${pad}${data}`);
+	console.log(inspect(data, { colors: true, depth: null }));
 }
