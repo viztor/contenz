@@ -1,4 +1,3 @@
-import path from "node:path";
 import { getSchemaForType } from "./config.js";
 import { type IntrospectedField, introspectSchema } from "./introspect.js";
 import { createWorkspace } from "./workspace.js";
@@ -10,7 +9,7 @@ export interface RunSkillResult {
 }
 
 function formatField(name: string, field: IntrospectedField, indent = 0): string {
-  const prefix = "  ".repeat(indent) + "- ";
+  const prefix = `${"  ".repeat(indent)}- `;
   const req = field.required ? "**(required)**" : "*(optional)*";
   let str = `${prefix}\`${name}\`: \`${field.type}\` ${req}`;
   if (field.description) {
@@ -36,8 +35,6 @@ function formatField(name: string, field: IntrospectedField, indent = 0): string
 export async function runSkill(cwd: string): Promise<RunSkillResult> {
   try {
     const ws = await createWorkspace({ cwd });
-
-    const projectName = path.basename(cwd);
 
     let md = `---
 name: project-content-model

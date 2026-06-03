@@ -1,6 +1,6 @@
 {
   "name": "@contenz/core",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Content validation and codegen from MDX/Markdown with Zod",
   "license": "MPL-2.0",
   "publishConfig": {
@@ -51,19 +51,19 @@
   "dependencies": {
     "@orama/orama": "^3.1.18",
     "@orama/plugin-data-persistence": "^3.1.18",
-    "globby": "^16.1.1",
+    "fast-glob": "^3.3.3",
     "p-map": "^7.0.4",
     "picocolors": "^1.1.1",
-    "tsx": "^4.21.0",
-    "zod": "^4.3.6"
+    "tsx": "^4.22.4",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.8",
-    "@types/node": "^25.5.0",
-    "@vitest/coverage-istanbul": "^4.1.1",
-    "knip": "^6.0.4",
+    "@biomejs/biome": "^2.4.16",
+    "@types/node": "^25.9.1",
+    "@vitest/coverage-istanbul": "^4.1.8",
+    "knip": "^6.15.0",
     "tsup": "^8.5.1",
-    "typescript": "^6.0.2",
-    "vitest": "^4.1.1"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
   }
 }

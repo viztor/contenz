@@ -8,7 +8,8 @@ describe("runSkill", () => {
     const result = await runSkill(cwd);
     expect(result.success).toBe(true);
 
-    const md = result.data!;
+    if (!result.data) throw new Error("No data returned");
+    const md = result.data;
     expect(md).toContain("name: project-content-model");
     expect(md).toContain("### Collection: `faq`");
     expect(md).toContain("`question`: `string` **(required)**");
@@ -22,7 +23,8 @@ describe("runSkill", () => {
     const result = await runSkill(cwd);
     expect(result.success).toBe(true);
 
-    const md = result.data!;
+    if (!result.data) throw new Error("No data returned");
+    const md = result.data;
     expect(md).toContain("### Collection: `terms`");
     expect(md).toContain("**Content Type: `term`**");
     expect(md).toContain("**Content Type: `topic`**");

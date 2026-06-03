@@ -22,6 +22,7 @@ export interface PaginatedResult<T> {
 	totalPages: number;
 }
 
+// biome-ignore lint/suspicious/noExplicitAny: Required for flexible generic constraint
 export class QueryBuilder<T extends Record<string, any>> {
 	private items: T[];
 
@@ -31,6 +32,7 @@ export class QueryBuilder<T extends Record<string, any>> {
 			: Object.values(collection);
 	}
 
+	// biome-ignore lint/suspicious/noExplicitAny: Required for flexible generic constraint
 	where<K extends keyof T>(field: K, op: Operator, value: any): this {
 		this.items = this.items.filter((item) => {
 			const itemValue = item[field];
@@ -109,6 +111,7 @@ export class QueryBuilder<T extends Record<string, any>> {
 	}
 }
 
+// biome-ignore lint/suspicious/noExplicitAny: Required for flexible generic constraint
 export function query<T extends Record<string, any>>(
 	collection: Record<string, T> | T[],
 ): QueryBuilder<T> {

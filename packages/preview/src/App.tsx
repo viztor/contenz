@@ -5,8 +5,8 @@ import { LayoutDashboard, Folder, FileText, AlertCircle, CheckCircle2, ChevronRi
 // --- Types ---
 type CollectionInfo = { name: string; path: string; count: number };
 type ListItemInfo = { slug: string; path: string; locale?: string };
-type ViewResult = { slug: string; locale?: string; file: string; meta: any; body?: string };
-type LintResult = { success: boolean; diagnostics: any[]; errors: number; warnings: number };
+type ViewResult = { slug: string; locale?: string; file: string; meta: Record<string, unknown>; body?: string };
+type LintResult = { success: boolean; diagnostics: unknown[]; errors: number; warnings: number };
 type StatusResult = { status: 'up-to-date' | 'needs-build'; dirtyCollections: string[] };
 
 // --- Layout ---

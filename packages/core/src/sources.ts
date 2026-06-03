@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { globby } from "globby";
+import fg from "fast-glob";
 import type { ContenzConfig } from "./types.js";
 
 const DEFAULT_SOURCES = ["content/*"] as const;
@@ -108,7 +108,7 @@ export async function discoverCollections(
     if (normalizedSource.endsWith("/*")) {
       const sourceRoot = normalizedSource.slice(0, -2);
       const rootDir = path.resolve(cwd, sourceRoot);
-      const schemaFiles = await globby("*/schema.ts", {
+      const schemaFiles = await fg("*/schema.ts", {
         cwd: rootDir,
         onlyFiles: true,
       });
@@ -154,7 +154,7 @@ export async function globContentFiles(
   ignore: string[]
 ): Promise<string[]> {
   const extensionPattern = extensions.map((e) => `*.${e}`).join(",");
-  return globby(`{${extensionPattern}}`, {
+  return fg(`{${extensionPattern}}`, {
     cwd: collectionPath,
     onlyFiles: true,
     ignore,

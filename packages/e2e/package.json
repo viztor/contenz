@@ -9,9 +9,9 @@
     "@contenz/core": "*",
     "@contenz/cli": "*",
     "@contenz/adapter-mdx": "*",
-    "typescript": "^6.0.2",
-    "@types/node": "^25.5.0",
-    "vitest": "^4.1.1"
+    "typescript": "^6.0.3",
+    "@types/node": "^25.9.1",
+    "vitest": "^4.1.8"
   },
-  "version": "0.0.2"
+  "version": "0.0.3"
 }

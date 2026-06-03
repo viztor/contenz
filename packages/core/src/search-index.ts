@@ -55,6 +55,7 @@ function buildSchema(metaFields: string[] = []) {
   return schema;
 }
 
+// biome-ignore lint/suspicious/noExplicitAny: Orama types require any
 export type ContenzSearchIndex = Orama<any>;
 
 /**
@@ -137,6 +138,7 @@ export async function addDocumentsToIndex(
   index: ContenzSearchIndex,
   docs: SearchDocument[]
 ): Promise<void> {
+  // biome-ignore lint/suspicious/noExplicitAny: Orama types require any
   await insertMultiple(index, docs as any[]);
 }
 
