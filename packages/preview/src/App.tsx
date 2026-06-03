@@ -5,7 +5,9 @@ import { LayoutDashboard, Folder, FileText, AlertCircle, CheckCircle2, ChevronRi
 // --- Types ---
 type CollectionInfo = { name: string; path: string; count: number };
 type ListItemInfo = { slug: string; path: string; locale?: string };
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ViewResult = { slug: string; locale?: string; file: string; meta: any; body?: string };
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type LintResult = { success: boolean; diagnostics: any[]; errors: number; warnings: number };
 type StatusResult = { status: 'up-to-date' | 'needs-build'; dirtyCollections: string[] };
 
@@ -26,7 +28,7 @@ function Layout({ children }: { children: React.ReactNode }) {
         <h1><LayoutDashboard size={24} /> Contenz</h1>
         
         <nav style={{ marginTop: '2rem' }}>
-          <Link to="/" className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}>
+          <Link to="/" className={`nav-link ${location.pathname === '/' ? 'active' : ''}`} aria-current={location.pathname === '/' ? 'page' : undefined}>
             <LayoutDashboard size={18} /> Dashboard
           </Link>
           <div style={{ marginTop: '2rem', marginBottom: '0.5rem', fontSize: '0.8rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600 }}>
@@ -37,6 +39,7 @@ function Layout({ children }: { children: React.ReactNode }) {
               key={c.name} 
               to={`/c/${c.name}`}
               className={`nav-link ${location.pathname.startsWith(`/c/${c.name}`) ? 'active' : ''}`}
+              aria-current={location.pathname.startsWith(`/c/${c.name}`) ? 'page' : undefined}
             >
               <Folder size={18} /> {c.name}
             </Link>
@@ -58,7 +61,7 @@ function Dashboard() {
     fetch('/api/status').then(res => res.json()).then(setData);
   }, []);
 
-  if (!data) return <div className="loader-container"><div className="loader"></div></div>;
+  if (!data) return <div className="loader-container" role="status" aria-label="Loading"><div className="loader"></div></div>;
 
   const { lint, status } = data;
   const isHealthy = lint?.success && status?.status === 'up-to-date';
@@ -111,7 +114,7 @@ function CollectionView() {
     });
   }, [name]);
 
-  if (!items) return <div className="loader-container"><div className="loader"></div></div>;
+  if (!items) return <div className="loader-container" role="status" aria-label="Loading"><div className="loader"></div></div>;
 
   return (
     <div>
@@ -174,16 +177,16 @@ function ItemView() {
     );
   }
 
-  if (!item) return <div className="loader-container"><div className="loader"></div></div>;
+  if (!item) return <div className="loader-container" role="status" aria-label="Loading"><div className="loader"></div></div>;
 
   return (
     <div>
       <div className="page-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
+        <nav aria-label="Breadcrumb" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
           <Link to={`/c/${name}`} style={{ color: 'inherit', textDecoration: 'none' }}><Folder size={16} /> {name}</Link>
-          <ChevronRight size={14} />
-          <FileText size={16} /> {slug}
-        </div>
+          <ChevronRight size={14} aria-hidden="true" />
+          <span aria-current="page" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><FileText size={16} /> {slug}</span>
+        </nav>
         <h2 className="page-title">{slug}</h2>
         <div className="details-meta">
           <span className="badge neutral">{item.file}</span>
