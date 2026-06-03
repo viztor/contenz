@@ -6,12 +6,12 @@
     "test": "vitest run"
   },
   "devDependencies": {
-    "@contenz/core": "^0.1.5",
-    "@contenz/cli": "^0.1.5",
-    "@contenz/adapter-mdx": "^0.1.5",
+    "@contenz/core": "^0.1.6",
+    "@contenz/cli": "^0.1.6",
+    "@contenz/adapter-mdx": "^0.1.6",
     "typescript": "^6.0.3",
     "@types/node": "^25.9.1",
     "vitest": "^4.1.8"
   },
-  "version": "0.1.5"
+  "version": "0.1.6"
 }

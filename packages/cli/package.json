@@ -1,6 +1,6 @@
 {
   "name": "@contenz/cli",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "CLI for contenz (content validation and codegen)",
   "license": "MPL-2.0",
   "publishConfig": {
@@ -29,8 +29,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@contenz/core": "^0.1.5",
-    "@contenz/preview": "^0.1.5",
+    "@contenz/core": "^0.1.6",
+    "@contenz/preview": "^0.1.6",
     "@hono/node-server": "^2.0.4",
     "citty": "^0.2.2",
     "get-port-please": "^3.2.0",
