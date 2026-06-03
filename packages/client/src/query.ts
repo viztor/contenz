@@ -40,13 +40,13 @@ export class QueryBuilder<T extends Record<string, unknown>> {
 				case "!=":
 					return itemValue !== value;
 				case "<":
-					return itemValue < value;
+					return (itemValue as number) < (value as number);
 				case "<=":
-					return itemValue <= value;
+					return (itemValue as number) <= (value as number);
 				case ">":
-					return itemValue > value;
+					return (itemValue as number) > (value as number);
 				case ">=":
-					return itemValue >= value;
+					return (itemValue as number) >= (value as number);
 				case "in":
 					return Array.isArray(value) && value.includes(itemValue);
 				case "not-in":
