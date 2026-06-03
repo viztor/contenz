@@ -1,7 +1,12 @@
 {
   "name": "@contenz/preview",
-  "private": true,
   "version": "0.1.5",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist"
+  ],
   "type": "module",
   "scripts": {
     "dev": "vite",

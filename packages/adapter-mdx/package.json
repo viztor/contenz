@@ -43,6 +43,6 @@
     "vitest": "^4.1.8"
   },
   "peerDependencies": {
-    "@contenz/core": "^0.1.3"
+    "@contenz/core": "^0.1.5"
   }
 }

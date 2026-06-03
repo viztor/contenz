@@ -17,7 +17,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
 
 // Packages in dependency order (core first, then dependents)
-const PACKAGES = ["core", "adapter-mdx", "cli"];
+const PACKAGES = ["core", "client", "preview", "adapter-mdx", "cli"];
 
 const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run");
