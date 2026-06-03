@@ -21,7 +21,9 @@ export {
 } from "./content-io.js";
 export type {
   Diagnostic,
+  DiagnosticCategory,
   DiagnosticFormat,
+  DiagnosticSeverity,
   DiagnosticSummary,
 } from "./diagnostics.js";
 export {
@@ -82,6 +84,17 @@ export {
 } from "./run-search.js";
 export { type RunSkillResult, runSkill } from "./run-skill.js";
 export { runStatus, type StatusOptions, type StatusResult } from "./run-status.js";
+export {
+  runWatch,
+  type WatchChangeEvent,
+  type WatchErrorEvent,
+  type WatchEvent,
+  type WatchEventMap,
+  type WatchHandle,
+  type WatchOptions,
+  type WatchReadyEvent,
+  type WatchRebuildEvent,
+} from "./run-watch.js";
 export {
   createSearchIndex,
   loadSearchIndex,

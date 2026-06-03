@@ -1,1 +1,1 @@
-export * from "file:///Users/viz/dev/contenz/packages/core/src/api.ts";
+export * from "./src/api.js";

@@ -4,14 +4,7 @@
     "src/**/*.ts"
   ],
   "ignoreDependencies": [
-    "tsx",
-    "@biomejs/biome"
-  ],
-  "ignoreBinaries": [
-    "tsup",
-    "tsc",
-    "biome",
-    "knip"
+    "tsx"
   ],
   "ignoreIssues": {
     "src/config.ts": [
