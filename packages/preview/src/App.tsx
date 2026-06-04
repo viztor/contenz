@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Link, useParams, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Folder, FileText, AlertCircle, CheckCircle2, ChevronRight, FileJson } from 'lucide-react';
+import { LayoutDashboard, Folder, FileText, AlertCircle, CheckCircle2, ChevronRight, FileJson, FolderOpen } from 'lucide-react';
 
 // --- Types ---
 type CollectionInfo = { name: string; path: string; count: number };
@@ -23,11 +23,15 @@ function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div id="root">
       <aside className="sidebar">
-        <h1><LayoutDashboard size={24} /> Contenz</h1>
+        <h1><LayoutDashboard size={24} aria-hidden="true" /> Contenz</h1>
         
         <nav style={{ marginTop: '2rem' }}>
-          <Link to="/" className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}>
-            <LayoutDashboard size={18} /> Dashboard
+          <Link
+            to="/"
+            className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}
+            aria-current={location.pathname === '/' ? 'page' : undefined}
+          >
+            <LayoutDashboard size={18} aria-hidden="true" /> Dashboard
           </Link>
           <div style={{ marginTop: '2rem', marginBottom: '0.5rem', fontSize: '0.8rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600 }}>
             Collections
@@ -37,8 +41,9 @@ function Layout({ children }: { children: React.ReactNode }) {
               key={c.name} 
               to={`/c/${c.name}`}
               className={`nav-link ${location.pathname.startsWith(`/c/${c.name}`) ? 'active' : ''}`}
+              aria-current={location.pathname.startsWith(`/c/${c.name}`) ? 'page' : undefined}
             >
-              <Folder size={18} /> {c.name}
+              <Folder size={18} aria-hidden="true" /> {c.name}
             </Link>
           ))}
         </nav>
@@ -58,7 +63,7 @@ function Dashboard() {
     fetch('/api/status').then(res => res.json()).then(setData);
   }, []);
 
-  if (!data) return <div className="loader-container"><div className="loader"></div></div>;
+  if (!data) return <div className="loader-container" role="status" aria-label="Loading dashboard data"><div className="loader"></div></div>;
 
   const { lint, status } = data;
   const isHealthy = lint?.success && status?.status === 'up-to-date';
@@ -73,7 +78,7 @@ function Dashboard() {
       <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))' }}>
         <div className="card">
           <div className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            {isHealthy ? <CheckCircle2 color="var(--success)" /> : <AlertCircle color="var(--danger)" />}
+            {isHealthy ? <CheckCircle2 color="var(--success)" aria-hidden="true" /> : <AlertCircle color="var(--danger)" aria-hidden="true" />}
             System Health
           </div>
           <div className="card-desc" style={{ marginTop: '1rem', fontSize: '1.1rem' }}>
@@ -111,13 +116,13 @@ function CollectionView() {
     });
   }, [name]);
 
-  if (!items) return <div className="loader-container"><div className="loader"></div></div>;
+  if (!items) return <div className="loader-container" role="status" aria-label={`Loading ${name} collection`}><div className="loader"></div></div>;
 
   return (
     <div>
       <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
-          <Folder size={16} /> {name}
+          <Folder size={16} aria-hidden="true" /> {name}
         </div>
         <h2 className="page-title">{items.length} Items</h2>
       </div>
@@ -126,7 +131,7 @@ function CollectionView() {
         {items.map(item => (
           <Link key={item.slug} to={`/c/${name}/${item.slug}`} className="card">
             <div className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <FileText size={18} color="var(--accent)" />
+              <FileText size={18} color="var(--accent)" aria-hidden="true" />
               {item.slug}
             </div>
             <div className="card-desc">
@@ -139,7 +144,23 @@ function CollectionView() {
           </Link>
         ))}
         {items.length === 0 && (
-          <div style={{ color: 'var(--text-muted)' }}>No items found in this collection.</div>
+          <div style={{
+            gridColumn: '1 / -1',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '4rem 2rem',
+            textAlign: 'center',
+            color: 'var(--text-muted)',
+            background: 'var(--card-bg)',
+            border: '1px dashed var(--border)',
+            borderRadius: '12px'
+          }}>
+            <FolderOpen size={48} aria-hidden="true" style={{ marginBottom: '1rem', opacity: 0.5 }} />
+            <h3 style={{ marginBottom: '0.5rem', color: 'var(--text-main)' }}>This collection is empty</h3>
+            <p>Add some files to see them here.</p>
+          </div>
         )}
       </div>
     </div>
@@ -164,8 +185,8 @@ function ItemView() {
 
   if (error) {
     return (
-      <div className="error-banner">
-        <AlertCircle size={24} />
+      <div className="error-banner" role="alert">
+        <AlertCircle size={24} aria-hidden="true" />
         <div>
           <strong>Failed to load content</strong>
           <p>{error}</p>
@@ -174,15 +195,15 @@ function ItemView() {
     );
   }
 
-  if (!item) return <div className="loader-container"><div className="loader"></div></div>;
+  if (!item) return <div className="loader-container" role="status" aria-label={`Loading ${slug}`}><div className="loader"></div></div>;
 
   return (
     <div>
       <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
-          <Link to={`/c/${name}`} style={{ color: 'inherit', textDecoration: 'none' }}><Folder size={16} /> {name}</Link>
-          <ChevronRight size={14} />
-          <FileText size={16} /> {slug}
+          <Link to={`/c/${name}`} style={{ color: 'inherit', textDecoration: 'none' }}><Folder size={16} aria-hidden="true" /> {name}</Link>
+          <ChevronRight size={14} aria-hidden="true" />
+          <FileText size={16} aria-hidden="true" /> {slug}
         </div>
         <h2 className="page-title">{slug}</h2>
         <div className="details-meta">
@@ -192,13 +213,13 @@ function ItemView() {
       </div>
 
       <div className="content-section">
-        <h3><FileJson size={16} style={{ display: 'inline', verticalAlign: 'text-bottom' }}/> Metadata (Frontmatter)</h3>
+        <h3><FileJson size={16} style={{ display: 'inline', verticalAlign: 'text-bottom' }} aria-hidden="true" /> Metadata (Frontmatter)</h3>
         <pre>{JSON.stringify(item.meta, null, 2)}</pre>
       </div>
 
       {item.body && (
         <div className="content-section">
-          <h3><FileText size={16} style={{ display: 'inline', verticalAlign: 'text-bottom' }}/> Raw Body</h3>
+          <h3><FileText size={16} style={{ display: 'inline', verticalAlign: 'text-bottom' }} aria-hidden="true" /> Raw Body</h3>
           <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>{item.body}</pre>
         </div>
       )}
