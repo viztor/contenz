@@ -88,6 +88,11 @@ body {
   box-shadow: 0 4px 12px rgba(94, 106, 210, 0.3);
 }
 
+.nav-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 /* Main Content Area */
 .main-content {
   flex: 1;
@@ -131,6 +136,11 @@ body {
   transform: translateY(-4px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
   border-color: rgba(255, 255, 255, 0.2);
+}
+
+.card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .card-title {

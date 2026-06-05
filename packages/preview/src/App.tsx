@@ -26,21 +26,29 @@ function Layout({ children }: { children: React.ReactNode }) {
         <h1><LayoutDashboard size={24} /> Contenz</h1>
         
         <nav style={{ marginTop: '2rem' }}>
-          <Link to="/" className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}>
+          <Link
+            to="/"
+            className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}
+            aria-current={location.pathname === '/' ? 'page' : undefined}
+          >
             <LayoutDashboard size={18} /> Dashboard
           </Link>
           <div style={{ marginTop: '2rem', marginBottom: '0.5rem', fontSize: '0.8rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600 }}>
             Collections
           </div>
-          {collections.map(c => (
-            <Link 
-              key={c.name} 
-              to={`/c/${c.name}`}
-              className={`nav-link ${location.pathname.startsWith(`/c/${c.name}`) ? 'active' : ''}`}
-            >
-              <Folder size={18} /> {c.name}
-            </Link>
-          ))}
+          {collections.map(c => {
+            const isActive = location.pathname.startsWith(`/c/${c.name}`);
+            return (
+              <Link
+                key={c.name}
+                to={`/c/${c.name}`}
+                className={`nav-link ${isActive ? 'active' : ''}`}
+                aria-current={isActive ? 'page' : undefined}
+              >
+                <Folder size={18} /> {c.name}
+              </Link>
+            );
+          })}
         </nav>
       </aside>
       <main className="main-content">
@@ -58,7 +66,7 @@ function Dashboard() {
     fetch('/api/status').then(res => res.json()).then(setData);
   }, []);
 
-  if (!data) return <div className="loader-container"><div className="loader"></div></div>;
+  if (!data) return <div className="loader-container" role="status" aria-label="Loading workspace overview"><div className="loader"></div></div>;
 
   const { lint, status } = data;
   const isHealthy = lint?.success && status?.status === 'up-to-date';
@@ -111,7 +119,7 @@ function CollectionView() {
     });
   }, [name]);
 
-  if (!items) return <div className="loader-container"><div className="loader"></div></div>;
+  if (!items) return <div className="loader-container" role="status" aria-label={`Loading ${name} collection`}><div className="loader"></div></div>;
 
   return (
     <div>
@@ -139,7 +147,23 @@ function CollectionView() {
           </Link>
         ))}
         {items.length === 0 && (
-          <div style={{ color: 'var(--text-muted)' }}>No items found in this collection.</div>
+          <div style={{
+            gridColumn: '1 / -1',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '4rem 2rem',
+            border: '2px dashed var(--border)',
+            borderRadius: '12px',
+            color: 'var(--text-muted)',
+            textAlign: 'center',
+            background: 'var(--card-bg)'
+          }}>
+            <Folder size={48} style={{ opacity: 0.5, marginBottom: '1rem' }} />
+            <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem', color: 'var(--text-main)' }}>Empty Collection</h3>
+            <p>No items found in <strong>{name}</strong>.</p>
+          </div>
         )}
       </div>
     </div>
@@ -174,7 +198,7 @@ function ItemView() {
     );
   }
 
-  if (!item) return <div className="loader-container"><div className="loader"></div></div>;
+  if (!item) return <div className="loader-container" role="status" aria-label={`Loading ${slug}`}><div className="loader"></div></div>;
 
   return (
     <div>
