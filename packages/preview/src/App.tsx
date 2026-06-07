@@ -25,9 +25,13 @@ function Layout({ children }: { children: React.ReactNode }) {
       <aside className="sidebar">
         <h1><LayoutDashboard size={24} /> Contenz</h1>
         
-        <nav style={{ marginTop: '2rem' }}>
-          <Link to="/" className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}>
-            <LayoutDashboard size={18} /> Dashboard
+        <nav style={{ marginTop: '2rem' }} aria-label="Main Navigation">
+          <Link
+            to="/"
+            className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}
+            aria-current={location.pathname === '/' ? 'page' : undefined}
+          >
+            <LayoutDashboard size={18} aria-hidden="true" /> Dashboard
           </Link>
           <div style={{ marginTop: '2rem', marginBottom: '0.5rem', fontSize: '0.8rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600 }}>
             Collections
@@ -37,8 +41,9 @@ function Layout({ children }: { children: React.ReactNode }) {
               key={c.name} 
               to={`/c/${c.name}`}
               className={`nav-link ${location.pathname.startsWith(`/c/${c.name}`) ? 'active' : ''}`}
+              aria-current={location.pathname.startsWith(`/c/${c.name}`) ? 'page' : undefined}
             >
-              <Folder size={18} /> {c.name}
+              <Folder size={18} aria-hidden="true" /> {c.name}
             </Link>
           ))}
         </nav>
@@ -58,7 +63,7 @@ function Dashboard() {
     fetch('/api/status').then(res => res.json()).then(setData);
   }, []);
 
-  if (!data) return <div className="loader-container"><div className="loader"></div></div>;
+  if (!data) return <div className="loader-container" role="status" aria-label="Loading content..."><div className="loader"></div></div>;
 
   const { lint, status } = data;
   const isHealthy = lint?.success && status?.status === 'up-to-date';
@@ -111,14 +116,14 @@ function CollectionView() {
     });
   }, [name]);
 
-  if (!items) return <div className="loader-container"><div className="loader"></div></div>;
+  if (!items) return <div className="loader-container" role="status" aria-label="Loading content..."><div className="loader"></div></div>;
 
   return (
     <div>
       <div className="page-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
-          <Folder size={16} /> {name}
-        </div>
+        <nav aria-label="Breadcrumb" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
+          <Folder size={16} aria-hidden="true" /> {name}
+        </nav>
         <h2 className="page-title">{items.length} Items</h2>
       </div>
 
@@ -174,16 +179,18 @@ function ItemView() {
     );
   }
 
-  if (!item) return <div className="loader-container"><div className="loader"></div></div>;
+  if (!item) return <div className="loader-container" role="status" aria-label="Loading content..."><div className="loader"></div></div>;
 
   return (
     <div>
       <div className="page-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
-          <Link to={`/c/${name}`} style={{ color: 'inherit', textDecoration: 'none' }}><Folder size={16} /> {name}</Link>
-          <ChevronRight size={14} />
-          <FileText size={16} /> {slug}
-        </div>
+        <nav aria-label="Breadcrumb" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
+          <Link to={`/c/${name}`} style={{ color: 'inherit', textDecoration: 'none' }}><Folder size={16} aria-hidden="true" /> {name}</Link>
+          <ChevronRight size={14} aria-hidden="true" />
+          <span aria-current="page" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <FileText size={16} aria-hidden="true" /> {slug}
+          </span>
+        </nav>
         <h2 className="page-title">{slug}</h2>
         <div className="details-meta">
           <span className="badge neutral">{item.file}</span>
