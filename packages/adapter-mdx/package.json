@@ -36,10 +36,13 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },
+  "dependencies": {
+    "json5": "^2.2.3"
+  },
   "devDependencies": {
-    "typescript": "^6.0.3",
     "@types/node": "^25.9.1",
     "tsup": "^8.5.1",
+    "typescript": "^6.0.3",
     "vitest": "^4.1.8"
   },
   "peerDependencies": {
