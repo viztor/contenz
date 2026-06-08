@@ -58,7 +58,7 @@ function Dashboard() {
     fetch('/api/status').then(res => res.json()).then(setData);
   }, []);
 
-  if (!data) return <div className="loader-container"><div className="loader"></div></div>;
+  if (!data) return <div className="loader-container" role="status"><div className="loader"><span className="sr-only">Loading dashboard...</span></div></div>;
 
   const { lint, status } = data;
   const isHealthy = lint?.success && status?.status === 'up-to-date';
@@ -111,7 +111,7 @@ function CollectionView() {
     });
   }, [name]);
 
-  if (!items) return <div className="loader-container"><div className="loader"></div></div>;
+  if (!items) return <div className="loader-container" role="status"><div className="loader"><span className="sr-only">Loading collection...</span></div></div>;
 
   return (
     <div>
@@ -174,7 +174,7 @@ function ItemView() {
     );
   }
 
-  if (!item) return <div className="loader-container"><div className="loader"></div></div>;
+  if (!item) return <div className="loader-container" role="status"><div className="loader"><span className="sr-only">Loading item...</span></div></div>;
 
   return (
     <div>
