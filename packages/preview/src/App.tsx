@@ -25,7 +25,7 @@ function Layout({ children }: { children: React.ReactNode }) {
       <aside className="sidebar">
         <h1><LayoutDashboard size={24} /> Contenz</h1>
         
-        <nav style={{ marginTop: '2rem' }}>
+        <nav aria-label="Sidebar Navigation" style={{ marginTop: '2rem' }}>
           <Link to="/" className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}>
             <LayoutDashboard size={18} /> Dashboard
           </Link>
@@ -58,7 +58,7 @@ function Dashboard() {
     fetch('/api/status').then(res => res.json()).then(setData);
   }, []);
 
-  if (!data) return <div className="loader-container"><div className="loader"></div></div>;
+  if (!data) return <div className="loader-container"><div className="loader" role="status" aria-label="Loading content"></div></div>;
 
   const { lint, status } = data;
   const isHealthy = lint?.success && status?.status === 'up-to-date';
@@ -111,7 +111,7 @@ function CollectionView() {
     });
   }, [name]);
 
-  if (!items) return <div className="loader-container"><div className="loader"></div></div>;
+  if (!items) return <div className="loader-container"><div className="loader" role="status" aria-label="Loading content"></div></div>;
 
   return (
     <div>
@@ -174,7 +174,7 @@ function ItemView() {
     );
   }
 
-  if (!item) return <div className="loader-container"><div className="loader"></div></div>;
+  if (!item) return <div className="loader-container"><div className="loader" role="status" aria-label="Loading content"></div></div>;
 
   return (
     <div>
@@ -193,13 +193,13 @@ function ItemView() {
 
       <div className="content-section">
         <h3><FileJson size={16} style={{ display: 'inline', verticalAlign: 'text-bottom' }}/> Metadata (Frontmatter)</h3>
-        <pre>{JSON.stringify(item.meta, null, 2)}</pre>
+        <pre tabIndex={0}>{JSON.stringify(item.meta, null, 2)}</pre>
       </div>
 
       {item.body && (
         <div className="content-section">
           <h3><FileText size={16} style={{ display: 'inline', verticalAlign: 'text-bottom' }}/> Raw Body</h3>
-          <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>{item.body}</pre>
+          <pre tabIndex={0} style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>{item.body}</pre>
         </div>
       )}
     </div>
