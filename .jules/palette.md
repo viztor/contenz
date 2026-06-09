@@ -1,0 +1,3 @@
+## 2024-05-18 - Focus States and ARIA Context Missing
+**Learning:** Custom interactive components (like `.card` acting as links or `.nav-link` anchors) and scrollable containers (like `<pre>`) often lack explicit `focus-visible` states and base accessibility attributes. Loaders often miss semantic `role="status"` and `aria-label` definitions, leaving screen reader users without context during async transitions.
+**Action:** Always ensure that custom styled interactive elements and scrollable blocks have a `:focus-visible` state or `tabIndex={0}`, and include appropriate `role` and `aria-label` on loaders and navigation sections.
