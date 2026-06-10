@@ -26,7 +26,7 @@ function Layout({ children }: { children: React.ReactNode }) {
         <h1><LayoutDashboard size={24} /> Contenz</h1>
         
         <nav style={{ marginTop: '2rem' }}>
-          <Link to="/" className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}>
+          <Link to="/" className={`nav-link ${location.pathname === '/' ? 'active' : ''}`} aria-current={location.pathname === '/' ? 'page' : undefined}>
             <LayoutDashboard size={18} /> Dashboard
           </Link>
           <div style={{ marginTop: '2rem', marginBottom: '0.5rem', fontSize: '0.8rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 600 }}>
@@ -37,6 +37,7 @@ function Layout({ children }: { children: React.ReactNode }) {
               key={c.name} 
               to={`/c/${c.name}`}
               className={`nav-link ${location.pathname.startsWith(`/c/${c.name}`) ? 'active' : ''}`}
+              aria-current={location.pathname.startsWith(`/c/${c.name}`) ? 'page' : undefined}
             >
               <Folder size={18} /> {c.name}
             </Link>
@@ -58,7 +59,7 @@ function Dashboard() {
     fetch('/api/status').then(res => res.json()).then(setData);
   }, []);
 
-  if (!data) return <div className="loader-container"><div className="loader"></div></div>;
+  if (!data) return <div className="loader-container" role="status" aria-label="Loading workspace overview" aria-busy="true"><div className="loader"></div></div>;
 
   const { lint, status } = data;
   const isHealthy = lint?.success && status?.status === 'up-to-date';
@@ -111,7 +112,7 @@ function CollectionView() {
     });
   }, [name]);
 
-  if (!items) return <div className="loader-container"><div className="loader"></div></div>;
+  if (!items) return <div className="loader-container" role="status" aria-label="Loading collection items" aria-busy="true"><div className="loader"></div></div>;
 
   return (
     <div>
@@ -174,7 +175,7 @@ function ItemView() {
     );
   }
 
-  if (!item) return <div className="loader-container"><div className="loader"></div></div>;
+  if (!item) return <div className="loader-container" role="status" aria-label="Loading item details" aria-busy="true"><div className="loader"></div></div>;
 
   return (
     <div>
