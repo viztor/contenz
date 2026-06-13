@@ -1,0 +1,3 @@
+## 2024-05-13 - [Caching compiled Regexes outside of hot loop]
+**Learning:** In `@contenz/core`'s file parsing, dynamically creating a new `RegExp` object via `new RegExp()` in a hot loop (like `parseFileName` when scanning potentially thousands of files) introduces unnecessary garbage collection and parsing overhead. Additionally, recalculating `extAlternation` array mapping and join operations for default extensions adds overhead.
+**Action:** When a dynamic RegExp is required based on input parameters (e.g., config options), cache the compiled `RegExp` object in a `Map` outside the hot loop, using the input parameters as a cache key. Also precompute any static array operations (like mapping/joining default extensions) during module initialization.
