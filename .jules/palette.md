@@ -1,0 +1,3 @@
+## 2024-06-14 - Scoping CSS interaction states to semantic elements
+**Learning:** The `.card` component in this app is used for both interactive items (links/buttons) and static displays (like dashboard summary cards). Applying `cursor: pointer` or hover effects globally to `.card` provides misleading affordances on static displays.
+**Action:** Always scope interactive CSS pseudo-classes (`:hover`, `:focus-visible`) and properties (`cursor: pointer`) to specific interactive HTML tags (`a.card`, `button.card`) when a utility or component class is reused across both interactive and static contexts.
