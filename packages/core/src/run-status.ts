@@ -9,6 +9,7 @@ import {
   computeConfigHash,
   getCachedInputHash,
   loadManifest,
+  type ManifestCollectionEntry,
 } from "./manifest.js";
 import { createWorkspace } from "./workspace.js";
 
