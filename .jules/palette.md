@@ -1,0 +1,3 @@
+## 2024-11-20 - Ensure Correct Interactive Affordances on Multi-Use Components
+**Learning:** Found that generic `.card` container components in the preview app had `cursor: pointer` applied globally, causing false interactive affordances on static dashboard cards.
+**Action:** Removed global cursor styles on static components and explicitly scoped interactive hover styles to `a.card:hover` to enforce correct semantic HTML usage. Additionally, implemented explicitly scoped `:focus-visible` outline styles (`a.card:focus-visible`, `.nav-link:focus-visible`) to ensure keyboard accessibility aligns visually with mouse hover states.
