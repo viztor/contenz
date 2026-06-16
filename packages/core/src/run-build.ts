@@ -599,6 +599,9 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
   const dryRun = options.dryRun ?? false;
   const projectConfigHash = computeConfigHash(baseConfig as unknown as Record<string, unknown>);
   const manifest = !force && !dryRun ? await loadManifest(cwd) : null;
+  const manifestCollectionsByName = manifest
+    ? new Map(manifest.collections.map((c) => [c.name, c]))
+    : undefined;
 
   /** Collections we can skip (cached hash matches, output exists) */
   const skipped: { name: string; outputName: string; indexMeta: IndexMeta }[] = [];
@@ -620,7 +623,8 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
         baseConfig.outputDir,
         sources,
         ctx.name,
-        projectConfigHash
+        projectConfigHash,
+        manifestCollectionsByName
       );
       const outputPath = path.join(outputDir, `${ctx.name}.ts`);
       try {
@@ -631,7 +635,7 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
       }
     }
     if (skip) {
-      const entry = manifest?.collections.find((c) => c.name === ctx.name);
+      const entry = manifestCollectionsByName?.get(ctx.name);
       const indexMeta = entry?.indexMeta ?? {
         name: ctx.name,
         hasI18n: ctx.config.i18n,
