@@ -1,0 +1,4 @@
+## 2024-05-24 - Arbitrary Code Execution in MDX Adapter
+**Vulnerability:** `@contenz/adapter-mdx` used `new Function` to parse dynamic `export const meta = { ... }` block in MDX, introducing Arbitrary Code Execution (ACE) via un-sanitized, executable JavaScript object notation processing.
+**Learning:** Using `new Function` or `eval` for evaluating JavaScript-like object structures (common in MDX/ASTs) introduces severe vulnerabilities, allowing an attacker to escape execution contexts or run arbitrary code during build.
+**Prevention:** Avoid dynamic JavaScript execution context parsing (like `eval`, `new Function`, `node:vm`). Use secure object-parser libraries like `json5` or full AST parsers (e.g. `acorn`) which parse structured literal object syntax without evaluating arbitrary expressions.
