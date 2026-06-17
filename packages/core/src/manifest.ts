@@ -130,7 +130,8 @@ export function getCachedInputHash(
   outputDir: string,
   sources: string[],
   collectionName: string,
-  configHash?: string
+  configHash?: string,
+  manifestCollectionsByName?: Map<string, ManifestCollectionEntry>
 ): string | null {
   if (!manifest || manifest.cwd !== cwd || manifest.outputDir !== outputDir) return null;
   if (
@@ -143,7 +144,9 @@ export function getCachedInputHash(
   if (configHash && manifest.configHash && manifest.configHash !== configHash) {
     return null;
   }
-  const entry = manifest.collections.find((c) => c.name === collectionName);
+  const entry = manifestCollectionsByName
+    ? manifestCollectionsByName.get(collectionName)
+    : manifest.collections.find((c) => c.name === collectionName);
   return entry?.inputHash ?? null;
 }
 
