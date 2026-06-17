@@ -4,6 +4,7 @@
  */
 
 import type { ContentOpResult } from "@contenz/core/api";
+import { inspect } from "node:util";
 
 /**
  * Print the result and exit with appropriate code.
@@ -13,50 +14,17 @@ export function printAndExit(result: ContentOpResult, format: string): never {
 		console.log(JSON.stringify(result, null, 2));
 	} else {
 		if (result.success && result.data) {
-			prettyPrint(result.data);
+			console.log(inspect(result.data, { colors: true, depth: null }));
 		} else {
-			console.error(`Error: ${result.error ?? "Unknown error"}`);
+			console.error(`\x1b[31mError: ${result.error ?? "Unknown error"}\x1b[0m`);
 			if (result.diagnostics?.length) {
 				for (const d of result.diagnostics) {
-					console.error(`  ${d.field ? `${d.field}: ` : ""}${d.message}`);
+					console.error(
+						`  ${d.field ? `\x1b[33m${d.field}:\x1b[0m ` : ""}${d.message}`,
+					);
 				}
 			}
 		}
 	}
 	process.exit(result.success ? 0 : 1);
-}
-
-function prettyPrint(data: unknown, indent = 0): void {
-	if (data === null || data === undefined) return;
-	const pad = "  ".repeat(indent);
-
-	if (Array.isArray(data)) {
-		for (const item of data) {
-			prettyPrint(item, indent);
-			if (typeof item === "object") console.log();
-		}
-		return;
-	}
-
-	if (typeof data === "object") {
-		for (const [key, value] of Object.entries(
-			data as Record<string, unknown>,
-		)) {
-			if (
-				typeof value === "object" &&
-				value !== null &&
-				!Array.isArray(value)
-			) {
-				console.log(`${pad}${key}:`);
-				prettyPrint(value, indent + 1);
-			} else if (Array.isArray(value)) {
-				console.log(`${pad}${key}: ${value.join(", ")}`);
-			} else {
-				console.log(`${pad}${key}: ${value}`);
-			}
-		}
-		return;
-	}
-
-	console.log(`${pad}${data}`);
 }
