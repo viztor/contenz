@@ -37,12 +37,16 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "typescript": "^6.0.3",
+    "@types/json5": "^0.0.30",
     "@types/node": "^25.9.1",
     "tsup": "^8.5.1",
+    "typescript": "^6.0.3",
     "vitest": "^4.1.8"
   },
   "peerDependencies": {
     "@contenz/core": "^0.1.6"
+  },
+  "dependencies": {
+    "json5": "^2.2.3"
   }
 }
