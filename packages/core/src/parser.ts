@@ -15,6 +15,18 @@ export interface ParseFileNameResult {
 /** Default extensions used when no config-level extensions are specified. */
 const DEFAULT_EXTENSIONS = ["mdx", "md", "json"];
 
+/** Cache for compiled regular expressions to prevent performance bottleneck in hot loops */
+const regexCache = new Map<string, RegExp>();
+
+function getCachedRegex(pattern: string): RegExp {
+  let regex = regexCache.get(pattern);
+  if (!regex) {
+    regex = new RegExp(pattern);
+    regexCache.set(pattern, regex);
+  }
+  return regex;
+}
+
 /**
  * Build a regex alternation pattern from an array of extensions.
  * e.g. ["md", "mdx", "json"] → "md|mdx|json"
@@ -53,7 +65,8 @@ export function parseFileName(
   if (i18nEnabled) {
     // BCP 47 locale: xx, xxx, xx-XX, xx-Xxxx, xx-Xxxx-XX, etc.
     const localePattern = "[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?";
-    const match = fileName.match(new RegExp(`^(.+)\\.(${localePattern})\\.(${alt})$`));
+    const pattern = `^(.+)\\.(${localePattern})\\.(${alt})$`;
+    const match = fileName.match(getCachedRegex(pattern));
     if (!match) return null;
     return {
       slug: match[1],
@@ -62,7 +75,8 @@ export function parseFileName(
     };
   }
 
-  const match = fileName.match(new RegExp(`^(.+)\\.(${alt})$`));
+  const pattern = `^(.+)\\.(${alt})$`;
+  const match = fileName.match(getCachedRegex(pattern));
   if (!match) return null;
   return {
     slug: match[1],
