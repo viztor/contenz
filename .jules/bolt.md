@@ -1,0 +1,3 @@
+## 2024-06-19 - [O(1) Manifest Collection Lookups]
+**Learning:** The build and status runners iterate over all collections, using `Array.prototype.find()` to locate the corresponding entry in the build manifest for each one. With many collections, this results in O(n²) performance degradation for cache hit validation, which can slow down large incremental builds.
+**Action:** When performing collection lookups inside loops, always precompute a `Map` of collection names to entries (e.g. `manifestCollectionsByName`) and use `Map.get()` for O(1) complexity to prevent performance degradation on large datasets.
