@@ -1,0 +1,3 @@
+## 2024-06-19 - Scope Interactive Styles and Affordances
+**Learning:** Applying interactive styles (like `cursor: pointer` or hover effects) to generic classes (like `.card`) can create misleading affordances if those classes are reused on non-interactive elements (like standard `div` elements used for layout in the Dashboard). Similarly, neglecting focus states creates accessibility barriers for keyboard users.
+**Action:** Always scope interactive cursor and hover styles strictly to interactive semantic elements (e.g., `a.card` or `button.card` instead of `.card`). Ensure explicitly defined `:focus-visible` outlines are added to custom interactive components to guarantee keyboard accessibility.
