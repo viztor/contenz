@@ -1,0 +1,3 @@
+## 2024-06-20 - Scope interactive CSS classes to interactive HTML elements
+**Learning:** CSS classes like `.card` are often used both as structural containers (divs) and interactive elements (links). If interactive styles like `cursor: pointer` or hover transforms are applied to the base class, non-interactive elements using that class get misleading affordances, causing user frustration and accessibility issues.
+**Action:** Always scope interactive CSS states (hover, cursor) and keyboard accessibility states (`focus-visible`) explicitly to semantic interactive elements (e.g., `a.card`, `button.card`) rather than the base structural class.
