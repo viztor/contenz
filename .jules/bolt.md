@@ -1,0 +1,3 @@
+## 2024-04-24 - [Regex Recompilation Bottleneck in Filename Parsing]
+**Learning:** Recompiling Regular Expressions on every file parse inside hot loops (like in `parseFileName` from `parser.ts`) leads to significant overhead in build times, particularly in large builds where the same extensions/alternations are matched repeatedly.
+**Action:** Implement `Map`-based caching to store pre-compiled regular expressions using a combination of flags and alternations as the cache key, avoiding `new RegExp(...)` recompilations on every file read. This is a critical codebase-specific performance pattern to reuse across other intensive string processing loops.
