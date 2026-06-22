@@ -9,6 +9,7 @@ import {
   computeConfigHash,
   getCachedInputHash,
   loadManifest,
+  type ManifestCollectionEntry,
 } from "./manifest.js";
 import { createWorkspace } from "./workspace.js";
 
@@ -62,6 +63,9 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
 
   const outputDir = path.resolve(cwd, ws.resolvedConfig.outputDir);
   const manifest = await loadManifest(cwd);
+  const manifestCollectionsByName = manifest
+    ? new Map<string, ManifestCollectionEntry>(manifest.collections.map((c) => [c.name, c]))
+    : undefined;
   const projectConfigHash = computeConfigHash(
     ws.resolvedConfig as unknown as Record<string, unknown>
   );
@@ -81,7 +85,8 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
       ws.resolvedConfig.outputDir,
       ws.sources,
       col.name,
-      projectConfigHash
+      projectConfigHash,
+      manifestCollectionsByName
     );
     const outputPath = path.join(outputDir, `${col.name}.ts`);
     let outputExists = false;
