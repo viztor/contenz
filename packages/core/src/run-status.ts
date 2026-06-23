@@ -66,7 +66,10 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
     ws.resolvedConfig as unknown as Record<string, unknown>
   );
 
-  const manifestCollectionsByName = new Map<string, import("./manifest.js").ManifestCollectionEntry>();
+  const manifestCollectionsByName = new Map<
+    string,
+    import("./manifest.js").ManifestCollectionEntry
+  >();
   if (manifest) {
     for (const entry of manifest.collections) {
       manifestCollectionsByName.set(entry.name, entry);
