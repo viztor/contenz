@@ -11,6 +11,7 @@
  */
 
 import type { FormatAdapter } from "@contenz/core";
+import JSON5 from "json5";
 
 // ── Brace-Balanced Scanner (for `export const meta = { ... }`) ──────────────
 
@@ -104,8 +105,9 @@ function skipStringLiteral(
 
 function safeEvalObjectLiteral(objectStr: string): Record<string, unknown> {
 	try {
-		const fn = new Function(`"use strict"; return (${objectStr});`);
-		const result = fn();
+		// Replace `new Function` eval block with `JSON5.parse` to safely parse JS object literal syntax
+		// and prevent arbitrary code execution vulnerabilities.
+		const result = JSON5.parse(objectStr);
 		if (typeof result === "object" && result !== null) {
 			return result as Record<string, unknown>;
 		}
