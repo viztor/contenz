@@ -65,6 +65,12 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
   const projectConfigHash = computeConfigHash(
     ws.resolvedConfig as unknown as Record<string, unknown>
   );
+
+  // ⚡ Bolt: Precompute Map for O(1) collection lookups during caching.
+  // Avoids O(n^2) loop bottleneck when checking status of hundreds of collections.
+  const manifestCollectionsByName = manifest
+    ? new Map(manifest.collections.map((c) => [c.name, c]))
+    : undefined;
   const dirty: string[] = [];
   const fresh: string[] = [];
 
@@ -81,7 +87,8 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
       ws.resolvedConfig.outputDir,
       ws.sources,
       col.name,
-      projectConfigHash
+      projectConfigHash,
+      manifestCollectionsByName
     );
     const outputPath = path.join(outputDir, `${col.name}.ts`);
     let outputExists = false;
