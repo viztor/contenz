@@ -600,6 +600,14 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
   const projectConfigHash = computeConfigHash(baseConfig as unknown as Record<string, unknown>);
   const manifest = !force && !dryRun ? await loadManifest(cwd) : null;
 
+  // Precompute manifest collections lookup map for O(1) access
+  const manifestCollectionsByName = new Map<string, ManifestCollectionEntry>();
+  if (manifest) {
+    for (const c of manifest.collections) {
+      manifestCollectionsByName.set(c.name, c);
+    }
+  }
+
   /** Collections we can skip (cached hash matches, output exists) */
   const skipped: { name: string; outputName: string; indexMeta: IndexMeta }[] = [];
   /** Collections we need to build */
@@ -620,7 +628,8 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
         baseConfig.outputDir,
         sources,
         ctx.name,
-        projectConfigHash
+        projectConfigHash,
+        manifestCollectionsByName
       );
       const outputPath = path.join(outputDir, `${ctx.name}.ts`);
       try {
