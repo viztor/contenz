@@ -1,0 +1,3 @@
+## 2025-06-26 - Cache RegExp in Hot Loops
+**Learning:** Recompiling `RegExp` objects (via `new RegExp()`) on every invocation within hot loops, such as parsing hundreds or thousands of filenames during builds or lists operations, introduces significant unnecessary overhead.
+**Action:** When dynamically generating `RegExp` objects from parameters in frequently called functions, cache them using a module-level `Map` (e.g., keyed by the relevant parameters) to reuse the compiled objects. Ensure the cached `RegExp` objects do not use `g` (global) or `y` (sticky) flags to avoid maintaining `lastIndex` state across executions, keeping them safe for reuse.
