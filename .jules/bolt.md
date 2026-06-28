@@ -1,0 +1,3 @@
+## 2024-05-17 - RegExp Construction Overhead in Core CLI Loops
+**Learning:** During status checks and bulk content parsing (`run-status.ts`, `run-build.ts`), functions like `parseFileName` execute tens of thousands of times. Dynamically constructing `new RegExp` objects in these loops created measurable overhead, even when the underlying string pattern remained identical.
+**Action:** When a pattern doesn't use stateful regex flags (like `g` or `y`), implement a module-scoped `Map<string, RegExp>` cache to reuse compiled regex instances. This micro-optimization speeds up synchronous parsing workflows significantly at scale.
