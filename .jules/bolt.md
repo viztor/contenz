@@ -1,0 +1,3 @@
+## 2025-06-29 - Cache RegExp objects in hot paths
+**Learning:** Dynamically creating `RegExp` objects (e.g. `new RegExp(...)`) on every iteration inside a hot path (like parsing every file in a file system) can have a significant performance overhead, especially when combined with string replacement functions used to build the regex string.
+**Action:** Always cache compiled `RegExp` objects using a lightweight key (like boolean flags or joined short arrays) in a module-level `Map` when they need to be reused frequently. Ensure cached regular expressions do not use global (`g`) or sticky (`y`) flags so their state does not persist across matches.
