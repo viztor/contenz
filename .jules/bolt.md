@@ -1,0 +1,3 @@
+## 2024-06-25 - Regex Compilation Overhead in File Parsers
+**Learning:** In `@contenz/core`, the `parseFileName` function is repeatedly called for every content file. Rebuilding `RegExp` objects inside this tight loop using dynamic strings causes measurable CPU overhead (about ~40% slower) due to repetitive string concatenation and regex compilation phases.
+**Action:** When a function executing in a tight loop constructs dynamic `RegExp` objects from static/semi-static inputs (like configured extensions), compile them once and cache them in a `Map`. Ensure cached regular expressions do not include the global (`g`) or sticky (`y`) flags to prevent unsafe state (`lastIndex`) leakage across executions.
