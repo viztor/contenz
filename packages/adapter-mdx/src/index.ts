@@ -11,6 +11,7 @@
  */
 
 import type { FormatAdapter } from "@contenz/core";
+import JSON5 from "json5";
 
 // ── Brace-Balanced Scanner (for `export const meta = { ... }`) ──────────────
 
@@ -104,8 +105,10 @@ function skipStringLiteral(
 
 function safeEvalObjectLiteral(objectStr: string): Record<string, unknown> {
 	try {
-		const fn = new Function(`"use strict"; return (${objectStr});`);
-		const result = fn();
+		// Security Improvement: Avoid Arbitrary Code Execution
+		// Using JSON5 instead of new Function() or eval() prevents ACE vulnerabilities
+		// while still supporting JS object literal syntax (like unquoted keys) commonly found in MDX.
+		const result = JSON5.parse(objectStr);
 		if (typeof result === "object" && result !== null) {
 			return result as Record<string, unknown>;
 		}
