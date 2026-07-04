@@ -1,0 +1,3 @@
+## 2024-07-04 - Cache RegExp instances in frequently called loops
+**Learning:** In `@contenz/core`, the `parseFileName` function is called for every file to extract the slug and locale, but it re-compiles the `new RegExp` on every invocation. This recompilation takes a non-trivial amount of time in hot loops.
+**Action:** Always cache compiled `RegExp` objects (e.g., using a `Map`) when they are constructed dynamically but from a limited set of inputs (like file extensions or fixed flags). Remember to ensure they do not use the global (`g`) or sticky (`y`) flags if they are reused, as those maintain a `lastIndex` state across executions.
