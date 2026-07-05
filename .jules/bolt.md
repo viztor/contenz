@@ -1,0 +1,3 @@
+## 2024-05-18 - Caching compiled Regular Expressions in tight loops
+**Learning:** In string processing utility functions (like `parseFileName` traversing thousands of files in a monorepo), dynamically generating regex alternation strings (`extAlternation`) and compiling `new RegExp` on every invocation represents a noticeable performance bottleneck.
+**Action:** Always verify if a regex pattern relies on statically definable or finite parameters (like file extensions and a boolean i18n flag). If so, cache the compiled `RegExp` object in a `Map` keyed by these parameters to bypass recompilation overhead across iterations. Ensure cached regexes do not use the global (`g`) or sticky (`y`) flags.
