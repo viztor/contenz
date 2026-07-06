@@ -102,10 +102,11 @@ function skipStringLiteral(
 	return i;
 }
 
+import JSON5 from "json5";
+
 function safeEvalObjectLiteral(objectStr: string): Record<string, unknown> {
 	try {
-		const fn = new Function(`"use strict"; return (${objectStr});`);
-		const result = fn();
+		const result = JSON5.parse(objectStr);
 		if (typeof result === "object" && result !== null) {
 			return result as Record<string, unknown>;
 		}

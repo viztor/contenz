@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "cwd": "/Users/viz/dev/contenz/packages/e2e/fixtures/mixed-sources",
+  "cwd": "/app/packages/e2e/fixtures/mixed-sources",
   "outputDir": "generated/content",
   "sources": [
     "content/*",
     "docs"
   ],
   "configHash": "6cdddd4aed6743bb11d5495b7e61679bfc2ce34fa8b1aa0ec425267a3b416e5d",
-  "generatedAt": "2026-05-30T20:01:49.431Z",
+  "generatedAt": "2026-07-06T08:15:02.573Z",
   "collections": [
     {
       "name": "docs",
