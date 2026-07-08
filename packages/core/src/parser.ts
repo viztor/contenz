@@ -15,14 +15,8 @@ export interface ParseFileNameResult {
 /** Default extensions used when no config-level extensions are specified. */
 const DEFAULT_EXTENSIONS = ["mdx", "md", "json"];
 
-/**
- * Build a regex alternation pattern from an array of extensions.
- * e.g. ["md", "mdx", "json"] → "md|mdx|json"
- */
-function extAlternation(extensions?: string[]): string {
-  const exts = extensions?.length ? extensions : DEFAULT_EXTENSIONS;
-  return exts.map((e) => e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
-}
+/** Pattern to validate BCP 47 locale format */
+const LOCALE_REGEX = /^[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?$/;
 
 /**
  * Parse filename to extract slug and optional locale.
@@ -48,26 +42,29 @@ export function parseFileName(
     };
   }
 
-  const alt = extAlternation(extensions);
+  const exts = extensions?.length ? extensions : DEFAULT_EXTENSIONS;
+  const lastDotIndex = fileName.lastIndexOf(".");
+
+  if (lastDotIndex <= 0) return null;
+
+  const ext = fileName.slice(lastDotIndex + 1);
+  if (!exts.includes(ext)) return null;
+
+  const base = fileName.slice(0, lastDotIndex);
 
   if (i18nEnabled) {
-    // BCP 47 locale: xx, xxx, xx-XX, xx-Xxxx, xx-Xxxx-XX, etc.
-    const localePattern = "[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?";
-    const match = fileName.match(new RegExp(`^(.+)\\.(${localePattern})\\.(${alt})$`));
-    if (!match) return null;
-    return {
-      slug: match[1],
-      locale: match[2],
-      ext: match[3],
-    };
+    const secondLastDotIndex = base.lastIndexOf(".");
+    if (secondLastDotIndex <= 0) return null;
+
+    const locale = base.slice(secondLastDotIndex + 1);
+    const slug = base.slice(0, secondLastDotIndex);
+
+    if (!LOCALE_REGEX.test(locale)) return null;
+
+    return { slug, locale, ext };
   }
 
-  const match = fileName.match(new RegExp(`^(.+)\\.(${alt})$`));
-  if (!match) return null;
-  return {
-    slug: match[1],
-    ext: match[2],
-  };
+  return { slug: base, ext };
 }
 
 /**
