@@ -1,0 +1,3 @@
+## $(date +%Y-%m-%d) - Prevent dynamic RegExp instantiation in parseFileName hot path
+**Learning:** In `@contenz/core`, `parseFileName` is a critical hot path used extensively during file parsing. Dynamically instantiating `new RegExp` for each file caused severe performance degradation. Additionally, extracting extensions using `lastIndexOf('.')` breaks support for multi-dot custom extensions (e.g., `.page.md`).
+**Action:** Use standard string manipulation (`slice`, `endsWith`) or pre-compiled static `RegExp` objects for parsing filenames. When extracting extensions, use `endsWith()` against a known array of extensions instead of splitting by the last dot.
