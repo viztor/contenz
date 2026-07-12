@@ -1,0 +1,4 @@
+## 2024-05-18 - Path traversal in writeContent
+**Vulnerability:** A path traversal vulnerability existed in `@contenz/core` `content-io.ts`'s `writeContent`. It allowed an attacker to write files outside of the intended collection directory by supplying a slug containing multiple `../`.
+**Learning:** `path.join` alone is not sufficient to prevent path traversal when the input can contain upward directory traversals (`../`). It merely normalizes the path but will happily resolve it outside the base directory.
+**Prevention:** Always use `path.resolve` on both the intended base directory and the constructed file path, and then verify that the resolved file path strictly starts with the resolved base directory + `path.sep` (or matches it exactly, depending on the use case) to ensure the target remains within the permitted bounds.
