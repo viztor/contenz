@@ -15,14 +15,8 @@ export interface ParseFileNameResult {
 /** Default extensions used when no config-level extensions are specified. */
 const DEFAULT_EXTENSIONS = ["mdx", "md", "json"];
 
-/**
- * Build a regex alternation pattern from an array of extensions.
- * e.g. ["md", "mdx", "json"] → "md|mdx|json"
- */
-function extAlternation(extensions?: string[]): string {
-  const exts = extensions?.length ? extensions : DEFAULT_EXTENSIONS;
-  return exts.map((e) => e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
-}
+/** Statically compiled regex to validate BCP 47 locale format */
+const LOCALE_REGEX = /^[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?$/;
 
 /**
  * Parse filename to extract slug and optional locale.
@@ -48,26 +42,33 @@ export function parseFileName(
     };
   }
 
-  const alt = extAlternation(extensions);
+  // OPTIMIZATION: Replacing dynamic RegExp compilation and execution with simple string manipulation
+  // Operations like slice, endsWith, and lastIndexOf are significantly faster.
+  const exts = extensions?.length ? extensions : DEFAULT_EXTENSIONS;
 
-  if (i18nEnabled) {
-    // BCP 47 locale: xx, xxx, xx-XX, xx-Xxxx, xx-Xxxx-XX, etc.
-    const localePattern = "[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?";
-    const match = fileName.match(new RegExp(`^(.+)\\.(${localePattern})\\.(${alt})$`));
-    if (!match) return null;
-    return {
-      slug: match[1],
-      locale: match[2],
-      ext: match[3],
-    };
+  for (const ext of exts) {
+    if (fileName.endsWith(`.${ext}`)) {
+      const baseName = fileName.slice(0, -(ext.length + 1));
+      if (baseName.length === 0) continue;
+
+      if (i18nEnabled) {
+        const lastDotIndex = baseName.lastIndexOf(".");
+        if (lastDotIndex === -1) continue;
+
+        const slug = baseName.slice(0, lastDotIndex);
+        if (slug.length === 0) continue;
+
+        const locale = baseName.slice(lastDotIndex + 1);
+        if (!LOCALE_REGEX.test(locale)) continue;
+
+        return { slug, locale, ext };
+      }
+
+      return { slug: baseName, ext };
+    }
   }
 
-  const match = fileName.match(new RegExp(`^(.+)\\.(${alt})$`));
-  if (!match) return null;
-  return {
-    slug: match[1],
-    ext: match[2],
-  };
+  return null;
 }
 
 /**
