@@ -127,7 +127,14 @@ export async function writeContent(options: WriteContentOptions): Promise<Conten
     fileName = `${options.slug}.${localeToUse}.${ext}`;
   }
 
-  const filePath = path.join(col.collectionPath, fileName);
+  const resolvedBase = path.resolve(col.collectionPath);
+  const filePath = path.resolve(resolvedBase, fileName);
+
+  // Prevent path traversal vulnerabilities
+  if (!filePath.startsWith(resolvedBase + path.sep)) {
+    throw new Error(`Invalid slug: resolves outside of collection directory`);
+  }
+
   await fs.mkdir(path.dirname(filePath), { recursive: true });
 
   const content = serializeContentFile(options.meta, options.body ?? "", ext, col.config.adapters);
