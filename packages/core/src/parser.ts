@@ -14,15 +14,7 @@ export interface ParseFileNameResult {
 
 /** Default extensions used when no config-level extensions are specified. */
 const DEFAULT_EXTENSIONS = ["mdx", "md", "json"];
-
-/**
- * Build a regex alternation pattern from an array of extensions.
- * e.g. ["md", "mdx", "json"] → "md|mdx|json"
- */
-function extAlternation(extensions?: string[]): string {
-  const exts = extensions?.length ? extensions : DEFAULT_EXTENSIONS;
-  return exts.map((e) => e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
-}
+const LOCALE_REGEX = /^[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?$/;
 
 /**
  * Parse filename to extract slug and optional locale.
@@ -48,26 +40,35 @@ export function parseFileName(
     };
   }
 
-  const alt = extAlternation(extensions);
-
-  if (i18nEnabled) {
-    // BCP 47 locale: xx, xxx, xx-XX, xx-Xxxx, xx-Xxxx-XX, etc.
-    const localePattern = "[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?";
-    const match = fileName.match(new RegExp(`^(.+)\\.(${localePattern})\\.(${alt})$`));
-    if (!match) return null;
-    return {
-      slug: match[1],
-      locale: match[2],
-      ext: match[3],
-    };
+  // ⚡ Bolt Optimization: Avoid instantiating dynamic `RegExp` objects inside hot paths.
+  // We use string operations instead which is significantly faster for parsing file names.
+  const exts = extensions?.length ? extensions : DEFAULT_EXTENSIONS;
+  let matchedExt: string | null = null;
+  for (const ext of exts) {
+    if (fileName.endsWith(`.${ext}`)) {
+      matchedExt = ext;
+      break;
+    }
   }
 
-  const match = fileName.match(new RegExp(`^(.+)\\.(${alt})$`));
-  if (!match) return null;
-  return {
-    slug: match[1],
-    ext: match[2],
-  };
+  if (!matchedExt) return null;
+
+  const withoutExt = fileName.slice(0, fileName.length - matchedExt.length - 1);
+  if (!withoutExt) return null;
+
+  if (i18nEnabled) {
+    const lastDotIdx = withoutExt.lastIndexOf(".");
+    if (lastDotIdx === -1) return null;
+
+    const slug = withoutExt.slice(0, lastDotIdx);
+    const locale = withoutExt.slice(lastDotIdx + 1);
+
+    if (!LOCALE_REGEX.test(locale)) return null;
+
+    return { slug, locale, ext: matchedExt };
+  }
+
+  return { slug: withoutExt, ext: matchedExt };
 }
 
 /**
