@@ -15,14 +15,8 @@ export interface ParseFileNameResult {
 /** Default extensions used when no config-level extensions are specified. */
 const DEFAULT_EXTENSIONS = ["mdx", "md", "json"];
 
-/**
- * Build a regex alternation pattern from an array of extensions.
- * e.g. ["md", "mdx", "json"] → "md|mdx|json"
- */
-function extAlternation(extensions?: string[]): string {
-  const exts = extensions?.length ? extensions : DEFAULT_EXTENSIONS;
-  return exts.map((e) => e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
-}
+// BCP 47 locale: xx, xxx, xx-XX, xx-Xxxx, xx-Xxxx-XX, etc.
+const STATIC_LOCALE_PATTERN = /^[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?$/;
 
 /**
  * Parse filename to extract slug and optional locale.
@@ -48,26 +42,40 @@ export function parseFileName(
     };
   }
 
-  const alt = extAlternation(extensions);
+  // ⚡ Bolt Optimization: Use string manipulation instead of dynamic RegExp
+  // Creating a new RegExp for every file is slow in hot paths.
+  const exts = extensions?.length ? extensions : DEFAULT_EXTENSIONS;
+  let ext = "";
 
-  if (i18nEnabled) {
-    // BCP 47 locale: xx, xxx, xx-XX, xx-Xxxx, xx-Xxxx-XX, etc.
-    const localePattern = "[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?";
-    const match = fileName.match(new RegExp(`^(.+)\\.(${localePattern})\\.(${alt})$`));
-    if (!match) return null;
-    return {
-      slug: match[1],
-      locale: match[2],
-      ext: match[3],
-    };
+  // Find matching extension using endsWith (supports multi-dot extensions)
+  for (const e of exts) {
+    if (fileName.endsWith(`.${e}`)) {
+      ext = e;
+      break;
+    }
   }
 
-  const match = fileName.match(new RegExp(`^(.+)\\.(${alt})$`));
-  if (!match) return null;
-  return {
-    slug: match[1],
-    ext: match[2],
-  };
+  if (!ext) return null;
+
+  // Base filename without the extension
+  const base = fileName.slice(0, -(ext.length + 1));
+
+  if (i18nEnabled) {
+    // ⚡ Bolt Optimization: Extract locale using string slicing and test against static RegExp
+    const lastDotIdx = base.lastIndexOf(".");
+    if (lastDotIdx === -1) return null;
+
+    const locale = base.slice(lastDotIdx + 1);
+    const slug = base.slice(0, lastDotIdx);
+
+    if (!STATIC_LOCALE_PATTERN.test(locale)) {
+      return null;
+    }
+
+    return { slug, locale, ext };
+  }
+
+  return { slug: base, ext };
 }
 
 /**
