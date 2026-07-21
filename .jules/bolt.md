@@ -1,0 +1,3 @@
+## 2025-02-13 - Optimize parseFileName RegExp Overhead
+**Learning:** The `parseFileName` function dynamically built `RegExp` objects based on provided extensions or locale patterns for every file. This caused severe performance degradation on the critical hot path of bulk file scanning.
+**Action:** When extracting components from strings in hot paths (like filenames or paths), use standard string operations (like `endsWith()`, `lastIndexOf()`, `slice()`) combined with static RegExp caching instead of instantiating new `RegExp` objects per execution. Ensure `endsWith` is used instead of `lastIndexOf('.')` for extensions to support multi-dot extensions (like `.page.md`).
