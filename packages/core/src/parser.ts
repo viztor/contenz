@@ -15,14 +15,8 @@ export interface ParseFileNameResult {
 /** Default extensions used when no config-level extensions are specified. */
 const DEFAULT_EXTENSIONS = ["mdx", "md", "json"];
 
-/**
- * Build a regex alternation pattern from an array of extensions.
- * e.g. ["md", "mdx", "json"] → "md|mdx|json"
- */
-function extAlternation(extensions?: string[]): string {
-  const exts = extensions?.length ? extensions : DEFAULT_EXTENSIONS;
-  return exts.map((e) => e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
-}
+// Statically compiled regex for BCP 47 locale matching
+const LOCALE_REGEX = /^[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?$/;
 
 /**
  * Parse filename to extract slug and optional locale.
@@ -48,26 +42,38 @@ export function parseFileName(
     };
   }
 
-  const alt = extAlternation(extensions);
+  const exts = extensions?.length ? extensions : DEFAULT_EXTENSIONS;
+  let matchedExt: string | undefined;
 
-  if (i18nEnabled) {
-    // BCP 47 locale: xx, xxx, xx-XX, xx-Xxxx, xx-Xxxx-XX, etc.
-    const localePattern = "[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?";
-    const match = fileName.match(new RegExp(`^(.+)\\.(${localePattern})\\.(${alt})$`));
-    if (!match) return null;
-    return {
-      slug: match[1],
-      locale: match[2],
-      ext: match[3],
-    };
+  // Use endsWith instead of lastIndexOf('.') to properly support multi-dot extensions
+  for (const ext of exts) {
+    if (fileName.endsWith(`.${ext}`)) {
+      matchedExt = ext;
+      break;
+    }
   }
 
-  const match = fileName.match(new RegExp(`^(.+)\\.(${alt})$`));
-  if (!match) return null;
-  return {
-    slug: match[1],
-    ext: match[2],
-  };
+  if (!matchedExt) return null;
+
+  const nameWithoutExt = fileName.slice(0, -(matchedExt.length + 1));
+  if (!nameWithoutExt) return null;
+
+  if (i18nEnabled) {
+    const lastDotIdx = nameWithoutExt.lastIndexOf(".");
+    if (lastDotIdx === -1) return null;
+
+    const slug = nameWithoutExt.slice(0, lastDotIdx);
+    const locale = nameWithoutExt.slice(lastDotIdx + 1);
+
+    if (!slug) return null;
+
+    // Performance: Statically compiled regex instead of dynamic RegExp creation
+    if (!LOCALE_REGEX.test(locale)) return null;
+
+    return { slug, locale, ext: matchedExt };
+  }
+
+  return { slug: nameWithoutExt, ext: matchedExt };
 }
 
 /**
