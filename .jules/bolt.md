@@ -1,0 +1,3 @@
+## 2024-07-24 - Avoid dynamic RegExps in hot paths
+**Learning:** In `@contenz/core`, functions that process files in bulk (like `parseFileName`) are critical hot paths. Instantiating dynamic `RegExp` objects inside these functions causes severe performance degradation, especially with many files.
+**Action:** Use standard string manipulation (like `.endsWith()` and `.slice()`) or statically compiled regexes for file path parsing to prevent performance bottlenecks. When extracting extensions, use `endsWith()` against known extensions rather than `lastIndexOf('.')` to preserve support for multi-dot custom extensions (e.g., `.page.md`).
