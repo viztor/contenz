@@ -1,0 +1,78 @@
+ WARNING  --parallel is deprecated and will be removed in a future major version. Instead, define task behavior in your turbo.json task definitions using `persistent` and `with`.
+• turbo 2.9.16
+
+   • Packages in scope: @contenz/adapter-mdx, @contenz/cli, @contenz/client, @contenz/core, @contenz/e2e, @contenz/preview
+   • Running dev in 6 packages
+   • Remote caching disabled
+
+@contenz/client:dev: cache bypass, force executing abd248e478d82d3c
+@contenz/adapter-mdx:dev: cache bypass, force executing 85aca8f154bac9f1
+@contenz/core:dev: cache bypass, force executing 3fd620c585873d20
+@contenz/preview:dev: cache bypass, force executing d29d24a4c87469b3
+@contenz/adapter-mdx:dev:
+@contenz/adapter-mdx:dev: > @contenz/adapter-mdx@0.1.6 dev
+@contenz/adapter-mdx:dev: > tsup --watch
+@contenz/adapter-mdx:dev:
+@contenz/preview:dev:
+@contenz/preview:dev: > @contenz/preview@0.1.6 dev
+@contenz/preview:dev: > vite
+@contenz/preview:dev:
+@contenz/core:dev:
+@contenz/core:dev: > @contenz/core@0.1.6 dev
+@contenz/core:dev: > tsup --watch
+@contenz/core:dev:
+@contenz/client:dev:
+@contenz/client:dev: > @contenz/client@0.1.6 dev
+@contenz/client:dev: > tsup --watch
+@contenz/client:dev:
+@contenz/preview:dev:
+@contenz/preview:dev:   VITE v8.0.16  ready in 655 ms
+@contenz/preview:dev:
+@contenz/preview:dev:   ➜  Local:   http://localhost:5173/
+@contenz/preview:dev:   ➜  Network: use --host to expose
+@contenz/adapter-mdx:dev: CLI Building entry: src/index.ts
+@contenz/adapter-mdx:dev: CLI Using tsconfig: tsconfig.json
+@contenz/adapter-mdx:dev: CLI tsup v8.5.1
+@contenz/adapter-mdx:dev: CLI Using tsup config: /app/packages/adapter-mdx/tsup.config.ts
+@contenz/adapter-mdx:dev: CLI Running in watch mode
+@contenz/adapter-mdx:dev: CLI Target: node18
+@contenz/adapter-mdx:dev: CLI Cleaning output folder
+@contenz/adapter-mdx:dev: ESM Build start
+@contenz/core:dev: CLI Building entry: {"index":"src/index.ts","api":"src/api.ts"}
+@contenz/core:dev: CLI Using tsconfig: tsconfig.json
+@contenz/core:dev: CLI tsup v8.5.1
+@contenz/core:dev: CLI Using tsup config: /app/packages/core/tsup.config.ts
+@contenz/core:dev: CLI Running in watch mode
+@contenz/core:dev: CLI Target: node18
+@contenz/adapter-mdx:dev: ESM dist/index.js 4.15 KB
+@contenz/adapter-mdx:dev: ESM ⚡️ Build success in 48ms
+@contenz/core:dev: CLI Cleaning output folder
+@contenz/core:dev: ESM Build start
+@contenz/adapter-mdx:dev: CLI Watching for changes in "."
+@contenz/adapter-mdx:dev: CLI Ignoring changes in "**/{.git,node_modules}/**" | "dist"
+@contenz/client:dev: CLI Building entry: src/index.ts
+@contenz/client:dev: CLI Using tsconfig: tsconfig.json
+@contenz/client:dev: CLI tsup v8.5.1
+@contenz/client:dev: CLI Using tsup config: /app/packages/client/tsup.config.ts
+@contenz/client:dev: CLI Running in watch mode
+@contenz/client:dev: CLI Target: es2022
+@contenz/client:dev: CLI Cleaning output folder
+@contenz/client:dev: ESM Build start
+@contenz/core:dev: ESM dist/index.js     2.61 KB
+@contenz/core:dev: ESM dist/api.js       114.15 KB
+@contenz/core:dev: ESM dist/index.js.map 8.28 KB
+@contenz/core:dev: ESM dist/api.js.map   252.47 KB
+@contenz/core:dev: ESM ⚡️ Build success in 341ms
+@contenz/core:dev: CLI Watching for changes in "."
+@contenz/core:dev: CLI Ignoring changes in "**/{.git,node_modules}/**" | "dist"
+@contenz/client:dev: ESM dist/index.js     2.07 KB
+@contenz/client:dev: ESM dist/index.js.map 5.33 KB
+@contenz/client:dev: ESM ⚡️ Build success in 208ms
+@contenz/client:dev: CLI Watching for changes in "."
+@contenz/client:dev: CLI Ignoring changes in "**/{.git,node_modules}/**" | "dist"
+@contenz/adapter-mdx:dev: DTS Build start
+@contenz/core:dev: DTS Build start
+@contenz/client:dev: DTS Build start
+@contenz/client:dev: DTS ⚡️ Build success in 2341ms
+@contenz/adapter-mdx:dev: DTS ⚡️ Build success in 2735ms
+@contenz/core:dev: DTS ⚡️ Build success in 6616ms
