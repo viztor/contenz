@@ -17,7 +17,9 @@ function isAbsoluteLikePath(value: string): boolean {
 }
 
 function isProjectRelativePath(value: string): boolean {
-  return value !== "." && value !== ".." && !value.startsWith("../") && !isAbsoluteLikePath(value);
+  if (isAbsoluteLikePath(value)) return false;
+  const normalized = path.posix.normalize(value);
+  return normalized !== "." && normalized !== ".." && !normalized.startsWith("../");
 }
 
 export function normalizeLegacyContentDir(contentDir: string): string {
