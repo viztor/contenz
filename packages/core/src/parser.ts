@@ -19,9 +19,35 @@ const DEFAULT_EXTENSIONS = ["mdx", "md", "json"];
  * Build a regex alternation pattern from an array of extensions.
  * e.g. ["md", "mdx", "json"] → "md|mdx|json"
  */
+// Bolt: Cache the extAlternation string to avoid recreating it on every call.
+let cachedAltKey = "";
+let cachedAltStr = "";
 function extAlternation(extensions?: string[]): string {
   const exts = extensions?.length ? extensions : DEFAULT_EXTENSIONS;
-  return exts.map((e) => e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+  const key = exts.join(",");
+  if (key === cachedAltKey) return cachedAltStr;
+
+  cachedAltStr = exts.map((e) => e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+  cachedAltKey = key;
+  return cachedAltStr;
+}
+
+// Bolt: Cache RegExp objects to avoid recompiling them thousands of times in tight loops.
+const patternCache = new Map<string, RegExp>();
+
+function getPattern(i18nEnabled: boolean, alt: string): RegExp {
+  const key = `${i18nEnabled}-${alt}`;
+  let pattern = patternCache.get(key);
+  if (!pattern) {
+    if (i18nEnabled) {
+      const localePattern = "[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?";
+      pattern = new RegExp(`^(.+)\\.(${localePattern})\\.(${alt})$`);
+    } else {
+      pattern = new RegExp(`^(.+)\\.(${alt})$`);
+    }
+    patternCache.set(key, pattern);
+  }
+  return pattern;
 }
 
 /**
@@ -49,12 +75,12 @@ export function parseFileName(
   }
 
   const alt = extAlternation(extensions);
+  const pattern = getPattern(i18nEnabled, alt);
+  const match = fileName.match(pattern);
+
+  if (!match) return null;
 
   if (i18nEnabled) {
-    // BCP 47 locale: xx, xxx, xx-XX, xx-Xxxx, xx-Xxxx-XX, etc.
-    const localePattern = "[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?";
-    const match = fileName.match(new RegExp(`^(.+)\\.(${localePattern})\\.(${alt})$`));
-    if (!match) return null;
     return {
       slug: match[1],
       locale: match[2],
@@ -62,8 +88,6 @@ export function parseFileName(
     };
   }
 
-  const match = fileName.match(new RegExp(`^(.+)\\.(${alt})$`));
-  if (!match) return null;
   return {
     slug: match[1],
     ext: match[2],
