@@ -1,0 +1,3 @@
+## 2024-05-24 - Cache RegExp compilation in tight parsing loops
+**Learning:** The `parseFileName` function is called repeatedly for every single content file in the workspace (during `createWorkspace` and in loops like search index building, linting, etc.). Each call dynamically regenerating the `extAlternation` string and recompiling a `RegExp` creates unnecessary overhead, resulting in slower execution for large projects.
+**Action:** When working with filename parsing or string matching functions called in tight loops across many files, cache the resulting `RegExp` objects and any intermediate computed string values to avoid recompilation overhead.
