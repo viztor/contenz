@@ -144,15 +144,25 @@ export async function addDocumentsToIndex(
 
 export function collectMetaFieldNames(docs: SearchDocument[]): string[] {
   const fields = new Set<string>();
-  for (const doc of docs) {
-    const meta = JSON.parse(doc._metaJson) as Record<string, unknown>;
-    for (const [key, value] of Object.entries(meta)) {
+
+  // ⚡ Bolt Optimization: Avoid JSON.parse in the hot path.
+  // Since buildSearchDocument spreads valid meta fields (string and string[]) directly onto
+  // the SearchDocument object, we can iterate its top-level keys and ignore the standard fields.
+  for (let i = 0; i < docs.length; i++) {
+    const doc = docs[i];
+    for (const key in doc) {
       if (
-        typeof value === "string" ||
-        (Array.isArray(value) && value.every((v) => typeof v === "string"))
+        key === "id" ||
+        key === "collection" ||
+        key === "slug" ||
+        key === "locale" ||
+        key === "file" ||
+        key === "body" ||
+        key === "_metaJson"
       ) {
-        fields.add(key);
+        continue;
       }
+      fields.add(key);
     }
   }
   return [...fields].sort();
