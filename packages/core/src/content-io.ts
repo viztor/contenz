@@ -127,7 +127,13 @@ export async function writeContent(options: WriteContentOptions): Promise<Conten
     fileName = `${options.slug}.${localeToUse}.${ext}`;
   }
 
-  const filePath = path.join(col.collectionPath, fileName);
+  const resolvedCollectionPath = path.resolve(col.collectionPath);
+  const filePath = path.resolve(resolvedCollectionPath, fileName);
+  if (!filePath.startsWith(resolvedCollectionPath + path.sep)) {
+    throw new Error(
+      `Invalid slug: "${options.slug}" results in path traversal outside collection directory`
+    );
+  }
   await fs.mkdir(path.dirname(filePath), { recursive: true });
 
   const content = serializeContentFile(options.meta, options.body ?? "", ext, col.config.adapters);
