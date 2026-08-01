@@ -218,125 +218,130 @@ async function processOneCollection(
   let parseErrors = 0;
   const detectedLocales = new Set<string>();
 
-  for (const file of contentFiles) {
-    const filePath = path.join(collectionPath, file);
-    const parsed = parseFileName(file, effectiveConfig.i18n, effectiveConfig.slugPattern);
-    if (!parsed) {
-      diagnostics.push({
-        code: "CONTENT_FILE_SKIPPED",
-        severity: "warning",
-        category: "content",
-        message: "Skipped file because it does not match the expected naming pattern.",
-        source: "build",
-        collection: collectionName,
-        file,
-      });
-      continue;
-    }
-    try {
-      const result = await parseContentFile(filePath, effectiveConfig);
-
-      // Hooks
-      if (hooks?.transformItem) {
-        await hooks.transformItem(result, collectionName);
-      }
-
-      // Compute fields
-      if (schemaModule.computed) {
-        for (const [key, computeFn] of Object.entries(schemaModule.computed)) {
-          try {
-            result.meta[key] = await computeFn(result);
-          } catch (err) {
-            parseErrors++;
-            diagnostics.push({
-              code: "COMPUTED_FIELD_FAILED",
-              severity: "error",
-              category: "content",
-              message: `Failed to compute field "${key}": ${err instanceof Error ? err.message : String(err)}`,
-              source: "build",
-              collection: collectionName,
-              file,
-            });
-          }
-        }
-      }
-
-      const contentType = getContentType(file, effectiveConfig) ?? defaultTypeName;
-      const schema =
-        contentType !== defaultTypeName
-          ? (getSchemaForType(schemaModule, contentType) ?? defaultSchema)
-          : defaultSchema;
-      const validation = validateMeta(result.meta, schema, file);
-      if (!validation.valid) {
-        parseErrors++;
-        for (const err of validation.errors) {
-          diagnostics.push({
-            code: "META_VALIDATION_FAILED",
-            severity: "error",
-            category: "validation",
-            message: err.message,
-            source: "build",
-            collection: collectionName,
-            file,
-            field: err.field,
-          });
-        }
-        continue;
-      }
-      if (!typeGroups.has(contentType)) typeGroups.set(contentType, new Map());
-      const itemsMap = typeGroups.get(contentType);
-      if (!itemsMap) {
-        parseErrors++;
+  // Bolt Optimization: Parallelize file parsing and async compute hooks
+  await pMap(
+    contentFiles,
+    async (file) => {
+      const filePath = path.join(collectionPath, file);
+      const parsed = parseFileName(file, effectiveConfig.i18n, effectiveConfig.slugPattern);
+      if (!parsed) {
         diagnostics.push({
-          code: "BUILD_TYPE_GROUP_FAILED",
-          severity: "error",
-          category: "build",
-          message: "Internal error creating collection type group.",
+          code: "CONTENT_FILE_SKIPPED",
+          severity: "warning",
+          category: "content",
+          message: "Skipped file because it does not match the expected naming pattern.",
           source: "build",
           collection: collectionName,
           file,
         });
-        continue;
+        return;
       }
-      if (effectiveConfig.i18n && parsed.locale) {
-        detectedLocales.add(parsed.locale);
-        if (!itemsMap.has(parsed.slug)) {
-          itemsMap.set(parsed.slug, { slug: parsed.slug, locales: {} });
-        }
-        const item = itemsMap.get(parsed.slug) as I18nCollectionData;
-        item.locales[parsed.locale] = { file, meta: result.meta };
-      } else {
-        itemsMap.set(parsed.slug, {
-          slug: parsed.slug,
-          file,
-          meta: result.meta,
-        } as FlatCollectionData);
-      }
+      try {
+        const result = await parseContentFile(filePath, effectiveConfig);
 
-      // Collect search document for this parsed content file
-      searchDocs.push(
-        buildSearchDocument(
-          collectionName,
-          parsed.slug,
-          parsed.locale,
+        // Hooks
+        if (hooks?.transformItem) {
+          await hooks.transformItem(result, collectionName);
+        }
+
+        // Compute fields
+        if (schemaModule.computed) {
+          for (const [key, computeFn] of Object.entries(schemaModule.computed)) {
+            try {
+              result.meta[key] = await computeFn(result);
+            } catch (err) {
+              parseErrors++;
+              diagnostics.push({
+                code: "COMPUTED_FIELD_FAILED",
+                severity: "error",
+                category: "content",
+                message: `Failed to compute field "${key}": ${err instanceof Error ? err.message : String(err)}`,
+                source: "build",
+                collection: collectionName,
+                file,
+              });
+            }
+          }
+        }
+
+        const contentType = getContentType(file, effectiveConfig) ?? defaultTypeName;
+        const schema =
+          contentType !== defaultTypeName
+            ? (getSchemaForType(schemaModule, contentType) ?? defaultSchema)
+            : defaultSchema;
+        const validation = validateMeta(result.meta, schema, file);
+        if (!validation.valid) {
+          parseErrors++;
+          for (const err of validation.errors) {
+            diagnostics.push({
+              code: "META_VALIDATION_FAILED",
+              severity: "error",
+              category: "validation",
+              message: err.message,
+              source: "build",
+              collection: collectionName,
+              file,
+              field: err.field,
+            });
+          }
+          return;
+        }
+        if (!typeGroups.has(contentType)) typeGroups.set(contentType, new Map());
+        const itemsMap = typeGroups.get(contentType);
+        if (!itemsMap) {
+          parseErrors++;
+          diagnostics.push({
+            code: "BUILD_TYPE_GROUP_FAILED",
+            severity: "error",
+            category: "build",
+            message: "Internal error creating collection type group.",
+            source: "build",
+            collection: collectionName,
+            file,
+          });
+          return;
+        }
+        if (effectiveConfig.i18n && parsed.locale) {
+          detectedLocales.add(parsed.locale);
+          if (!itemsMap.has(parsed.slug)) {
+            itemsMap.set(parsed.slug, { slug: parsed.slug, locales: {} });
+          }
+          const item = itemsMap.get(parsed.slug) as I18nCollectionData;
+          item.locales[parsed.locale] = { file, meta: result.meta };
+        } else {
+          itemsMap.set(parsed.slug, {
+            slug: parsed.slug,
+            file,
+            meta: result.meta,
+          } as FlatCollectionData);
+        }
+
+        // Collect search document for this parsed content file
+        searchDocs.push(
+          buildSearchDocument(
+            collectionName,
+            parsed.slug,
+            parsed.locale,
+            file,
+            result.meta,
+            result.body
+          )
+        );
+      } catch (error) {
+        parseErrors++;
+        diagnostics.push({
+          code: "CONTENT_PARSE_FAILED",
+          severity: "error",
+          category: "content",
+          message: error instanceof Error ? error.message : String(error),
+          source: "build",
+          collection: collectionName,
           file,
-          result.meta,
-          result.body
-        )
-      );
-    } catch (error) {
-      parseErrors++;
-      diagnostics.push({
-        code: "CONTENT_PARSE_FAILED",
-        severity: "error",
-        category: "content",
-        message: error instanceof Error ? error.message : String(error),
-        source: "build",
-        collection: collectionName,
-        file,
-      });
-    }
-  }
+        });
+      }
+    },
+    { concurrency: BUILD_CONCURRENCY }
+  );
 
   if (parseErrors > 0) {
     return { ok: false, diagnostics };
