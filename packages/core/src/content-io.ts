@@ -117,17 +117,28 @@ export async function writeContent(options: WriteContentOptions): Promise<Conten
     throw new Error(`Collection not found: ${options.collectionName}`);
   }
 
+  const normalizedSlug = path.posix.normalize(options.slug.replaceAll("\\", "/"));
+  if (normalizedSlug.startsWith("..") || path.isAbsolute(normalizedSlug)) {
+    throw new Error(`Invalid slug "${options.slug}": Path traversal is not allowed`);
+  }
   const ext = options.ext ?? (col.config.extensions[0] as ContentExtension) ?? "mdx";
-  let fileName = `${options.slug}.${ext}`;
+  let fileName = `${normalizedSlug}.${ext}`;
   if (col.config.i18n) {
     const localeToUse = options.locale ?? col.config.resolvedI18n?.defaultLocale;
     if (!localeToUse) {
       throw new Error("Locale is required when i18n is enabled");
     }
-    fileName = `${options.slug}.${localeToUse}.${ext}`;
+    fileName = `${normalizedSlug}.${localeToUse}.${ext}`;
   }
 
   const filePath = path.join(col.collectionPath, fileName);
+
+  const resolvedFilePath = path.resolve(filePath);
+  const resolvedCollectionPath = path.resolve(col.collectionPath);
+  if (!resolvedFilePath.startsWith(resolvedCollectionPath + path.sep)) {
+    throw new Error(`Invalid slug "${options.slug}": resolves outside collection directory`);
+  }
+
   await fs.mkdir(path.dirname(filePath), { recursive: true });
 
   const content = serializeContentFile(options.meta, options.body ?? "", ext, col.config.adapters);
