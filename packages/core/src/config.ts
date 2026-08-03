@@ -20,7 +20,7 @@ function normalizeI18n(raw: boolean | I18nConfigShape | undefined): {
   resolvedI18n: ResolvedI18nConfig;
 } {
   const enabled =
-    typeof raw === "boolean" ? raw :  (raw as I18nConfigShape)?.enabled;
+    typeof raw === "boolean" ? raw : (raw as I18nConfigShape)?.enabled;
   if (!enabled) {
     return {
       enabled: false,

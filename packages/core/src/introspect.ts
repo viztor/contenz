@@ -256,10 +256,22 @@ export function introspectField(schema: z.ZodTypeAny): IntrospectedField {
       return { ...baseField, type: "enum", options: values };
     }
     if (entries && typeof entries === "object") {
+      const enumOptions = Object.values(entries).filter(
+        (v): v is string | number =>
+          typeof v === "string" || typeof v === "number"
+      );
+      // Homogenous string[] or number[] for IntrospectedField.options
+      const allStrings = enumOptions.every((v) => typeof v === "string");
+      const allNumbers = enumOptions.every((v) => typeof v === "number");
+      const options = allStrings
+        ? (enumOptions)
+        : (allNumbers
+          ? (enumOptions)
+          : (enumOptions.map(String)));
       return {
         ...baseField,
         type: "enum",
-        options: Object.values(entries),
+        options,
       };
     }
     return { ...baseField, type: "enum" };

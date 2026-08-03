@@ -88,7 +88,7 @@ export async function runSchema(
         collection: opts.collection,
         contentType,
         schema: introspected,
-        relations: relations,
+        relations,
       },
     };
   } catch (error) {
