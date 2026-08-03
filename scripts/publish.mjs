@@ -10,6 +10,7 @@
  */
 
 import { execSync } from "node:child_process";
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -31,6 +32,18 @@ function run(cmd, cwd) {
   }
 }
 
+function isVersionOnRegistry(name, version) {
+  try {
+    const out = execSync(`npm view ${name}@${version} version`, {
+      encoding: "utf-8",
+      stdio: ["ignore", "pipe", "pipe"],
+    }).trim();
+    return out === version;
+  } catch {
+    return false;
+  }
+}
+
 console.log(
   `\n🚀 Publishing @contenz packages${dryRun ? " (dry run)" : ""}...\n`
 );
@@ -43,10 +56,7 @@ run("pnpm run build", root);
 for (const pkg of PACKAGES) {
   const pkgDir = path.join(root, "packages", pkg);
   const pkgJson = JSON.parse(
-    (await import("node:fs")).readFileSync(
-      path.join(pkgDir, "package.json"),
-      "utf-8"
-    )
+    fs.readFileSync(path.join(pkgDir, "package.json"), "utf-8")
   );
 
   if (pkgJson.private) {
@@ -56,8 +66,15 @@ for (const pkg of PACKAGES) {
 
   console.log(`\n━━━ Publishing ${pkgJson.name}@${pkgJson.version} ━━━`);
 
-  // npm publish: reliable with setup-node registry-url + NODE_AUTH_TOKEN.
-  // GitHub OIDC provenance is attached via --provenance when id-token: write.
+  if (isVersionOnRegistry(pkgJson.name, pkgJson.version)) {
+    console.log(
+      `  ⏭  ${pkgJson.name}@${pkgJson.version} already on registry, skipping`
+    );
+    continue;
+  }
+
+  // npm publish: works with setup-node registry-url + NODE_AUTH_TOKEN.
+  // OIDC provenance attaches when the workflow has id-token: write.
   const publishCmd = [
     "npm publish --access public --provenance",
     otp ? `--otp ${otp}` : "",
@@ -70,14 +87,10 @@ for (const pkg of PACKAGES) {
     console.log(`  ✅ ${pkgJson.name}@${pkgJson.version} published`);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    // Idempotent re-runs: version already on the registry
-    if (
-      msg.includes("cannot publish over") ||
-      msg.includes("EPUBLISHCONFLICT") ||
-      msg.includes("previously published versions")
-    ) {
+    // Race: another run published between check and publish
+    if (isVersionOnRegistry(pkgJson.name, pkgJson.version)) {
       console.log(
-        `  ⏭  ${pkgJson.name}@${pkgJson.version} already published, continuing`
+        `  ⏭  ${pkgJson.name}@${pkgJson.version} appeared on registry, continuing`
       );
       continue;
     }
