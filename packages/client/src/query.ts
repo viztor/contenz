@@ -34,6 +34,13 @@ export class QueryBuilder<T extends Record<string, any>> {
 
 	// biome-ignore lint/suspicious/noExplicitAny: Required for flexible generic constraint
 	where<K extends keyof T>(field: K, op: Operator, value: any): this {
+		// ⚡ Bolt: Convert array to Set outside the loop for O(1) lookups instead of O(n)
+		// biome-ignore lint/suspicious/noExplicitAny: Required for flexible array items
+		let lookupSet: Set<any> | null = null;
+		if ((op === "in" || op === "not-in") && Array.isArray(value)) {
+			lookupSet = new Set(value);
+		}
+
 		this.items = this.items.filter((item) => {
 			const itemValue = item[field];
 			switch (op) {
@@ -50,9 +57,9 @@ export class QueryBuilder<T extends Record<string, any>> {
 				case ">=":
 					return itemValue >= value;
 				case "in":
-					return Array.isArray(value) && value.includes(itemValue);
+					return lookupSet ? lookupSet.has(itemValue) : false;
 				case "not-in":
-					return Array.isArray(value) && !value.includes(itemValue);
+					return lookupSet ? !lookupSet.has(itemValue) : false;
 				case "contains":
 					return Array.isArray(itemValue) && itemValue.includes(value);
 				default:
