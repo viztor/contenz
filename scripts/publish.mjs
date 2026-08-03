@@ -56,8 +56,10 @@ for (const pkg of PACKAGES) {
 
   console.log(`\n━━━ Publishing ${pkgJson.name}@${pkgJson.version} ━━━`);
 
+  // npm publish: reliable with setup-node registry-url + NODE_AUTH_TOKEN.
+  // GitHub OIDC provenance is attached via --provenance when id-token: write.
   const publishCmd = [
-    "pnpm publish --access public --no-git-checks",
+    "npm publish --access public --provenance",
     otp ? `--otp ${otp}` : "",
   ]
     .filter(Boolean)
@@ -67,7 +69,19 @@ for (const pkg of PACKAGES) {
     run(publishCmd, pkgDir);
     console.log(`  ✅ ${pkgJson.name}@${pkgJson.version} published`);
   } catch (err) {
-    console.error(`  ❌ Failed to publish ${pkgJson.name}: ${err.message}`);
+    const msg = err instanceof Error ? err.message : String(err);
+    // Idempotent re-runs: version already on the registry
+    if (
+      msg.includes("cannot publish over") ||
+      msg.includes("EPUBLISHCONFLICT") ||
+      msg.includes("previously published versions")
+    ) {
+      console.log(
+        `  ⏭  ${pkgJson.name}@${pkgJson.version} already published, continuing`
+      );
+      continue;
+    }
+    console.error(`  ❌ Failed to publish ${pkgJson.name}: ${msg}`);
     process.exit(1);
   }
 }
