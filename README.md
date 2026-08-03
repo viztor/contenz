@@ -6,7 +6,6 @@ Contenz is a content management toolkit for developers and content teams. It sim
 
 - `packages/core` – core library (published as `@contenz/core`); programmatic API only, no CLI binary
 - `packages/cli` – CLI (published as `@contenz/cli`); provides the `contenz` binary
-- `packages/client` – runtime query helpers for generated output (published as `@contenz/client`)
 - `packages/adapter-mdx` – MD/MDX format adapter (published as `@contenz/adapter-mdx`)
 - `packages/e2e` – e2e tests and fixtures (private; not published)
 

@@ -75,7 +75,7 @@ Status: 🟠. CI can pass commits that local hooks would reject (type errors) an
 | Finding | Status |
 | --- | --- |
 | Two lint stacks: Biome (core, client) and ESLint (preview); cli/adapter-mdx have neither | 🟠 |
-| `packages/client` runs Biome with no `biome.json` (implicit defaults; core has explicit config) | 🟠 |
+| `packages/client` | 🟢 removed |
 | Compile targets / engines: Node.js LTS (`node24` tsup, `engines.node: >=24`, CI `lts/*`) | 🟢 |
 | Internal deps pinned as `^0.1.6` instead of `workspace:*` — resolves via lockfile today; breaks the moment a version bump is uneven | 🟠 |
 | `@contenz/preview` package | 🟢 removed |
@@ -86,7 +86,7 @@ Status: 🟠. CI can pass commits that local hooks would reject (type errors) an
 
 | Finding | Status |
 | --- | --- |
-| Publish order in `scripts/publish.mjs` is correct (core → client → adapter-mdx → cli) | 🟢 |
+| Publish order in `scripts/publish.mjs` is correct (core → adapter-mdx → cli) | 🟢 |
 | Provenance enabled in `publish.yml` | 🟢 |
 | (preview tarball smoke obsolete — package removed) | 🟢 removed |
 | Version bumps are manual across 6 `package.json` files + cross-dep ranges | 🟠 |
@@ -115,7 +115,7 @@ Verified: build, typecheck, lint, and full e2e suite (184 tests) all pass post-f
 ### Phase 3 — structural maintainability
 
 - [x] E: `packages/e2e/setup.ts`; fixture registry; gitignore fixture `.contenz/`
-- [x] D: `docs/ARCHITECTURE.md` + `docs/CODEBASE.md` updated (5 packages, Stricli, client)
+- [x] D: `docs/ARCHITECTURE.md` + `docs/CODEBASE.md` updated (core/cli/adapter-mdx/e2e, Stricli)
 - [x] F: internal deps use `workspace:*`
 - [x] D: CONTRIBUTING.md pnpm/oxc; CLI on Stricli
 
@@ -123,7 +123,7 @@ Verified: build, typecheck, lint, and full e2e suite (184 tests) all pass post-f
 
 - [x] A: preview package removed (no SPA type sync needed)
 - [x] CLI: full Stricli migration (typed flags, help/version, bash completion)
-- [x] `@contenz/client` examples in `docs/USAGE.md`
+- [x] `@contenz/client` removed (apps import generated modules directly)
 - [ ] G: `publish:verify` tarball smoke test
 - [ ] Consider `contenz doctor` (config valid, build fresh)
 

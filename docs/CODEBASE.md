@@ -11,7 +11,6 @@ contenz/
 ├── packages/
 │   ├── core/          # @contenz/core — schema validation, codegen, workspace, introspection
 │   ├── cli/           # @contenz/cli — Stricli CLI (12 commands + bash completion)
-│   ├── client/        # @contenz/client — runtime createContent / createT / query
 │   ├── adapter-mdx/   # @contenz/adapter-mdx — MD/MDX format adapter (peer dep on core)
 │   └── e2e/           # @contenz/e2e — integration tests + fixtures
 ├── docs/              # Project documentation
@@ -27,7 +26,6 @@ contenz/
 ```
 adapter-mdx ──peer──▸ core
 cli ──────────dep───▸ core, @stricli/core, @stricli/auto-complete
-client ─────── (no runtime dep on core)
 e2e ──────────dev───▸ core, cli, adapter-mdx
 ```
 
@@ -35,18 +33,18 @@ Internal monorepo deps use `workspace:*`. Engines: **Node.js LTS ≥ 24**.
 
 ### Build Tooling
 
-| Tool       | Version | Purpose                                       |
-| ---------- | ------- | --------------------------------------------- |
-| TypeScript | 7.x     | Type checking + declaration emit              |
-| tsup       | 8.x     | JS bundling (core, cli, client, adapter-mdx)  |
-| Vitest     | 4.x     | Testing (core, client, cli, adapter-mdx, e2e) |
-| oxlint     | 1.x     | Type-aware lint (Ultracite presets)           |
-| oxfmt      | 0.x     | Formatting                                    |
-| Turbo      | 2.x     | Task orchestration                            |
-| pnpm       | 11.x    | Package manager                               |
-| Zod        | 4.x     | Schema validation runtime                     |
-| Stricli    | 1.x     | CLI framework                                 |
-| Husky      | 9.x     | Git hooks                                     |
+| Tool       | Version | Purpose                               |
+| ---------- | ------- | ------------------------------------- |
+| TypeScript | 7.x     | Type checking + declaration emit      |
+| tsup       | 8.x     | JS bundling (core, cli, adapter-mdx)  |
+| Vitest     | 4.x     | Testing (core, cli, adapter-mdx, e2e) |
+| oxlint     | 1.x     | Type-aware lint (Ultracite presets)   |
+| oxfmt      | 0.x     | Formatting                            |
+| Turbo      | 2.x     | Task orchestration                    |
+| pnpm       | 11.x    | Package manager                       |
+| Zod        | 4.x     | Schema validation runtime             |
+| Stricli    | 1.x     | CLI framework                         |
+| Husky      | 9.x     | Git hooks                             |
 
 ---
 
@@ -229,7 +227,6 @@ Still useful later: `contenz doctor`, publish tarball verify, raise core coverag
 | Package     | Runner | Scope                                                |
 | ----------- | ------ | ---------------------------------------------------- |
 | core        | Vitest | unit + pipeline (~176 tests)                         |
-| client      | Vitest | query / localize / createContent                     |
 | cli         | Vitest | Stricli help/version/enum smoke (injectable context) |
 | adapter-mdx | Vitest | format adapter                                       |
 | e2e         | Vitest | CLI + API fixtures (~183 tests)                      |

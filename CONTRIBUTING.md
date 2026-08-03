@@ -36,7 +36,7 @@ pnpm run ci
 | Command | Purpose |
 | --- | --- |
 | `pnpm run build` | Build all packages with Turbo |
-| `pnpm test` | Run package tests (core, client, adapter-mdx, e2e) |
+| `pnpm test` | Run package tests (core, cli, adapter-mdx, e2e) |
 | `pnpm run typecheck` | Typecheck packages that declare `typecheck` |
 | `pnpm run lint` | Root oxlint (type-aware) |
 | `pnpm run format` / `format:check` | oxfmt write / check |
@@ -72,7 +72,6 @@ Generated fixture output (`generated/`, `.contenz/`, coverage markdown) is gitig
 | --- | --- |
 | `@contenz/core` | Schema helpers, pipeline, programmatic API; coverage floor in Vitest |
 | `@contenz/cli` | `contenz` binary and command wiring |
-| `@contenz/client` | Runtime helpers for generated content (`createContent`, `createT`, query) |
 | `@contenz/adapter-mdx` | MD/MDX format adapter |
 | `@contenz/e2e` | Fixture-based CLI verification (private) |
 

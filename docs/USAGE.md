@@ -23,12 +23,9 @@ pnpm add -D @contenz/cli
 
 # Core (for schema/config files)
 pnpm add @contenz/core zod
-
-# Runtime helpers for apps that import generated content
-pnpm add @contenz/client
 ```
 
-`@contenz/cli` provides the `contenz` binary. `@contenz/core` provides schema helpers like `defineCollection` plus the `zod` peer dependency.
+`@contenz/cli` provides the `contenz` binary. `@contenz/core` provides schema helpers like `defineCollection` (install `zod` alongside it for schemas).
 
 ---
 
@@ -484,73 +481,23 @@ See [Configuration](./CONFIGURATION.md) for full details.
 
 ---
 
-## 9. Consuming generated content (`@contenz/client`)
+## 9. Consuming generated content
 
-After `contenz build`, import generated modules in your app and resolve locales with `@contenz/client`.
-
-```bash
-pnpm add @contenz/client
-# or: npm install @contenz/client
-```
-
-### Locale-bound content handle
-
-```ts
-import { faq, blog } from "@/generated/content";
-import { createContent } from "@contenz/client";
-
-// e.g. Next.js App Router
-export default async function Page({
-  params,
-}: {
-  params: Promise<{ locale: string }>;
-}) {
-  const { locale } = await params;
-
-  const content = createContent({
-    locale,
-    defaultLocale: "en",
-    fallback: { "zh-Hant": "zh", zh: "en" },
-    collections: { faq, blog },
-  });
-
-  // Named collections are typed properties:
-  const entry = content.faq.get("moq");
-  // entry?.question
-  // entry?._resolvedFrom  // set when served from a fallback locale
-
-  const allFaqs = content.faq.all();
-  // or: content.collection("faq")?.get("moq")
-}
-```
-
-### Field helper (`createT`)
-
-Prefer `createContent` for pages. Use `createT` for thin field reads:
+After `contenz build`, import the generated modules in your app:
 
 ```ts
 import { faq } from "@/generated/content";
-import { createT } from "@contenz/client";
+// or: import { faq } from "../generated/content/faq.js";
 
-const t = createT({ locale: "zh", defaultLocale: "en" });
-t(faq, "moq", "question"); // localized string or undefined
-t.item(faq, "moq"); // full resolved entry
+// Flat (non-i18n) collection
+faq.hello.question;
+
+// i18n collection shape (slug → { locales: { en, zh, … } })
+faq.moq.locales.en.question;
+faq.moq.locales.zh?.question ?? faq.moq.locales.en.question;
 ```
 
-### Query builder
-
-```ts
-import { query } from "@contenz/client";
-import { posts } from "@/generated/content";
-
-const latest = query(Object.values(posts))
-  .where((p) => p.published)
-  .sortBy("date", "desc")
-  .take(10)
-  .all();
-```
-
-Locale resolution order: requested locale → configured `fallback` chain → `defaultLocale` → first available locale. See [API – client](./API.md).
+Locale selection and fallbacks live in your application (route params, middleware, etc.). See [Content model](./CONTENT-MODEL.md) for the generated output shape.
 
 ---
 

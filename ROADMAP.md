@@ -109,7 +109,7 @@ Status: **complete**
 
 **Deliverables:**
 
-- **Query API:** `@contenz/client` type-safe helpers for filtering, sorting, pagination, and relation joins
+- **App consumption:** import generated modules from build output; locale/query helpers live in the app
 - **Extension Hooks:** Lifecycle hooks (`beforeBuild`, `transformItem`, `afterBuild`)
 - **Computed Fields:** Fields dynamically derived from other content at build time
 

@@ -4,80 +4,10 @@ This page summarizes the programmatic API from `@contenz/core/api`. Use it when 
 
 **Entry points**:
 
-- `@contenz/core/api` (All programmatic pipelines: schema helpers, build, lint, content ops)
-- `@contenz/client` (Runtime query builder for consuming output in apps)
+- `@contenz/core` — schema helpers (`defineCollection`, types) for `schema.ts` / config
+- `@contenz/core/api` — full programmatic pipelines (build, lint, content ops, workspace)
 
-## Client Query API (`@contenz/client`)
-
-When building frontend applications (e.g., Next.js, Nuxt), use `@contenz/client` to filter, sort, and paginate your generated JSON content. This package is completely decoupled from Node APIs.
-
-| Export | Description |
-| --- | --- |
-| `query(collection)` | Create a new `QueryBuilder` over an array or object of items. |
-| `.where(field, op, val)` | Filter items. Operators: `==`, `!=`, `<`, `<=`, `>`, `>=`, `in`, `not-in`, `contains`. |
-| `.orderBy(field, dir)` | Sort items by a key (`asc` or `desc`). |
-| `.paginate({ page, limit })` | Returns a `PaginatedResult` with `items`, `total`, `page`, `limit`, and `totalPages`. |
-| `.limit(count)` | Restrict result count. |
-| `.offset(count)` | Skip a number of results. |
-| `.first()` | Returns the first item or undefined. |
-| `.all()` | Returns all matched items. |
-
-**Example:**
-
-```ts
-import { query } from "@contenz/client";
-import { blog } from "./generated/content/blog.js";
-
-const recentPosts = query(blog)
-  .where("draft", "==", false)
-  .orderBy("date", "desc")
-  .paginate({ page: 1, limit: 10 });
-```
-
-## Content resolver (`createContent`)
-
-Read generated i18n collections with **default-locale fallback**. This is the recommended runtime API — not a UI string catalog, but structured content resolution.
-
-| Export | Description |
-| --- | --- |
-| `createContent(ctx)` | Locale-bound resolver over all collections. |
-| `content.collection(name).get(slug)` | One entry; falls back to `defaultLocale` when missing. |
-| `content.collection(name).all()` | All entries for the locale (fallback applied per slug). |
-| `entry._resolvedFrom` | Present when fallback served a different locale (e.g. `"en"`). |
-
-**Fallback order:** requested locale → `i18n.fallback` chain → `defaultLocale` → first available.
-
-**Next.js App Router example:**
-
-```ts
-import { faq, blog } from "@/generated/content";
-import { createContent } from "@contenz/client";
-
-export default async function Page({ params }: PageProps<"/[locale]/faq/[slug]">) {
-  const { locale, slug } = await params;
-  const content = createContent({
-    locale,
-    defaultLocale: "en",
-    fallback: { "zh-Hant": "zh" }, // mirrors contenz.config.ts
-    collections: { faq, blog },
-  });
-
-  const entry = content.collection("faq")?.get(slug);
-  return (
-    <>
-      <h1>{entry?.question}</h1>
-      {entry?._resolvedFrom && <p>Showing {entry._resolvedFrom} (translation pending)</p>}
-    </>
-  );
-}
-```
-
-### Lower-level helpers
-
-| Export | Description |
-| --- | --- |
-| `getLocalizedItem(collection, slug, options)` | One-shot entry resolver with fallback. |
-| `createT(options)` | Field accessor sugar: `t(faq, slug, "question")`. Prefer `createContent` for pages. |
+Apps that only need published content import the modules produced by `contenz build` (e.g. `generated/content`) and resolve locales in application code.
 
 ## Config and discovery
 

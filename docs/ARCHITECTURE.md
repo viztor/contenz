@@ -9,7 +9,6 @@ contenz/
 ├── packages/
 │   ├── core/         # @contenz/core – schema helpers, types, build/lint/status API
 │   ├── cli/          # @contenz/cli – contenz binary and commands
-│   ├── client/       # @contenz/client – runtime helpers for generated output
 │   ├── adapter-mdx/  # @contenz/adapter-mdx – MD/MDX format adapter
 │   └── e2e/          # E2E tests and fixtures (private, not published)
 ├── docs/             # This documentation set
@@ -35,12 +34,6 @@ contenz/
 - **Framework**: [Stricli](https://bloomberg.github.io/stricli/) (`@stricli/core` + `@stricli/auto-complete`) for typed flags, help/version, and bash completion.
 - **Commands**: `init`, `lint`, `build`, `watch`, `status`, `view`, `list`, `create`, `update`, `search`, `schema`, `skill` (plus hidden `install` / `uninstall` for shell completion).
 - **Depends on**: `@contenz/core` for all content and config logic.
-
-### @contenz/client
-
-- **Role**: Lightweight runtime helpers for apps that consume generated content (Next.js, etc.).
-- **Exports**: `createContent` (locale-bound collection access with fallback), `createT`, localization helpers, query builder.
-- **Does not** depend on the CLI or filesystem at runtime — works against imported generated modules.
 
 ### @contenz/adapter-mdx
 
@@ -76,8 +69,8 @@ contenz/
 7. **AI-native layer**  
    The bidirectional content operations (`runView`, `runList`, `runCreate`, `runUpdate`, `runSearch`, `runSchema`) form the AI-native interface. They use the same workspace and parsing primitives as lint/build but expose content through a structured JSON contract.
 
-8. **Runtime client**  
-   Apps import generated modules and use `@contenz/client` (`createContent`, `createT`) for locale resolution and ergonomic collection access without re-parsing source files.
+8. **App consumption**  
+   Apps import generated modules from the build output (e.g. `generated/content`) and resolve locales in application code.
 
 ## Key invariants
 
