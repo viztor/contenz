@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
+
 import { introspectSchema } from "../introspect.js";
 
 describe("Schema Introspection", () => {
@@ -15,10 +16,22 @@ describe("Schema Introspection", () => {
 
       const result = introspectSchema(schema);
 
-      expect(result.fields.str).toMatchObject({ type: "string", required: true });
-      expect(result.fields.num).toMatchObject({ type: "number", required: true });
-      expect(result.fields.bool).toMatchObject({ type: "boolean", required: true });
-      expect(result.fields.date).toMatchObject({ type: "date", required: true });
+      expect(result.fields.str).toMatchObject({
+        type: "string",
+        required: true,
+      });
+      expect(result.fields.num).toMatchObject({
+        type: "number",
+        required: true,
+      });
+      expect(result.fields.bool).toMatchObject({
+        type: "boolean",
+        required: true,
+      });
+      expect(result.fields.date).toMatchObject({
+        type: "date",
+        required: true,
+      });
       expect(result.fields.any).toMatchObject({ type: "any", required: true });
     });
   });
@@ -33,22 +46,37 @@ describe("Schema Introspection", () => {
 
       const result = introspectSchema(schema);
 
-      expect(result.fields.opt).toMatchObject({ type: "string", required: false });
-      expect(result.fields.null).toMatchObject({ type: "string", required: false });
-      expect(result.fields.def).toMatchObject({ type: "string", required: false, default: "test" });
+      expect(result.fields.opt).toMatchObject({
+        type: "string",
+        required: false,
+      });
+      expect(result.fields.null).toMatchObject({
+        type: "string",
+        required: false,
+      });
+      expect(result.fields.def).toMatchObject({
+        type: "string",
+        required: false,
+        default: "test",
+      });
     });
 
     it("handles descriptions", () => {
       const schema = z.object({
         desc: z.string().describe("Test description"),
-        defDesc: z.string().default("test").describe("Test description on default"),
+        defDesc: z
+          .string()
+          .default("test")
+          .describe("Test description on default"),
         optDesc: z.string().describe("Test description on opt").optional(),
       });
 
       const result = introspectSchema(schema);
 
       expect(result.fields.desc.description).toBe("Test description");
-      expect(result.fields.defDesc.description).toBe("Test description on default");
+      expect(result.fields.defDesc.description).toBe(
+        "Test description on default"
+      );
       expect(result.fields.optDesc.description).toBe("Test description on opt");
     });
   });
@@ -101,10 +129,22 @@ describe("Schema Introspection", () => {
 
       const result = introspectSchema(schema);
 
-      expect(result.fields.zEnum).toMatchObject({ type: "enum", options: ["one", "two"] });
-      expect(result.fields.native).toMatchObject({ type: "enum", options: ["a", "b"] });
-      expect(result.fields.literalUnion).toMatchObject({ type: "enum", options: ["x", "y"] });
-      expect(result.fields.literal).toMatchObject({ type: "enum", options: ["fixed"] });
+      expect(result.fields.zEnum).toMatchObject({
+        type: "enum",
+        options: ["one", "two"],
+      });
+      expect(result.fields.native).toMatchObject({
+        type: "enum",
+        options: ["a", "b"],
+      });
+      expect(result.fields.literalUnion).toMatchObject({
+        type: "enum",
+        options: ["x", "y"],
+      });
+      expect(result.fields.literal).toMatchObject({
+        type: "enum",
+        options: ["fixed"],
+      });
     });
   });
 
@@ -114,7 +154,11 @@ describe("Schema Introspection", () => {
         transformed: z.string().transform((v) => v.toUpperCase()),
         refined: z.number().refine((n) => n > 0),
         superRefined: z.boolean().superRefine((v, ctx) => {
-          if (!v) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "must be true" });
+          if (!v)
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: "must be true",
+            });
         }),
         transformedDesc: z
           .string()
@@ -124,9 +168,18 @@ describe("Schema Introspection", () => {
 
       const result = introspectSchema(schema);
 
-      expect(result.fields.transformed).toMatchObject({ type: "string", required: true });
-      expect(result.fields.refined).toMatchObject({ type: "number", required: true });
-      expect(result.fields.superRefined).toMatchObject({ type: "boolean", required: true });
+      expect(result.fields.transformed).toMatchObject({
+        type: "string",
+        required: true,
+      });
+      expect(result.fields.refined).toMatchObject({
+        type: "number",
+        required: true,
+      });
+      expect(result.fields.superRefined).toMatchObject({
+        type: "boolean",
+        required: true,
+      });
       expect(result.fields.transformedDesc.description).toBe("base desc");
     });
 

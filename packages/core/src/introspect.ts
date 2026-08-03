@@ -112,7 +112,10 @@ function getInnerType(schema: z.ZodTypeAny): z.ZodTypeAny | null {
  * Check if a type matches a given name.
  * Handles both Zod 3.25 lowercase names and old Zod 3 PascalCase names.
  */
-function isTypeMatch(typeName: string | undefined, ...names: string[]): boolean {
+function isTypeMatch(
+  typeName: string | undefined,
+  ...names: string[]
+): boolean {
   if (!typeName) return false;
   return names.includes(typeName);
 }
@@ -147,7 +150,7 @@ export function introspectSchema(
   if (isTypeMatch(typeName, "ZodObject", "object")) {
     const shape = getShape(baseSchema);
     for (const [key, fieldSchema] of Object.entries(shape)) {
-      fields[key] = introspectField(fieldSchema as z.ZodTypeAny);
+      fields[key] = introspectField(fieldSchema);
       if (descriptions?.[key]) {
         fields[key].description = descriptions[key];
       }
@@ -171,7 +174,15 @@ export function introspectField(schema: z.ZodTypeAny): IntrospectedField {
   // Unwrap Optional / Nullable / Default wrappers
   const seen = new Set<z.ZodTypeAny>();
   while (!seen.has(inner)) {
-    if (isTypeMatch(typeName, "ZodOptional", "optional", "ZodNullable", "nullable")) {
+    if (
+      isTypeMatch(
+        typeName,
+        "ZodOptional",
+        "optional",
+        "ZodNullable",
+        "nullable"
+      )
+    ) {
       seen.add(inner);
       isRequired = false;
       if (!description) description = getDescription(inner);
@@ -248,7 +259,7 @@ export function introspectField(schema: z.ZodTypeAny): IntrospectedField {
       return {
         ...baseField,
         type: "enum",
-        options: Object.values(entries) as string[],
+        options: Object.values(entries),
       };
     }
     return { ...baseField, type: "enum" };
@@ -260,7 +271,11 @@ export function introspectField(schema: z.ZodTypeAny): IntrospectedField {
       const enumValues = Object.values(values).filter(
         (v) => typeof v === "string" || typeof v === "number"
       );
-      return { ...baseField, type: "enum", options: enumValues as string[] | number[] };
+      return {
+        ...baseField,
+        type: "enum",
+        options: enumValues as string[] | number[],
+      };
     }
     return { ...baseField, type: "enum" };
   }
@@ -269,7 +284,11 @@ export function introspectField(schema: z.ZodTypeAny): IntrospectedField {
     // Zod 3.25: _def.element; Old Zod 3: _def.type (the element schema)
     const elementType = def.element || def.type;
     if (elementType) {
-      return { ...baseField, type: "array", itemType: introspectField(elementType) };
+      return {
+        ...baseField,
+        type: "array",
+        itemType: introspectField(elementType),
+      };
     }
     return { ...baseField, type: "array" };
   }
@@ -277,14 +296,18 @@ export function introspectField(schema: z.ZodTypeAny): IntrospectedField {
     const shape: Record<string, IntrospectedField> = {};
     const objectShape = getShape(inner);
     for (const [key, val] of Object.entries(objectShape)) {
-      shape[key] = introspectField(val as z.ZodTypeAny);
+      shape[key] = introspectField(val);
     }
     return { ...baseField, type: "object", shape };
   }
   if (isTypeMatch(typeName, "ZodLiteral", "literal")) {
     const def = getDef(inner);
     const value = def.value ?? (def.values ? [...def.values][0] : undefined);
-    return { ...baseField, type: "enum", options: value !== undefined ? [value] : [] };
+    return {
+      ...baseField,
+      type: "enum",
+      options: value !== undefined ? [value] : [],
+    };
   }
   if (isTypeMatch(typeName, "ZodUnion", "union")) {
     const def = getDef(inner);
@@ -300,7 +323,10 @@ export function introspectField(schema: z.ZodTypeAny): IntrospectedField {
           type: "enum",
           options: options.map((opt: z.ZodTypeAny) => {
             const optDef = getDef(opt);
-            return optDef.value ?? (optDef.values ? [...optDef.values][0] : undefined);
+            return (
+              optDef.value ??
+              (optDef.values ? [...optDef.values][0] : undefined)
+            );
           }),
         };
       }

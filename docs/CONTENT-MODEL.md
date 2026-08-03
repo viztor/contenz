@@ -6,10 +6,10 @@ This document describes how Contenz treats filenames, generated output, relation
 
 Content files live under each collection directory. The parser infers **slug** and (when i18n is enabled) **locale** from the filename.
 
-| i18n | Pattern | Example |
-|------|---------|---------|
-| `false` | `{slug}.{ext}` | `hello-world.mdx`, `faq.mdx` |
-| `true` | `{slug}.{locale}.{ext}` | `moq.en.mdx`, `intro.zh.mdx` |
+| i18n    | Pattern                 | Example                      |
+| ------- | ----------------------- | ---------------------------- |
+| `false` | `{slug}.{ext}`          | `hello-world.mdx`, `faq.mdx` |
+| `true`  | `{slug}.{locale}.{ext}` | `moq.en.mdx`, `intro.zh.mdx` |
 
 - **ext**: From config `extensions` (default `md`, `mdx`, `json`).
 - **slug**: Used as the document key in generated output and in URLs.
@@ -37,6 +37,7 @@ Content body goes here.
 MDX files support **both** frontmatter and export syntax. The adapter auto-detects which one is in use:
 
 **Frontmatter** (recommended for compatibility):
+
 ```mdx
 ---
 title: Welcome
@@ -47,6 +48,7 @@ Content body with <Component /> support.
 ```
 
 **Export syntax** (MDX-specific):
+
 ```mdx
 export const meta = {
   title: "Welcome",
@@ -130,9 +132,9 @@ Fields that reference other collections can be validated so that each referenced
 export const { meta, relations } = defineCollection({
   schema,
   relations: {
-    glossaryLinks: "glossary",   // any field name → target collection
-    authorRef: "team",           // single reference field
-    seeAlso: "faq",             // self-referencing relation
+    glossaryLinks: "glossary", // any field name → target collection
+    authorRef: "team", // single reference field
+    seeAlso: "faq", // self-referencing relation
   },
 });
 ```
@@ -164,13 +166,26 @@ i18n: {
 ```
 
 - **defaultLocale**: Used as source for staleness and as fallback when no locale is specified.
-- **locales**: Optional explicit list; if omitted, locales are inferred from filenames.
+- **locales**: Optional explicit list; if omitted, locales are inferred from filenames. **When declared, `contenz lint` checks every slug against this list** (see below).
 - **fallback**: Record (locale → fallback locale) or array for a single global fallback.
-- **coverageThreshold**: Minimum ratio (0–1) before coverage warnings.
+- **coverageThreshold**: Minimum ratio (0–1) of fully translated slugs before lint/build warn.
 - **detectStale**: Emit diagnostics when a translation file is older than the default-locale source.
 - **includeFallbackMetadata**: Add `_fallback` in generated output when value came from fallback.
 
-Lint with `--coverage` writes a coverage report (e.g. `contenz.coverage.md`) showing per-locale and per-slug coverage and staleness when applicable.
+Lint with `--coverage` writes a coverage report (e.g. `contenz.coverage.md`) showing per-locale and per-slug coverage and staleness when applicable. Declared locales are always included in the report, even when no file exists for them yet.
+
+### Missing-translation detection
+
+When `locales` is explicitly declared, `contenz lint --translations` emits one diagnostic per slug per missing locale:
+
+| Code | Severity | Meaning |
+| --- | --- | --- |
+| `I18N_MISSING_TRANSLATION` | warning (error with `strict: true`) | A slug has no file for a declared locale. Carries `collection`, `slug`, `locale` (the missing one), and `file` (the default-locale source to translate from). |
+| `I18N_COVERAGE_BELOW_THRESHOLD` | warning (error with `strict: true`) | The ratio of fully translated slugs is below `coverageThreshold`. |
+
+The check is opt-in (`--translations` on the CLI, `translations: true` in `runLint`) so regular lint runs stay focused on schema and relation errors. Projects using `i18n: true` or omitting `locales` keep the inferred, report-only behavior — no per-slug diagnostics are emitted even with the flag.
+
+The diagnostics are designed to be piped to an AI agent via `--format json`; each one is a self-contained translation task. See [CLI reference – lint](./CLI.md#lint).
 
 ## Multi-type collections
 

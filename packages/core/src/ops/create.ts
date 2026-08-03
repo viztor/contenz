@@ -21,17 +21,28 @@ export interface CreateResult {
   meta: Record<string, unknown>;
 }
 
-export async function runCreate(opts: CreateOptions): Promise<ContentOpResult<CreateResult>> {
+export async function runCreate(
+  opts: CreateOptions
+): Promise<ContentOpResult<CreateResult>> {
   try {
-    const ws = await createWorkspace({ cwd: opts.cwd, collection: opts.collection });
+    const ws = await createWorkspace({
+      cwd: opts.cwd,
+      collection: opts.collection,
+    });
     const col = ws.getCollection(opts.collection);
 
     if (!col) {
-      return { success: false, error: `Collection not found: ${opts.collection}` };
+      return {
+        success: false,
+        error: `Collection not found: ${opts.collection}`,
+      };
     }
 
     if (!col.schema?.meta) {
-      return { success: false, error: `No schema found for collection: ${opts.collection}` };
+      return {
+        success: false,
+        error: `No schema found for collection: ${opts.collection}`,
+      };
     }
 
     // Fill defaults from schema introspection
@@ -44,7 +55,11 @@ export async function runCreate(opts: CreateOptions): Promise<ContentOpResult<Cr
     }
 
     // Validate against schema
-    const validation = validateMeta(meta, col.schema.meta, `${opts.collection}/${opts.slug}`);
+    const validation = validateMeta(
+      meta,
+      col.schema.meta,
+      `${opts.collection}/${opts.slug}`
+    );
     if (!validation.valid) {
       return {
         success: false,
@@ -62,7 +77,7 @@ export async function runCreate(opts: CreateOptions): Promise<ContentOpResult<Cr
       slug: opts.slug,
       locale: opts.locale,
       meta,
-      ext: (col.config.extensions[0] ?? "mdx") as ContentExtension,
+      ext: (col.config.extensions[0] ?? "mdx"),
     });
 
     return {
@@ -75,6 +90,9 @@ export async function runCreate(opts: CreateOptions): Promise<ContentOpResult<Cr
       },
     };
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : String(error) };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
   }
 }

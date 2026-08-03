@@ -7,34 +7,48 @@ This is the main contribution guide for the workspace. Package READMEs should de
 ## Setup
 
 ```bash
-npm install
-npm run build
+pnpm install
+pnpm run build
 ```
 
-Before committing, the pre-commit hook runs `npm run typecheck` and `npm run lint`.
+Requires **Node.js LTS** (currently ≥ 24) and **pnpm 11** (see root `packageManager` / `engines`).
+
+Before committing, the pre-commit hook runs **lint-staged** (oxfmt + oxlint on staged files).
 
 Before pushing, run the workspace checks:
 
 ```bash
-npm run build
-npm run test
-npm run typecheck
-npm run lint
+pnpm run build
+pnpm test
+pnpm run typecheck
+pnpm run lint
+pnpm run format:check
+```
+
+Or the combined gate:
+
+```bash
+pnpm run ci
 ```
 
 ## Workspace commands
 
-- `npm run build` - build all packages with Turbo
-- `npm run test` - run core and e2e tests
-- `npm run typecheck` - typecheck all packages
-- `npm run lint` - run configured lint tasks across the workspace
-- `npm run knip` - find dead code and unused dependencies
+| Command | Purpose |
+| --- | --- |
+| `pnpm run build` | Build all packages with Turbo |
+| `pnpm test` | Run package tests (core, client, adapter-mdx, e2e) |
+| `pnpm run typecheck` | Typecheck packages that declare `typecheck` |
+| `pnpm run lint` | Root oxlint (type-aware) |
+| `pnpm run format` / `format:check` | oxfmt write / check |
+| `pnpm run knip` | Dead code / unused deps |
+| `pnpm run test:coverage` | Coverage (core floor enforced) |
+| `pnpm run publish:all` / `publish:dry` | Release helpers |
 
-To run commands for one package:
+Package-scoped:
 
 ```bash
-npm run test --workspace @contenz/core
-npm run build --workspace @contenz/cli
+pnpm --filter @contenz/core test
+pnpm --filter @contenz/cli build
 ```
 
 ## E2E fixtures
@@ -45,46 +59,43 @@ When adding a fixture:
 
 1. Add a directory under `packages/e2e/fixtures/`.
 2. Add `contenz.config.ts` and any needed `content/.../schema.ts` and content files.
-3. If the fixture has schemas, add it to `FIXTURES_WITH_SCHEMA` in `packages/e2e/e2e.test.ts`.
-4. Add or extend the e2e test coverage in `packages/e2e/e2e.test.ts`.
+3. Register it in `packages/e2e/setup.ts` (`FIXTURES_WITH_SCHEMA` / `linkAllFixtures` callers).
+4. Add or extend coverage in `e2e.test.ts` / advanced / stress suites.
 
-Generated fixture output such as `generated/content/` and `contenz.coverage.md` is gitignored.
+Shared helpers: `packages/e2e/setup.ts` (`runCli`, `linkFixturePackages`, `cleanGenerated`, …).
 
-## Package notes
+Generated fixture output (`generated/`, `.contenz/`, coverage markdown) is gitignored.
 
-- `@contenz/core`
-  - schema helpers and programmatic APIs
-  - enforces a minimum coverage floor in Vitest
-- `@contenz/cli`
-  - owns the `contenz` binary and command wiring
-- `@contenz/e2e`
-  - fixture-based CLI verification
+## Packages
+
+| Package | Role |
+| --- | --- |
+| `@contenz/core` | Schema helpers, pipeline, programmatic API; coverage floor in Vitest |
+| `@contenz/cli` | `contenz` binary and command wiring |
+| `@contenz/client` | Runtime helpers for generated content (`createContent`, `createT`, query) |
+| `@contenz/adapter-mdx` | MD/MDX format adapter |
+| `@contenz/e2e` | Fixture-based CLI verification (private) |
+
+Internal monorepo deps use `workspace:*`.
 
 ## Planning docs
 
-Tracked root planning docs have distinct roles:
+- `PROJECT_SCOPE.md` — long-lived product direction
+- `ROADMAP.md` — milestone sequencing
 
-- `PROJECT_SCOPE.md` for long-lived product direction
-- `ROADMAP.md` for milestone sequencing
-- `BACKLOG.md` for near-term executable work
-
-Temporary planning drafts should stay local-only and out of the canonical repo docs.
-
-For user-facing and API documentation (config, CLI, content model, Studio, core API), see the [docs/](./docs/README.md) folder.
+For user-facing and API documentation, see [docs/](./docs/README.md).
 
 ## Core quality gate
 
-`packages/core` currently enforces this minimum test coverage floor:
+`packages/core` enforces this minimum coverage floor:
 
-- Statements: `30%`
-- Lines: `30%`
-- Functions: `30%`
+- Statements / lines / functions: `30%`
 - Branches: `20%`
 
-Raise the floor when hot paths gain durable regression coverage; do not lower it to land unrelated work.
+Raise the floor when hot paths gain durable coverage; do not lower it to land unrelated work.
 
 ## Code style
 
-- Use TypeScript package exports and local `./types.js` imports consistently.
-- Keep package docs package-specific; put workspace process docs at the repo root.
-- Use Biome for formatting and lint fixes where configured.
+- TypeScript ESM with local `./foo.js` import paths
+- **oxlint** (type-aware) + **oxfmt** via Ultracite presets at the repo root
+- Keep package docs package-specific; workspace process docs live here

@@ -1,5 +1,6 @@
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+
 import { buildAdapterList } from "./format-adapter.js";
 import { resolveSourcePatterns } from "./sources.js";
 import type {
@@ -18,7 +19,8 @@ function normalizeI18n(raw: boolean | I18nConfigShape | undefined): {
   enabled: boolean;
   resolvedI18n: ResolvedI18nConfig;
 } {
-  const enabled = typeof raw === "boolean" ? raw : (raw as I18nConfigShape)?.enabled === true;
+  const enabled =
+    typeof raw === "boolean" ? raw :  (raw as I18nConfigShape)?.enabled;
   if (!enabled) {
     return {
       enabled: false,
@@ -34,8 +36,11 @@ function normalizeI18n(raw: boolean | I18nConfigShape | undefined): {
       },
     };
   }
-  const shape = (typeof raw === "object" && raw !== null ? raw : {}) as I18nConfigShape;
-  const defaultLocale = typeof shape.defaultLocale === "string" ? shape.defaultLocale : null;
+  const shape = (
+    typeof raw === "object" && raw !== null ? raw : {}
+  ) as I18nConfigShape;
+  const defaultLocale =
+    typeof shape.defaultLocale === "string" ? shape.defaultLocale : null;
   const locales = Array.isArray(shape.locales)
     ? shape.locales.filter((l): l is string => typeof l === "string")
     : [];
@@ -76,7 +81,10 @@ function normalizeI18n(raw: boolean | I18nConfigShape | undefined): {
 }
 
 const BUILT_IN_DEFAULTS: Required<
-  Omit<ContenzConfig, "coveragePath" | "outputDir" | "contentDir" | "collections">
+  Omit<
+    ContenzConfig,
+    "coveragePath" | "outputDir" | "contentDir" | "collections"
+  >
 > & {
   coveragePath: string;
   outputDir: string;
@@ -147,7 +155,9 @@ export async function loadCollectionConfig(
 /**
  * Load schema module from the configured content directory.
  */
-export async function loadSchemaModule(collectionPath: string): Promise<SchemaModule | null> {
+export async function loadSchemaModule(
+  collectionPath: string
+): Promise<SchemaModule | null> {
   const schemaPath = path.join(collectionPath, "schema.ts");
   try {
     const imported = await import(pathToFileURL(schemaPath).href);
@@ -197,9 +207,13 @@ export function resolveConfig(
     i18n: i18nEnabled,
     resolvedI18n,
     adapters: buildAdapterList(project.adapters),
-    extensions: collection?.extensions ?? project.extensions ?? BUILT_IN_DEFAULTS.extensions,
+    extensions:
+      collection?.extensions ??
+      project.extensions ??
+      BUILT_IN_DEFAULTS.extensions,
     ignore: collection?.ignore ?? project.ignore ?? BUILT_IN_DEFAULTS.ignore,
-    buildSearchIndex: project.buildSearchIndex ?? BUILT_IN_DEFAULTS.buildSearchIndex,
+    buildSearchIndex:
+      project.buildSearchIndex ?? BUILT_IN_DEFAULTS.buildSearchIndex,
     types: collection?.types,
     slugPattern: collection?.slugPattern,
   };
@@ -242,11 +256,13 @@ export function extractRelations(
     // biome-ignore lint/suspicious/noExplicitAny: Zod internals — _def.shape is a function in old Zod, plain object in Zod 3.25
     const def = (schema as any)._def;
     const shape =
-      typeof def?.shape === "function" ? def.shape() : (def?.shape as Record<string, unknown>);
+      typeof def?.shape === "function"
+        ? def.shape()
+        : (def?.shape as Record<string, unknown>);
     if (shape && typeof shape === "object") {
       for (const fieldName of Object.keys(shape)) {
         // Match pattern: related{Collection} → collection
-        const match = fieldName.match(/^related([A-Z][a-zA-Z]*)$/);
+        const match = /^related([A-Z][a-zA-Z]*)$/.exec(fieldName);
         if (match) {
           const targetCollection = match[1].toLowerCase();
           // Only add if target collection exists
@@ -281,14 +297,17 @@ export function getSchemaForType(
   if (!typeName || typeName === "default") {
     return schemaModule.meta;
   }
-  const schemaKey = `${typeName}Meta` as `${string}Meta`;
+  const schemaKey = `${typeName}Meta`;
   return schemaModule[schemaKey] ?? schemaModule.meta;
 }
 
 /**
  * Determine content type from filename using config.types patterns.
  */
-export function getContentType(fileName: string, config: ResolvedConfig): string | undefined {
+export function getContentType(
+  fileName: string,
+  config: ResolvedConfig
+): string | undefined {
   if (!config.types || config.types.length === 0) {
     return undefined;
   }

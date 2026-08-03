@@ -19,19 +19,32 @@ export interface UpdateResult {
   meta: Record<string, unknown>;
 }
 
-export async function runUpdate(opts: UpdateOptions): Promise<ContentOpResult<UpdateResult>> {
+export async function runUpdate(
+  opts: UpdateOptions
+): Promise<ContentOpResult<UpdateResult>> {
   try {
     const hasSet = opts.set && Object.keys(opts.set).length > 0;
     const hasUnset = opts.unset && opts.unset.length > 0;
 
     if (!hasSet && !hasUnset) {
-      return { success: false, error: "No mutations specified. Use --set or --unset." };
+      return {
+        success: false,
+        error: "No mutations specified. Use --set or --unset.",
+      };
     }
 
     // Read current content (workspace loaded + adapters registered internally)
-    const current = await readContent(opts.cwd, opts.collection, opts.slug, opts.locale);
+    const current = await readContent(
+      opts.cwd,
+      opts.collection,
+      opts.slug,
+      opts.locale
+    );
     if (!current) {
-      return { success: false, error: `Content not found: ${opts.collection}/${opts.slug}` };
+      return {
+        success: false,
+        error: `Content not found: ${opts.collection}/${opts.slug}`,
+      };
     }
 
     // Compute the merged meta after mutations
@@ -48,7 +61,10 @@ export async function runUpdate(opts: UpdateOptions): Promise<ContentOpResult<Up
     }
 
     // Validate the merged meta against the schema (reuses cached workspace)
-    const ws = await createWorkspace({ cwd: opts.cwd, collection: opts.collection });
+    const ws = await createWorkspace({
+      cwd: opts.cwd,
+      collection: opts.collection,
+    });
     const col = ws.getCollection(opts.collection);
     if (col?.schema?.meta) {
       const validation = validateMeta(
@@ -78,7 +94,10 @@ export async function runUpdate(opts: UpdateOptions): Promise<ContentOpResult<Up
     );
 
     if (!result) {
-      return { success: false, error: `Content not found: ${opts.collection}/${opts.slug}` };
+      return {
+        success: false,
+        error: `Content not found: ${opts.collection}/${opts.slug}`,
+      };
     }
 
     return {
@@ -91,6 +110,9 @@ export async function runUpdate(opts: UpdateOptions): Promise<ContentOpResult<Up
       },
     };
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : String(error) };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
   }
 }

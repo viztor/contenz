@@ -114,9 +114,10 @@ The layer that makes contenz the perfect bridge between AI agents and project co
 
 A deployable, read-only visual interface over repo-backed content.
 
-Rather than building a heavy, monolithic Authoring Studio (with forms and edit state), Contenz leans fully into its AI-Native CLI foundation: AI agents handle the *authoring* and *editing*.
+Rather than building a heavy, monolithic Authoring Studio (with forms and edit state), Contenz leans fully into its AI-Native CLI foundation: AI agents handle the _authoring_ and _editing_.
 
 The Preview UI simply:
+
 - renders content and schema validation status beautifully
 - provides a visual "Diff/PR" viewer for non-technical stakeholders
 - allows human reviewers (like Legal or Marketing) to inspect what the AI drafted without touching GitHub Markdown diffs
@@ -239,6 +240,7 @@ The current development target is **Milestone 4: AI-Native Foundation**.
 Contenz v0.1 proved the read-only build pipeline works (incremental builds, diagnostics, i18n). Milestone 4 pivots the project to becoming a bidirectional interface.
 
 The goal is to build out:
+
 - Schema Introspection
 - Symmetric Content I/O (handling MDX, MD, JSON seamlessly)
 - A self-describing command registry (`create`, `update`, `view`, `search`, `list`)

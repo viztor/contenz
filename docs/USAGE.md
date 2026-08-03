@@ -3,6 +3,7 @@
 This guide describes every feature, command, and workflow for Contenz — a schema-first, AI-native content management CLI.
 
 For reference-level details see:
+
 - [CLI reference](./CLI.md) — all commands with options tables
 - [API reference](./API.md) — programmatic API (`@contenz/core/api`)
 - [Configuration](./CONFIGURATION.md) — project and collection config, schemas
@@ -17,10 +18,14 @@ Install the CLI and core library:
 
 ```bash
 # CLI (for commands)
-npm install -D @contenz/cli
+pnpm add -D @contenz/cli
+# or: npm install -D @contenz/cli
 
 # Core (for schema/config files)
-npm install @contenz/core zod
+pnpm add @contenz/core zod
+
+# Runtime helpers for apps that import generated content
+pnpm add @contenz/client
 ```
 
 `@contenz/cli` provides the `contenz` binary. `@contenz/core` provides schema helpers like `defineCollection` plus the `zod` peer dependency.
@@ -36,6 +41,7 @@ contenz init
 ```
 
 This creates:
+
 - `contenz.config.ts` — project configuration
 - `content/pages/schema.ts` — starter collection schema
 - `content/pages/welcome.json` — sample content file
@@ -85,16 +91,17 @@ project-root/
 
 ### Filename patterns
 
-| i18n | Pattern | Example |
-|------|---------|---------|
-| `false` | `{slug}.{ext}` | `hello-world.mdx`, `faq.md` |
-| `true` | `{slug}.{locale}.{ext}` | `moq.en.mdx`, `intro.zh.md` |
+| i18n    | Pattern                 | Example                     |
+| ------- | ----------------------- | --------------------------- |
+| `false` | `{slug}.{ext}`          | `hello-world.mdx`, `faq.md` |
+| `true`  | `{slug}.{locale}.{ext}` | `moq.en.mdx`, `intro.zh.md` |
 
 Supported extensions: `md`, `mdx`, `json` (default). MD/MDX require `@contenz/adapter-mdx` to be registered; JSON is built-in.
 
 ### Metadata formats
 
 **MDX** (`export const meta`):
+
 ```mdx
 export const meta = {
   title: "Welcome",
@@ -105,6 +112,7 @@ Your content body goes here.
 ```
 
 **Markdown** (frontmatter):
+
 ```md
 ---
 title: Welcome
@@ -115,6 +123,7 @@ Your content body goes here.
 ```
 
 **JSON** (pure data, no body):
+
 ```json
 {
   "title": "Welcome",
@@ -146,12 +155,13 @@ For multi-type collections (e.g. terms + topics):
 import { defineMultiTypeCollection } from "@contenz/core";
 import { z } from "zod";
 
-export const { termMeta, topicMeta, meta, relations, types } = defineMultiTypeCollection({
-  schemas: {
-    topic: { schema: z.object({ title: z.string() }), pattern: /^topic-/ },
-    term: { schema: z.object({ term: z.string() }), pattern: /.*/ },
-  },
-});
+export const { termMeta, topicMeta, meta, relations, types } =
+  defineMultiTypeCollection({
+    schemas: {
+      topic: { schema: z.object({ title: z.string() }), pattern: /^topic-/ },
+      term: { schema: z.object({ term: z.string() }), pattern: /.*/ },
+    },
+  });
 ```
 
 ### Relations
@@ -162,7 +172,7 @@ Validate that slugs in relation fields exist in target collections. Define relat
 export const { meta, relations } = defineCollection({
   schema,
   relations: {
-    glossaryLinks: "glossary",   // any field name → target collection
+    glossaryLinks: "glossary", // any field name → target collection
     authorRef: "team",
   },
 });
@@ -221,6 +231,7 @@ Output goes to `generated/content/` (configurable via `outputDir`).
 ### Generated output shape
 
 Without i18n:
+
 ```ts
 export const faq = {
   hello: {
@@ -233,6 +244,7 @@ export const faq = {
 ```
 
 With i18n:
+
 ```ts
 export const faq = {
   moq: {
@@ -389,8 +401,15 @@ Import from `@contenz/core/api` for scripting and tooling:
 
 ```ts
 import {
-  runBuild, runLint, runStatus,
-  runList, runView, runCreate, runUpdate, runSearch, runSchema,
+  runBuild,
+  runLint,
+  runStatus,
+  runList,
+  runView,
+  runCreate,
+  runUpdate,
+  runSearch,
+  runSchema,
   createWorkspace,
 } from "@contenz/core/api";
 
@@ -403,7 +422,11 @@ const buildResult = await runBuild({ cwd });
 // Content operations
 const schema = await runSchema({ cwd, collection: "faq" });
 const item = await runView({ cwd, collection: "faq", slug: "hello" });
-const results = await runSearch({ cwd, collection: "faq", fields: { category: "products" } });
+const results = await runSearch({
+  cwd,
+  collection: "faq",
+  fields: { category: "products" },
+});
 ```
 
 For schema files, import from `@contenz/core` (the default entry):
@@ -422,7 +445,7 @@ See [API reference](./API.md) for the complete list of exports and types.
 ### Project config (`contenz.config.ts`)
 
 | Option | Type | Default | Description |
-|--------|------|---------|-------------|
+| --- | --- | --- | --- |
 | `sources` | `string[]` | `["content/*"]` | Source patterns for collection discovery |
 | `outputDir` | `string` | `"generated/content"` | Generated output directory |
 | `i18n` | `boolean \| I18nConfigShape` | `false` | Enable locale detection |
@@ -436,7 +459,7 @@ See [API reference](./API.md) for the complete list of exports and types.
 ### Collection config (`content/<collection>/config.ts`)
 
 | Option | Type | Description |
-|--------|------|-------------|
+| --- | --- | --- |
 | `types` | `ContentType[]` | Multi-type: `{ name, pattern }` |
 | `slugPattern` | `RegExp` | Custom slug extraction regex |
 | `i18n` | `boolean \| I18nConfigShape` | Override project i18n |
@@ -461,10 +484,80 @@ See [Configuration](./CONFIGURATION.md) for full details.
 
 ---
 
-## 9. Common commands cheat sheet
+## 9. Consuming generated content (`@contenz/client`)
+
+After `contenz build`, import generated modules in your app and resolve locales with `@contenz/client`.
+
+```bash
+pnpm add @contenz/client
+# or: npm install @contenz/client
+```
+
+### Locale-bound content handle
+
+```ts
+import { faq, blog } from "@/generated/content";
+import { createContent } from "@contenz/client";
+
+// e.g. Next.js App Router
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+
+  const content = createContent({
+    locale,
+    defaultLocale: "en",
+    fallback: { "zh-Hant": "zh", zh: "en" },
+    collections: { faq, blog },
+  });
+
+  // Named collections are typed properties:
+  const entry = content.faq.get("moq");
+  // entry?.question
+  // entry?._resolvedFrom  // set when served from a fallback locale
+
+  const allFaqs = content.faq.all();
+  // or: content.collection("faq")?.get("moq")
+}
+```
+
+### Field helper (`createT`)
+
+Prefer `createContent` for pages. Use `createT` for thin field reads:
+
+```ts
+import { faq } from "@/generated/content";
+import { createT } from "@contenz/client";
+
+const t = createT({ locale: "zh", defaultLocale: "en" });
+t(faq, "moq", "question"); // localized string or undefined
+t.item(faq, "moq"); // full resolved entry
+```
+
+### Query builder
+
+```ts
+import { query } from "@contenz/client";
+import { posts } from "@/generated/content";
+
+const latest = query(Object.values(posts))
+  .where((p) => p.published)
+  .sortBy("date", "desc")
+  .take(10)
+  .all();
+```
+
+Locale resolution order: requested locale → configured `fallback` chain → `defaultLocale` → first available locale. See [API – client](./API.md).
+
+---
+
+## 10. Common commands cheat sheet
 
 | Task | Command |
-|------|---------|
+| --- | --- |
 | Initialize project | `contenz init` |
 | Validate content | `contenz lint` |
 | Generate TypeScript | `contenz build` |
@@ -476,3 +569,5 @@ See [Configuration](./CONFIGURATION.md) for full details.
 | Update an item | `contenz update <collection> <slug> --set key=value` |
 | Search items | `contenz search <collection> [query] [--field key=value]` |
 | Introspect schema | `contenz schema <collection>` |
+| Agent skill file | `contenz skill` |
+| Bash completion | `contenz install` / `contenz uninstall` |

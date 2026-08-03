@@ -6,6 +6,7 @@ Contenz is a content management toolkit for developers and content teams. It sim
 
 - `packages/core` – core library (published as `@contenz/core`); programmatic API only, no CLI binary
 - `packages/cli` – CLI (published as `@contenz/cli`); provides the `contenz` binary
+- `packages/client` – runtime query helpers for generated output (published as `@contenz/client`)
 - `packages/adapter-mdx` – MD/MDX format adapter (published as `@contenz/adapter-mdx`)
 - `packages/e2e` – e2e tests and fixtures (private; not published)
 
@@ -30,17 +31,20 @@ Planning and contribution:
 
 ## Common commands
 
-- `npm run build` - build all packages
-- `npm run test` - run tests for all packages
-- `npm run lint` - lint all packages
-- `npm run typecheck` - typecheck all packages
-- `npm run publish:all` - build and publish all packages to npm
-- `npm run publish:dry` - preview what would be published
+Requires **Node.js LTS** (≥ 24) and **pnpm 11** (see `engines` / `packageManager`).
 
-To run package-level commands directly:
+- `pnpm run build` - build all packages
+- `pnpm test` - run tests for all packages
+- `pnpm run lint` - lint all packages
+- `pnpm run typecheck` - typecheck all packages
+- `pnpm run ci` - lint + format check + typecheck + test
+- `pnpm run publish:all` - build and publish all packages to npm
+- `pnpm run publish:dry` - show what would be published
+
+Package-level:
 
 ```bash
-npm run build --workspace @contenz/core
+pnpm --filter @contenz/core build
 ```
 
 ## Project setup
@@ -48,13 +52,14 @@ npm run build --workspace @contenz/core
 For CLI usage:
 
 ```bash
-npm install -D @contenz/cli
+pnpm add -D @contenz/cli
+# or: npm install -D @contenz/cli
 ```
 
 For library usage in schema/config files:
 
 ```bash
-npm install @contenz/core
+pnpm add @contenz/core
 ```
 
 ## CLI usage
@@ -79,6 +84,10 @@ contenz watch
 
 # Check if build is up to date
 contenz status
+
+# Generate AI agent skill for the content model
+contenz skill
+contenz skill --format json
 
 # Content operations
 contenz list faq
@@ -190,10 +199,10 @@ export const config: ContenzConfig = {
 
 ## Filename patterns
 
-| i18n | Pattern | Example |
-|------|---------|---------|
-| `true` | `{slug}.{locale}.{ext}` | `moq.en.mdx` |
-| `false` | `{slug}.{ext}` | `hello-world.mdx` |
+| i18n    | Pattern                 | Example           |
+| ------- | ----------------------- | ----------------- |
+| `true`  | `{slug}.{locale}.{ext}` | `moq.en.mdx`      |
+| `false` | `{slug}.{ext}`          | `hello-world.mdx` |
 
 ## Generated output shape
 
@@ -237,7 +246,7 @@ Define relations explicitly in `defineCollection()` using any field name:
 export const { meta, relations } = defineCollection({
   schema,
   relations: {
-    glossaryLinks: "glossary",   // any field name → target collection
+    glossaryLinks: "glossary", // any field name → target collection
     authorRef: "team",
   },
 });

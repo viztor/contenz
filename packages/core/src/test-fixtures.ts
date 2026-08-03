@@ -29,19 +29,30 @@ async function rewriteFixtureImports(dir: string): Promise<void> {
     }
 
     const source = await fs.readFile(entryPath, "utf-8");
-    if (!source.includes("@contenz/core") && !source.includes("@contenz/adapter-mdx")) {
+    if (
+      !source.includes("@contenz/core") &&
+      !source.includes("@contenz/adapter-mdx")
+    ) {
       continue;
     }
 
-    let rewritten = source.replaceAll('"@contenz/core"', `"${coreSourceImport}"`);
-    rewritten = rewritten.replaceAll('"@contenz/adapter-mdx"', `"${adapterMdxSourceImport}"`);
+    let rewritten = source.replaceAll(
+      '"@contenz/core"',
+      `"${coreSourceImport}"`
+    );
+    rewritten = rewritten.replaceAll(
+      '"@contenz/adapter-mdx"',
+      `"${adapterMdxSourceImport}"`
+    );
     await fs.writeFile(entryPath, rewritten, "utf-8");
   }
 }
 
 export async function prepareFixture(name: string): Promise<string> {
   const fixtureSource = path.join(e2eFixturesDir, name);
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), `contenz-core-${name}-`));
+  const tempDir = await fs.mkdtemp(
+    path.join(os.tmpdir(), `contenz-core-${name}-`)
+  );
   await fs.cp(fixtureSource, tempDir, { recursive: true });
   await rewriteFixtureImports(tempDir);
   return tempDir;

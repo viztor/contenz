@@ -11,7 +11,9 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
+
 import type { ZodTypeAny } from "zod";
+
 import { generateTypeFromZod, type I18nCollectionData } from "./generator.js";
 
 // ── Types ───────────────────────────────────────────────────────────────────
@@ -65,7 +67,8 @@ function resolveLocaleChain(
   maxDepth = 5
 ): { file: string; meta: Record<string, unknown>; _fallback?: string } | null {
   // Direct hit
-  if (locales[locale]) return { file: locales[locale].file, meta: locales[locale].meta };
+  if (locales[locale])
+    return { file: locales[locale].file, meta: locales[locale].meta };
 
   // Chain fallback
   let current = fallbackMap[locale] ?? fallbackMap.__default;
@@ -73,7 +76,11 @@ function resolveLocaleChain(
   while (current && !visited.has(current) && visited.size < maxDepth) {
     visited.add(current);
     if (locales[current]) {
-      return { file: locales[current].file, meta: locales[current].meta, _fallback: current };
+      return {
+        file: locales[current].file,
+        meta: locales[current].meta,
+        _fallback: current,
+      };
     }
     current = fallbackMap[current] ?? fallbackMap.__default;
   }
@@ -121,7 +128,11 @@ export async function generateSplitLocaleCollectionFile(
 
   output += `export const ${collectionName}Slugs = Object.keys(${collectionName}) as (keyof typeof ${collectionName})[];\n`;
 
-  await fs.writeFile(path.join(localeDir, `${collectionName}.ts`), output, "utf-8");
+  await fs.writeFile(
+    path.join(localeDir, `${collectionName}.ts`),
+    output,
+    "utf-8"
+  );
 }
 
 // ── Per-locale index file ({locale}/index.ts) ───────────────────────────────

@@ -1,90 +1,75 @@
 import { runUpdate } from "@contenz/core/api";
-import { defineCommand } from "citty";
-import { printAndExit } from "../output.js";
+import { buildCommand } from "@stricli/core";
 
-export const updateCommand = defineCommand({
-	meta: {
-		name: "update",
-		description: "Update fields on an existing content item",
-	},
-	args: {
-		collection: {
-			type: "positional",
-			description: "Collection name",
-			required: true,
-		},
-		slug: {
-			type: "positional",
-			description: "Content slug",
-			required: true,
-		},
-		locale: {
-			type: "string",
-			description: "Locale to update",
-			required: false,
-		},
-		set: {
-			type: "string",
-			description: "Set field values (key=value), repeatable",
-			required: false,
-		},
-		unset: {
-			type: "string",
-			description: "Remove optional fields, repeatable",
-			required: false,
-		},
-		cwd: {
-			type: "string",
-			description: "Project root",
-			default: ".",
-		},
-		format: {
-			type: "string",
-			description: "Output format: json or pretty",
-			default: "json",
-		},
-	},
-	async run({ args }) {
-		// Parse --set flags
-		const setFields: Record<string, unknown> = {};
-		if (args.set) {
-			const pairs = Array.isArray(args.set) ? args.set : [args.set];
-			for (const pair of pairs) {
-				const eqIdx = pair.indexOf("=");
-				if (eqIdx === -1) {
-					printAndExit(
-						{
-							success: false,
-							error: `Invalid --set format: "${pair}". Expected key=value`,
-						},
-						args.format,
-					);
-				}
-				const key = pair.slice(0, eqIdx);
-				const rawValue = pair.slice(eqIdx + 1);
-				try {
-					setFields[key] = JSON.parse(rawValue);
-				} catch {
-					setFields[key] = rawValue;
-				}
-			}
-		}
+import type { ContenzContext } from "../context.js";
+import { printResult } from "../output.js";
+import {
+  cwdFlag,
+  localeFlag,
+  outputFormatFlag,
+  parseSetPairs,
+  setFlag,
+  unsetFlag,
+  type OutputFormat,
+} from "../shared.js";
 
-		// Parse --unset flags
-		const unsetFields: string[] = [];
-		if (args.unset) {
-			const fields = Array.isArray(args.unset) ? args.unset : [args.unset];
-			unsetFields.push(...fields);
-		}
+interface UpdateFlags {
+  cwd: string;
+  locale?: string;
+  set?: readonly string[];
+  unset?: readonly string[];
+  format: OutputFormat;
+}
 
-		const result = await runUpdate({
-			cwd: args.cwd,
-			collection: args.collection,
-			slug: args.slug,
-			set: setFields,
-			unset: unsetFields,
-			locale: args.locale,
-		});
-		printAndExit(result, args.format);
-	},
+async function update(
+  this: ContenzContext,
+  flags: UpdateFlags,
+  collection: string,
+  slug: string
+): Promise<void> {
+  const setFields = parseSetPairs(flags.set);
+  const unsetFields = flags.unset ? [...flags.unset] : [];
+
+  const result = await runUpdate({
+    cwd: flags.cwd,
+    collection,
+    slug,
+    set: setFields,
+    unset: unsetFields,
+    locale: flags.locale,
+  });
+  printResult(this, result, flags.format);
+}
+
+export const updateCommandDef = buildCommand({
+  func: update,
+  parameters: {
+    positional: {
+      kind: "tuple",
+      parameters: [
+        {
+          brief: "Collection name",
+          parse: String,
+          placeholder: "collection",
+        },
+        {
+          brief: "Content slug",
+          parse: String,
+          placeholder: "slug",
+        },
+      ],
+    },
+    flags: {
+      cwd: cwdFlag,
+      locale: localeFlag,
+      set: setFlag,
+      unset: unsetFlag,
+      format: outputFormatFlag,
+    },
+  },
+  docs: {
+    brief: "Update fields on an existing content item",
+    fullDescription:
+      "Update with --set key=value and/or --unset field (both repeatable).",
+  },
 });

@@ -1,15 +1,25 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
+
 import { resolveConfig } from "./config.js";
 import { discoverCollections, normalizeSourcePattern } from "./sources.js";
-import type { CollectionConfig, ContenzConfig, ResolvedConfig } from "./types.js";
+import type {
+  CollectionConfig,
+  ContenzConfig,
+  ResolvedConfig,
+} from "./types.js";
 
 const tempDirs: string[] = [];
 
 afterEach(async () => {
-  await Promise.all(tempDirs.splice(0).map((dir) => fs.rm(dir, { recursive: true, force: true })));
+  await Promise.all(
+    tempDirs
+      .splice(0)
+      .map( async (dir) => fs.rm(dir, { recursive: true, force: true }))
+  );
 });
 
 async function createTempProject(): Promise<string> {
@@ -98,7 +108,10 @@ describe("resolveConfig", () => {
       i18n: { enabled: true, fallback: { "zh-Hant": "zh", zh: "en" } },
     };
     const resolved = resolveConfig(project);
-    expect(resolved.resolvedI18n?.fallbackMap).toEqual({ "zh-Hant": "zh", zh: "en" });
+    expect(resolved.resolvedI18n?.fallbackMap).toEqual({
+      "zh-Hant": "zh",
+      zh: "en",
+    });
   });
 });
 
@@ -109,8 +122,12 @@ describe("normalizeSourcePattern", () => {
   });
 
   it("rejects unsupported glob syntax", () => {
-    expect(() => normalizeSourcePattern("content/**")).toThrow(/Unsupported source pattern/);
-    expect(() => normalizeSourcePattern("content/*/nested")).toThrow(/Unsupported source pattern/);
+    expect(() => normalizeSourcePattern("content/**")).toThrow(
+      /Unsupported source pattern/
+    );
+    expect(() => normalizeSourcePattern("content/*/nested")).toThrow(
+      /Unsupported source pattern/
+    );
   });
 });
 
@@ -119,16 +136,27 @@ describe("discoverCollections", () => {
     const cwd = await createTempProject();
 
     await fs.mkdir(path.join(cwd, "content", "faq"), { recursive: true });
-    await fs.writeFile(path.join(cwd, "content", "faq", "schema.ts"), "export const meta = {};\n");
+    await fs.writeFile(
+      path.join(cwd, "content", "faq", "schema.ts"),
+      "export const meta = {};\n"
+    );
     await fs.mkdir(path.join(cwd, "docs"), { recursive: true });
-    await fs.writeFile(path.join(cwd, "docs", "schema.ts"), "export const meta = {};\n");
+    await fs.writeFile(
+      path.join(cwd, "docs", "schema.ts"),
+      "export const meta = {};\n"
+    );
 
     const result = await discoverCollections(cwd, ["content/*", "docs"]);
 
     expect(result.errors).toEqual([]);
-    expect(result.collections.map((collection) => collection.name)).toEqual(["docs", "faq"]);
+    expect(result.collections.map((collection) => collection.name)).toEqual([
+      "docs",
+      "faq",
+    ]);
     expect(
-      result.collections.map((collection) => path.relative(cwd, collection.collectionPath))
+      result.collections.map((collection) =>
+        path.relative(cwd, collection.collectionPath)
+      )
     ).toEqual(["docs", "content/faq"]);
   });
 
@@ -136,13 +164,21 @@ describe("discoverCollections", () => {
     const cwd = await createTempProject();
 
     await fs.mkdir(path.join(cwd, "content", "docs"), { recursive: true });
-    await fs.writeFile(path.join(cwd, "content", "docs", "schema.ts"), "export const meta = {};\n");
+    await fs.writeFile(
+      path.join(cwd, "content", "docs", "schema.ts"),
+      "export const meta = {};\n"
+    );
     await fs.mkdir(path.join(cwd, "docs"), { recursive: true });
-    await fs.writeFile(path.join(cwd, "docs", "schema.ts"), "export const meta = {};\n");
+    await fs.writeFile(
+      path.join(cwd, "docs", "schema.ts"),
+      "export const meta = {};\n"
+    );
 
     const result = await discoverCollections(cwd, ["content/*", "docs"]);
 
-    expect(result.collections.map((collection) => collection.name)).toEqual(["docs"]);
+    expect(result.collections.map((collection) => collection.name)).toEqual([
+      "docs",
+    ]);
     expect(result.errors).toEqual([
       'Collection "docs" was discovered from both "content/*" and "docs". Collection names must be unique across sources.',
     ]);
@@ -212,7 +248,11 @@ describe("extractRelations", () => {
         seeAlso: "faq",
       },
     };
-    const result = extractRelations(module as never, ["glossary", "team", "faq"]);
+    const result = extractRelations(module, [
+      "glossary",
+      "team",
+      "faq",
+    ]);
     expect(result).toEqual({
       glossaryLinks: "glossary",
       authorRef: "team",
@@ -248,7 +288,7 @@ describe("extractRelations", () => {
     const { extractRelations } = await import("./config.js");
     const module = { relations: { tags: "glossary" } };
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    extractRelations(module as never, ["glossary"]);
+    extractRelations(module, ["glossary"]);
     expect(warnSpy).not.toHaveBeenCalled();
     warnSpy.mockRestore();
   });

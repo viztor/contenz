@@ -5,7 +5,7 @@ This folder is the main documentation set for the Contenz repo. Use it to set up
 ## Documentation index
 
 | Document | Description |
-|----------|-------------|
+| --- | --- |
 | [Architecture](./ARCHITECTURE.md) | Monorepo layout, packages, and how the pipeline fits together |
 | [Configuration](./CONFIGURATION.md) | Project and collection config, schema authoring, sources |
 | [CLI reference](./CLI.md) | All commands: `init`, `lint`, `build`, `watch`, `status`, and AI-native ops |
@@ -22,17 +22,20 @@ This folder is the main documentation set for the Contenz repo. Use it to set up
 ## Quick start
 
 1. **Install** in your project:
+
    ```bash
    npm install -D @contenz/cli
    npm install @contenz/core
    ```
 
 2. **Scaffold** Contenz:
+
    ```bash
    contenz init
    ```
 
 3. **Validate** content:
+
    ```bash
    contenz lint
    ```

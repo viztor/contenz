@@ -30,7 +30,7 @@ const schema = z.object({
 export const { meta, relations } = defineCollection({
   schema,
   relations: {
-    glossaryLinks: "glossary",   // any field name → target collection
+    glossaryLinks: "glossary", // any field name → target collection
   },
 });
 ```
@@ -44,12 +44,13 @@ import { z } from "zod";
 const termSchema = z.object({ term: z.string() });
 const topicSchema = z.object({ title: z.string() });
 
-export const { termMeta, topicMeta, meta, relations, types } = defineMultiTypeCollection({
-  schemas: {
-    topic: { schema: topicSchema, pattern: /^topic-/ },
-    term: { schema: termSchema, pattern: /.*/ },
-  },
-});
+export const { termMeta, topicMeta, meta, relations, types } =
+  defineMultiTypeCollection({
+    schemas: {
+      topic: { schema: topicSchema, pattern: /^topic-/ },
+      term: { schema: termSchema, pattern: /.*/ },
+    },
+  });
 ```
 
 Then you can omit `config.types` in `config.ts`. Or use plain `schemas: { term: termSchema, topic: topicSchema }` and set `config.types` in `config.ts`. See [Configuration – Multi-type](../../docs/CONFIGURATION.md#multi-type-collection).

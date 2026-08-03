@@ -18,7 +18,12 @@ export interface ManifestCollectionEntry {
   inputHash: string;
   outputFiles: string[];
   /** For regenerating index when some collections are skipped */
-  indexMeta?: { name: string; types?: string[]; hasI18n: boolean; metaTypeName?: string };
+  indexMeta?: {
+    name: string;
+    types?: string[];
+    hasI18n: boolean;
+    metaTypeName?: string;
+  };
 }
 
 export interface BuildManifest {
@@ -45,7 +50,9 @@ function sha256(data: string): string {
  */
 export function computeConfigHash(config: Record<string, unknown>): string {
   // Serialize deterministically: sorted keys, no RegExp/function values
-  return sha256(JSON.stringify(config, (_, v) => (v instanceof RegExp ? v.source : v)));
+  return sha256(
+    JSON.stringify(config, (_, v) => (v instanceof RegExp ? v.source : v))
+  );
 }
 
 async function readFileSafe(filePath: string): Promise<string> {
@@ -132,7 +139,8 @@ export function getCachedInputHash(
   collectionName: string,
   configHash?: string
 ): string | null {
-  if (!manifest || manifest.cwd !== cwd || manifest.outputDir !== outputDir) return null;
+  if (!manifest || manifest.cwd !== cwd || manifest.outputDir !== outputDir)
+    return null;
   if (
     manifest.sources.length !== sources.length ||
     manifest.sources.some((s, i) => s !== sources[i])
@@ -175,6 +183,8 @@ export function mergeManifest(
     sources,
     configHash,
     generatedAt: new Date().toISOString(),
-    collections: [...byName.values()].sort((a, b) => a.name.localeCompare(b.name)),
+    collections: [...byName.values()].sort((a, b) =>
+      a.name.localeCompare(b.name)
+    ),
   };
 }

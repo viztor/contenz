@@ -22,6 +22,10 @@ export interface Diagnostic {
   collection?: string;
   file?: string;
   field?: string;
+  /** Content slug for per-item diagnostics (e.g. missing translations) */
+  slug?: string;
+  /** Locale for i18n diagnostics (e.g. the missing locale) */
+  locale?: string;
 }
 
 export interface DiagnosticSummary {
@@ -56,7 +60,10 @@ function formatLocation(diagnostic: Diagnostic): string {
 }
 
 function escapeGithubValue(value: string): string {
-  return value.replaceAll("%", "%25").replaceAll("\r", "%0D").replaceAll("\n", "%0A");
+  return value
+    .replaceAll("%", "%25")
+    .replaceAll("\r", "%0D")
+    .replaceAll("\n", "%0A");
 }
 
 function compareDiagnostics(left: Diagnostic, right: Diagnostic): number {
@@ -89,7 +96,11 @@ function formatPrettyReport(input: DiagnosticReportInput): string {
 
   if (diagnostics.length === 0) {
     lines.push("");
-    lines.push(pc.green(input.success ? "No diagnostics." : "No diagnostics were emitted."));
+    lines.push(
+      pc.green(
+        input.success ? "No diagnostics." : "No diagnostics were emitted."
+      )
+    );
   } else {
     lines.push("");
 
@@ -98,13 +109,15 @@ function formatPrettyReport(input: DiagnosticReportInput): string {
       const prefix =
         diagnostic.severity === "error"
           ? pc.red("error")
-          : diagnostic.severity === "warning"
+          : (diagnostic.severity === "warning"
             ? pc.yellow("warning")
-            : pc.blue("info");
+            : pc.blue("info"));
       const code = pc.dim(diagnostic.code);
       const category = pc.dim(`[${diagnostic.category}]`);
       const locationLabel = location ? ` ${pc.dim(location)}` : "";
-      const fieldLabel = diagnostic.field ? ` ${pc.dim(`(${diagnostic.field})`)}` : "";
+      const fieldLabel = diagnostic.field
+        ? ` ${pc.dim(`(${diagnostic.field})`)}`
+        : "";
       lines.push(`${prefix} ${code} ${category}${locationLabel}${fieldLabel}`);
       lines.push(`  ${diagnostic.message}`);
     }
@@ -140,18 +153,25 @@ function formatGithubReport(input: DiagnosticReportInput): string {
     const command =
       diagnostic.severity === "error"
         ? "error"
-        : diagnostic.severity === "warning"
+        : (diagnostic.severity === "warning"
           ? "warning"
-          : "notice";
+          : "notice");
     const metadata: string[] = [];
-    if (diagnostic.file) metadata.push(`file=${escapeGithubValue(diagnostic.file)}`);
+    if (diagnostic.file)
+      metadata.push(`file=${escapeGithubValue(diagnostic.file)}`);
     if (diagnostic.field) {
-      metadata.push(`title=${escapeGithubValue(`${diagnostic.code} (${diagnostic.field})`)}`);
+      metadata.push(
+        `title=${escapeGithubValue(`${diagnostic.code} (${diagnostic.field})`)}`
+      );
     } else metadata.push(`title=${escapeGithubValue(diagnostic.code)}`);
 
     const location = formatLocation(diagnostic);
-    const message = location ? `${location}: ${diagnostic.message}` : diagnostic.message;
-    lines.push(`::${command} ${metadata.join(",")}::${escapeGithubValue(message)}`);
+    const message = location
+      ? `${location}: ${diagnostic.message}`
+      : diagnostic.message;
+    lines.push(
+      `::${command} ${metadata.join(",")}::${escapeGithubValue(message)}`
+    );
   }
 
   if (lines.length === 0) {
@@ -178,7 +198,10 @@ export function formatDiagnosticsReport(input: DiagnosticReportInput): string {
 
 // ── Diagnostic factories (DRY helpers for pipelines) ───────────────────────
 
-export function schemaLoadFailed(source: string, collection: string): Diagnostic {
+export function schemaLoadFailed(
+  source: string,
+  collection: string
+): Diagnostic {
   return {
     code: "SCHEMA_LOAD_FAILED",
     severity: "error",
@@ -189,7 +212,10 @@ export function schemaLoadFailed(source: string, collection: string): Diagnostic
   };
 }
 
-export function schemaExportMissing(source: string, collection: string): Diagnostic {
+export function schemaExportMissing(
+  source: string,
+  collection: string
+): Diagnostic {
   return {
     code: "SCHEMA_EXPORT_MISSING",
     severity: "error",

@@ -10,7 +10,7 @@ Contenz is a schema-first, AI-native content management CLI. Content lives in th
 This skill teaches you how to operate on a Contenz project. For exhaustive option tables and edge cases, read the built-in docs directly — they are the source of truth:
 
 | Doc | Path | What it covers |
-|-----|------|----------------|
+| --- | --- | --- |
 | CLI reference | `docs/CLI.md` | Every command, every flag, output shapes |
 | Usage guide | `docs/USAGE.md` | End-to-end workflows with examples |
 | Configuration | `docs/CONFIGURATION.md` | Project config, collection config, schemas, adapters |
@@ -83,6 +83,7 @@ contenz create <collection> <slug> --type term --set term="API" --format json
 The `--set` flag is repeatable. Values are parsed as JSON when possible, otherwise treated as strings. Schema defaults are auto-applied. If required fields are missing, the command fails with diagnostics.
 
 **Pre-flight checklist:**
+
 1. Run `contenz schema <collection>` to know the required fields
 2. If i18n is enabled, always pass `--locale`
 3. If multi-type, always pass `--type`
@@ -230,6 +231,7 @@ contenz build --force
 When content has a body (MDX/MD), `contenz create` writes the metadata but the body will be empty. To create a fully translated file including body content, write the file directly:
 
 **For MDX/MD with frontmatter:**
+
 ```
 ---
 title: 翻译标题
@@ -242,8 +244,9 @@ category: products
 Save to: `content/<collection>/<slug>.<locale>.mdx`
 
 **For JSON (no body):**
+
 ```json
-{"title": "翻译标题", "category": "products"}
+{ "title": "翻译标题", "category": "products" }
 ```
 
 Save to: `content/<collection>/<slug>.<locale>.json`
@@ -252,10 +255,10 @@ After writing files directly, run `contenz lint` to validate them against the sc
 
 ### Filename convention
 
-| i18n | Pattern | Example |
-|------|---------|---------|
-| `true` | `{slug}.{locale}.{ext}` | `moq.zh.mdx` |
-| `false` | `{slug}.{ext}` | `hello.mdx` |
+| i18n    | Pattern                 | Example      |
+| ------- | ----------------------- | ------------ |
+| `true`  | `{slug}.{locale}.{ext}` | `moq.zh.mdx` |
+| `false` | `{slug}.{ext}`          | `hello.mdx`  |
 
 The locale is embedded in the filename. This is how Contenz discovers which locale a file belongs to.
 
@@ -299,8 +302,14 @@ For scripting beyond what the CLI offers, use `@contenz/core/api`:
 
 ```ts
 import {
-  runList, runView, runCreate, runUpdate,
-  runSearch, runSchema, runLint, runBuild,
+  runList,
+  runView,
+  runCreate,
+  runUpdate,
+  runSearch,
+  runSchema,
+  runLint,
+  runBuild,
 } from "@contenz/core/api";
 ```
 
@@ -338,17 +347,17 @@ Rebuilds on every content/config change.
 
 ## Quick reference
 
-| Task | Command |
-|------|---------|
-| List collections | `contenz list` |
-| List items | `contenz list <collection>` |
-| Introspect schema | `contenz schema <collection>` |
-| View item | `contenz view <collection> <slug>` |
-| Create item | `contenz create <collection> <slug> --set k=v` |
-| Update item | `contenz update <collection> <slug> --set k=v` |
-| Search | `contenz search <collection> [query] [--field k=v]` |
-| Validate | `contenz lint` |
-| Build | `contenz build` |
-| Coverage report | `contenz lint --coverage` |
-| Watch | `contenz watch` |
-| Build status | `contenz status` |
+| Task              | Command                                             |
+| ----------------- | --------------------------------------------------- |
+| List collections  | `contenz list`                                      |
+| List items        | `contenz list <collection>`                         |
+| Introspect schema | `contenz schema <collection>`                       |
+| View item         | `contenz view <collection> <slug>`                  |
+| Create item       | `contenz create <collection> <slug> --set k=v`      |
+| Update item       | `contenz update <collection> <slug> --set k=v`      |
+| Search            | `contenz search <collection> [query] [--field k=v]` |
+| Validate          | `contenz lint`                                      |
+| Build             | `contenz build`                                     |
+| Coverage report   | `contenz lint --coverage`                           |
+| Watch             | `contenz watch`                                     |
+| Build status      | `contenz status`                                    |

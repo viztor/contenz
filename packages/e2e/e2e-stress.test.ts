@@ -14,11 +14,9 @@
  *   - Content idempotency under rapid mutation
  */
 
-import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+
 import {
   runBuild,
   runLint,
@@ -31,87 +29,24 @@ import {
   runSchema,
   createWorkspace,
 } from "@contenz/core/api";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-// ── Paths ───────────────────────────────────────────────────────────────────
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const cliRoot = path.resolve(__dirname, "..", "cli");
-const coreRoot = path.resolve(__dirname, "..", "core");
-const adapterMdxRoot = path.resolve(__dirname, "..", "adapter-mdx");
-const binPath = path.join(cliRoot, "bin", "run.mjs");
-
-const fixture = (name: string) => path.join(__dirname, "fixtures", name);
-
-// ── Helpers ─────────────────────────────────────────────────────────────────
+import {
+  cleanGenerated,
+  fixture,
+  linkAllFixtures,
+  runCli as runCliBase,
+} from "./setup.js";
 
 const CLI_TIMEOUT_MS = 15_000;
-
-function runCli(
-  args: string[],
-  cwd: string
-): { status: number | null; stdout: string; stderr: string } {
-  const result = spawnSync(process.execPath, [binPath, ...args], {
-    cwd,
-    encoding: "utf-8",
-    env: { ...process.env, FORCE_COLOR: "0" },
-    timeout: CLI_TIMEOUT_MS,
-  });
-  if (result.signal === "SIGTERM") {
-    return {
-      status: 1,
-      stdout: result.stdout ?? "",
-      stderr: `[TIMEOUT after ${CLI_TIMEOUT_MS}ms] ${result.stderr ?? ""}`,
-    };
-  }
-  return {
-    status: result.status,
-    stdout: result.stdout ?? "",
-    stderr: result.stderr ?? "",
-  };
+function runCli(args: string[], cwd: string) {
+  return runCliBase(args, cwd, CLI_TIMEOUT_MS);
 }
-
-function ensureSymlink(projectDir: string, pkg: string, target: string): void {
-  const linkPath = path.join(projectDir, "node_modules", ...pkg.split("/"));
-  try {
-    const stat = fs.lstatSync(linkPath);
-    if (stat.isSymbolicLink()) {
-      const resolved = path.resolve(
-        path.dirname(linkPath),
-        fs.readlinkSync(linkPath)
-      );
-      if (fs.existsSync(resolved)) return;
-      fs.rmSync(linkPath, { recursive: true, force: true });
-    } else {
-      return;
-    }
-  } catch {
-    /* doesn't exist yet */
-  }
-  fs.mkdirSync(path.dirname(linkPath), { recursive: true });
-  fs.symlinkSync(target, linkPath);
-}
-
-/** Clean up generated files for a fixture */
-function cleanGenerated(fixturePath: string): void {
-  const gen = path.join(fixturePath, "generated");
-  if (fs.existsSync(gen)) fs.rmSync(gen, { recursive: true, force: true });
-  const manifest = path.join(fixturePath, ".contenz");
-  if (fs.existsSync(manifest))
-    fs.rmSync(manifest, { recursive: true, force: true });
-}
-
-// ── Setup ───────────────────────────────────────────────────────────────────
 
 const LARGE_PROJECT = fixture("large-project");
 
 beforeAll(() => {
-  const repoRoot = path.resolve(__dirname, "..", "..");
-  const zodRoot = path.join(repoRoot, "node_modules", "zod");
-  for (const name of ["large-project", "minimal", "i18n", "mixed-sources"]) {
-    ensureSymlink(fixture(name), "@contenz/core", coreRoot);
-    ensureSymlink(fixture(name), "@contenz/adapter-mdx", adapterMdxRoot);
-  }
-  ensureSymlink(LARGE_PROJECT, "zod", zodRoot);
+  linkAllFixtures(["large-project", "minimal", "i18n", "mixed-sources"]);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -220,10 +155,7 @@ describe("multi-collection: schema introspection", () => {
 
   it("schema CLI --format json works for all collections", () => {
     for (const col of ["blog", "glossary", "changelog"]) {
-      const r = runCli(
-        ["schema", col, "--format", "json"],
-        LARGE_PROJECT
-      );
+      const r = runCli(["schema", col, "--format", "json"], LARGE_PROJECT);
       expect(r.status).toBe(0);
       const parsed = JSON.parse(r.stdout);
       expect(parsed.success).toBe(true);
@@ -257,7 +189,9 @@ describe("multi-collection: list and view", () => {
       items: Array<{ slug: string; locale?: string }>;
     };
     expect(data.items.length).toBeGreaterThanOrEqual(3);
-    const locales = [...new Set(data.items.map((i) => i.locale).filter(Boolean))];
+    const locales = [
+      ...new Set(data.items.map((i) => i.locale).filter(Boolean)),
+    ];
     expect(locales).toContain("en");
   });
 
@@ -425,10 +359,7 @@ describe("multi-collection: search", () => {
 
   it("CLI search across collections", () => {
     for (const col of ["blog", "glossary", "changelog"]) {
-      const r = runCli(
-        ["search", col, "--format", "json"],
-        LARGE_PROJECT
-      );
+      const r = runCli(["search", col, "--format", "json"], LARGE_PROJECT);
       expect(r.status).toBe(0);
       const parsed = JSON.parse(r.stdout);
       expect(parsed.success).toBe(true);
@@ -703,10 +634,7 @@ describe("CLI flag combinations", () => {
   });
 
   it("lint --collection blog --format json lints only blog", () => {
-    const r = runCli(
-      ["lint", "--collection", "blog", "--format", "json"],
-      cwd
-    );
+    const r = runCli(["lint", "--collection", "blog", "--format", "json"], cwd);
     // May exit 0 (all valid) or 1 (cross-collection relation warnings);
     // the key assertion is that it runs without crashing and produces JSON.
     const parsed = JSON.parse(r.stdout);
@@ -867,12 +795,7 @@ describe("error recovery: validation and edge cases", () => {
       },
     });
     expect(result.success).toBe(false);
-    const file = path.join(
-      cwd,
-      "content",
-      "blog",
-      "e2e-bad-status.en.json"
-    );
+    const file = path.join(cwd, "content", "blog", "e2e-bad-status.en.json");
     if (fs.existsSync(file)) fs.unlinkSync(file);
   });
 
@@ -885,12 +808,7 @@ describe("error recovery: validation and edge cases", () => {
       meta: { title: "", author: "Nobody", status: "draft" },
     });
     expect(result.success).toBe(false);
-    const file = path.join(
-      cwd,
-      "content",
-      "blog",
-      "e2e-empty-title.en.json"
-    );
+    const file = path.join(cwd, "content", "blog", "e2e-empty-title.en.json");
     if (fs.existsSync(file)) fs.unlinkSync(file);
   });
 
@@ -960,7 +878,11 @@ describe("error recovery: validation and edge cases", () => {
       // Fix the file
       const fixedContent = isMd
         ? `---\ntitle: Fixed Recovery\nauthor: Tester\nstatus: published\n---\n`
-        : JSON.stringify({ title: "Fixed Recovery", author: "Tester", status: "published" });
+        : JSON.stringify({
+            title: "Fixed Recovery",
+            author: "Tester",
+            status: "published",
+          });
       fs.writeFileSync(file, fixedContent, "utf-8");
 
       // Lint should now pass
@@ -1022,7 +944,12 @@ describe("i18n: partial locale coverage and edge cases", () => {
 
   it("creating a new locale variant does not affect other locales", async () => {
     const fileMd = path.join(cwd, "content", "blog", "advanced-schemas.zh.md");
-    const fileJson = path.join(cwd, "content", "blog", "advanced-schemas.zh.json");
+    const fileJson = path.join(
+      cwd,
+      "content",
+      "blog",
+      "advanced-schemas.zh.json"
+    );
     try {
       const createResult = await runCreate({
         cwd,
@@ -1062,12 +989,7 @@ describe("i18n: partial locale coverage and edge cases", () => {
   });
 
   it("update on one locale does not bleed to another", async () => {
-    const enFile = path.join(
-      cwd,
-      "content",
-      "glossary",
-      "cms.en.json"
-    );
+    const enFile = path.join(cwd, "content", "glossary", "cms.en.json");
     const original = fs.readFileSync(enFile, "utf-8");
     try {
       await runUpdate({
@@ -1094,9 +1016,7 @@ describe("i18n: partial locale coverage and edge cases", () => {
         slug: "cms",
         locale: "en",
       });
-      expect(enView.data?.meta.definition).toBe(
-        "Updated English definition"
-      );
+      expect(enView.data?.meta.definition).toBe("Updated English definition");
     } finally {
       fs.writeFileSync(enFile, original, "utf-8");
     }
@@ -1143,7 +1063,12 @@ describe("full lifecycle: multi-collection create → build → status → searc
     });
     expect(blogCreate.success).toBe(true);
     for (const ext of [".md", ".json"]) {
-      const f = path.join(cwd, "content", "blog", `e2e-lifecycle-post.en${ext}`);
+      const f = path.join(
+        cwd,
+        "content",
+        "blog",
+        `e2e-lifecycle-post.en${ext}`
+      );
       if (fs.existsSync(f)) createdFiles.push(f);
     }
 
@@ -1159,7 +1084,12 @@ describe("full lifecycle: multi-collection create → build → status → searc
     });
     expect(glossaryCreate.success).toBe(true);
     for (const ext of [".md", ".json"]) {
-      const f = path.join(cwd, "content", "glossary", `e2e-lifecycle-term.en${ext}`);
+      const f = path.join(
+        cwd,
+        "content",
+        "glossary",
+        `e2e-lifecycle-term.en${ext}`
+      );
       if (fs.existsSync(f)) createdFiles.push(f);
     }
 
@@ -1172,7 +1102,12 @@ describe("full lifecycle: multi-collection create → build → status → searc
     });
     expect(changelogCreate.success).toBe(true);
     for (const ext of [".md", ".json"]) {
-      const f = path.join(cwd, "content", "changelog", `e2e-lifecycle-release.en${ext}`);
+      const f = path.join(
+        cwd,
+        "content",
+        "changelog",
+        `e2e-lifecycle-release.en${ext}`
+      );
       if (fs.existsSync(f)) createdFiles.push(f);
     }
 

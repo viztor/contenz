@@ -1,83 +1,73 @@
 import { runCreate } from "@contenz/core/api";
-import { defineCommand } from "citty";
-import { printAndExit } from "../output.js";
+import { buildCommand } from "@stricli/core";
 
-/** Parse citty's --set arg (single string or array) into a Record */
-function parseSetFlags(
-	setArg: string | string[] | undefined,
-): Record<string, unknown> {
-	const meta: Record<string, unknown> = {};
-	if (!setArg) return meta;
+import type { ContenzContext } from "../context.js";
+import { printResult } from "../output.js";
+import {
+  contentTypeFlag,
+  cwdFlag,
+  localeFlag,
+  outputFormatFlag,
+  parseSetPairs,
+  setFlag,
+  type OutputFormat,
+} from "../shared.js";
 
-	const pairs = Array.isArray(setArg) ? setArg : [setArg];
-	for (const pair of pairs) {
-		const eqIdx = pair.indexOf("=");
-		if (eqIdx === -1) {
-			throw new Error(`Invalid --set format: "${pair}". Expected key=value`);
-		}
-		const key = pair.slice(0, eqIdx);
-		const rawValue = pair.slice(eqIdx + 1);
-		try {
-			meta[key] = JSON.parse(rawValue);
-		} catch {
-			meta[key] = rawValue;
-		}
-	}
-	return meta;
+interface CreateFlags {
+  cwd: string;
+  locale?: string;
+  set?: readonly string[];
+  type?: string;
+  format: OutputFormat;
 }
 
-export const createCommand = defineCommand({
-	meta: {
-		name: "create",
-		description: "Create a new content item in a collection",
-	},
-	args: {
-		collection: {
-			type: "positional",
-			description: "Collection name",
-			required: true,
-		},
-		slug: {
-			type: "positional",
-			description: "Content slug",
-			required: true,
-		},
-		locale: {
-			type: "string",
-			description: "Locale for the content item",
-			required: false,
-		},
-		set: {
-			type: "string",
-			description: "Set field values (key=value), repeatable",
-			required: false,
-		},
-		type: {
-			type: "string",
-			description: "Content type (for multi-type collections)",
-			required: false,
-		},
-		cwd: {
-			type: "string",
-			description: "Project root",
-			default: ".",
-		},
-		format: {
-			type: "string",
-			description: "Output format: json or pretty",
-			default: "json",
-		},
-	},
-	async run({ args }) {
-		const meta = parseSetFlags(args.set as string | string[] | undefined);
-		const result = await runCreate({
-			cwd: args.cwd,
-			collection: args.collection,
-			slug: args.slug,
-			locale: args.locale,
-			meta,
-			contentType: args.type,
-		});
-		printAndExit(result, args.format);
-	},
+async function create(
+  this: ContenzContext,
+  flags: CreateFlags,
+  collection: string,
+  slug: string
+): Promise<void> {
+  const meta = parseSetPairs(flags.set);
+  const result = await runCreate({
+    cwd: flags.cwd,
+    collection,
+    slug,
+    locale: flags.locale,
+    meta,
+    contentType: flags.type,
+  });
+  printResult(this, result, flags.format);
+}
+
+export const createCommandDef = buildCommand({
+  func: create,
+  parameters: {
+    positional: {
+      kind: "tuple",
+      parameters: [
+        {
+          brief: "Collection name",
+          parse: String,
+          placeholder: "collection",
+        },
+        {
+          brief: "Content slug",
+          parse: String,
+          placeholder: "slug",
+        },
+      ],
+    },
+    flags: {
+      cwd: cwdFlag,
+      locale: localeFlag,
+      set: setFlag,
+      type: contentTypeFlag,
+      format: outputFormatFlag,
+    },
+  },
+  docs: {
+    brief: "Create a new content item in a collection",
+    fullDescription:
+      "Create content with --set key=value (repeatable). Values are JSON-parsed when valid, otherwise used as strings.",
+  },
 });

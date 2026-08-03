@@ -7,13 +7,14 @@ This document describes the Contenz monorepo layout, packages, and how the conte
 ```
 contenz/
 ├── packages/
-│   ├── core/       # @contenz/core – schema helpers, types, build/lint/status API
-│   ├── cli/        # @contenz/cli – contenz binary and commands
-│   ├── adapter-mdx/ # @contenz/adapter-mdx – MD/MDX format adapter
-│   └── e2e/        # E2E tests and fixtures (private, not published)
-├── docs/           # This documentation set
-├── scripts/        # Publish and utility scripts
-├── contenz.config.ts
+│   ├── core/         # @contenz/core – schema helpers, types, build/lint/status API
+│   ├── cli/          # @contenz/cli – contenz binary and commands
+│   ├── client/       # @contenz/client – runtime helpers for generated output
+│   ├── adapter-mdx/  # @contenz/adapter-mdx – MD/MDX format adapter
+│   └── e2e/          # E2E tests and fixtures (private, not published)
+├── docs/             # This documentation set
+├── scripts/          # Publish and utility scripts
+├── skills/           # Agent skill for contenz workflows
 ├── PROJECT_SCOPE.md
 └── ROADMAP.md
 ```
@@ -31,8 +32,15 @@ contenz/
 ### @contenz/cli
 
 - **Role**: Provides the `contenz` command.
-- **Commands**: `init`, `lint`, `build`, `watch`, `status`, `view`, `list`, `create`, `update`, `search`, `schema`.
+- **Framework**: [Stricli](https://bloomberg.github.io/stricli/) (`@stricli/core` + `@stricli/auto-complete`) for typed flags, help/version, and bash completion.
+- **Commands**: `init`, `lint`, `build`, `watch`, `status`, `view`, `list`, `create`, `update`, `search`, `schema`, `skill` (plus hidden `install` / `uninstall` for shell completion).
 - **Depends on**: `@contenz/core` for all content and config logic.
+
+### @contenz/client
+
+- **Role**: Lightweight runtime helpers for apps that consume generated content (Next.js, etc.).
+- **Exports**: `createContent` (locale-bound collection access with fallback), `createT`, localization helpers, query builder.
+- **Does not** depend on the CLI or filesystem at runtime — works against imported generated modules.
 
 ### @contenz/adapter-mdx
 
@@ -42,30 +50,34 @@ contenz/
 ### packages/e2e
 
 - **Role**: End-to-end tests and fixtures. Not published.
-- **Fixtures**: `minimal`, `centralized`, `i18n`, `multi-type`, `mixed-sources`, `invalid-schema`, `invalid-relation` – used to drive CLI and pipeline tests.
+- **Fixtures**: `minimal`, `centralized`, `i18n`, `i18n-partial`, `multi-type`, `mixed-sources`, `invalid-schema`, `invalid-relation`, `large-project`, `empty` — used to drive CLI and pipeline tests.
+- **Shared setup**: `packages/e2e/setup.ts` (symlink wiring, `runCli`, fixture registry).
 
 ## Data flow
 
-1. **Config**
+1. **Config**  
    `contenz.config.ts` (and optional `content/<collection>/config.ts`) is loaded and resolved by `@contenz/core`. Defines sources, i18n, output dir, extensions, ignore patterns, format adapters, and optional inline `collections` declarations.
 
-2. **Discovery**
+2. **Discovery**  
    `discoverCollections(cwd, sources)` walks the filesystem and returns collection roots and their paths. Collection identity comes from folder names under the source pattern (e.g. `content/*` → `content/faq` → collection `faq`).
 
-3. **Schema**
+3. **Schema**  
    Each collection can have a `schema.ts` (and optional `config.ts`). The schema module exports `meta` (or `termMeta`/`topicMeta` for multi-type), and optionally `relations`. Config can override types, slug pattern, i18n, extensions, ignore.
 
-4. **Lint**
+4. **Lint**  
    `runLint({ cwd, ... })` parses all content files, validates metadata against the schema, runs relation checks, and (optionally) writes a coverage report. Emits diagnostics in pretty, JSON, or GitHub format.
 
-5. **Build**
+5. **Build**  
    `runBuild({ cwd, ... })` uses a manifest (`.contenz/build-manifest.json`) to skip unchanged collections. For each collection it parses content, validates, and writes typed output (e.g. `generated/content/faq.ts`). Manifest is updated after a successful build.
 
-6. **Status**
+6. **Status**  
    `runStatus({ cwd })` compares current input hashes to the manifest and reports whether a build is up to date or which collections would be rebuilt.
 
-7. **AI-native layer**
-   The bidirectional content operations (`runView`, `runList`, `runCreate`, `runUpdate`, `runSearch`, `runSchema`) form the AI-native interface. They use the same workspace and parsing primitives as lint/build but expose content through a structured JSON contract. This enables AI agents and scripts to safely introspect schemas, read content, create new items, and update existing items without touching raw files directly.
+7. **AI-native layer**  
+   The bidirectional content operations (`runView`, `runList`, `runCreate`, `runUpdate`, `runSearch`, `runSchema`) form the AI-native interface. They use the same workspace and parsing primitives as lint/build but expose content through a structured JSON contract.
+
+8. **Runtime client**  
+   Apps import generated modules and use `@contenz/client` (`createContent`, `createT`) for locale resolution and ergonomic collection access without re-parsing source files.
 
 ## Key invariants
 

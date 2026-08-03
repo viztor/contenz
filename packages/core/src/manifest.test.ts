@@ -6,7 +6,9 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import {
   type BuildManifest,
   computeCollectionInputHash,
@@ -34,7 +36,11 @@ async function createTempDir(): Promise<string> {
 describe("computeCollectionInputHash", () => {
   it("uses content hashing only: same content produces same hash", async () => {
     const dir = await createTempDir();
-    await fs.writeFile(path.join(dir, "schema.ts"), "export const meta = {};", "utf-8");
+    await fs.writeFile(
+      path.join(dir, "schema.ts"),
+      "export const meta = {};",
+      "utf-8"
+    );
     await fs.writeFile(path.join(dir, "hello.mdx"), "content", "utf-8");
 
     const hash1 = await computeCollectionInputHash(dir, ["hello.mdx"], ["mdx"]);
@@ -45,7 +51,11 @@ describe("computeCollectionInputHash", () => {
 
   it("different content produces different hash", async () => {
     const dir = await createTempDir();
-    await fs.writeFile(path.join(dir, "schema.ts"), "export const meta = {};", "utf-8");
+    await fs.writeFile(
+      path.join(dir, "schema.ts"),
+      "export const meta = {};",
+      "utf-8"
+    );
     await fs.writeFile(path.join(dir, "hello.mdx"), "content A", "utf-8");
 
     const hash1 = await computeCollectionInputHash(dir, ["hello.mdx"], ["mdx"]);
@@ -56,17 +66,29 @@ describe("computeCollectionInputHash", () => {
 
   it("mtime does not affect hash (CI-safe)", async () => {
     const dir = await createTempDir();
-    await fs.writeFile(path.join(dir, "schema.ts"), "export const meta = {};", "utf-8");
+    await fs.writeFile(
+      path.join(dir, "schema.ts"),
+      "export const meta = {};",
+      "utf-8"
+    );
     const contentPath = path.join(dir, "hello.mdx");
     await fs.writeFile(contentPath, "same content", "utf-8");
 
-    const hashBefore = await computeCollectionInputHash(dir, ["hello.mdx"], ["mdx"]);
+    const hashBefore = await computeCollectionInputHash(
+      dir,
+      ["hello.mdx"],
+      ["mdx"]
+    );
 
     // Change mtime only (e.g. as in a fresh git checkout in CI)
     const past = new Date(Date.now() - 60_000);
     await fs.utimes(contentPath, past, past);
 
-    const hashAfter = await computeCollectionInputHash(dir, ["hello.mdx"], ["mdx"]);
+    const hashAfter = await computeCollectionInputHash(
+      dir,
+      ["hello.mdx"],
+      ["mdx"]
+    );
     expect(hashAfter).toBe(hashBefore);
   });
 });
@@ -116,7 +138,9 @@ describe("manifest load/save/merge", () => {
       sources: ["content/*"],
       generatedAt: "",
       configHash: "cfghash",
-      collections: [{ name: "faq", inputHash: "abc123", outputFiles: ["faq.ts"] }],
+      collections: [
+        { name: "faq", inputHash: "abc123", outputFiles: ["faq.ts"] },
+      ],
     };
     expect(
       getCachedInputHash(
@@ -149,7 +173,9 @@ describe("manifest load/save/merge", () => {
       sources: ["content/*"],
       generatedAt: "",
       configHash: "cfghash",
-      collections: [{ name: "faq", inputHash: "abc123", outputFiles: ["faq.ts"] }],
+      collections: [
+        { name: "faq", inputHash: "abc123", outputFiles: ["faq.ts"] },
+      ],
     };
     expect(
       getCachedInputHash(
@@ -176,7 +202,14 @@ describe("manifest load/save/merge", () => {
       { name: "faq", inputHash: "new", outputFiles: ["faq.ts"] },
       { name: "docs", inputHash: "docHash", outputFiles: ["docs.ts"] },
     ];
-    const merged = mergeManifest(existing, "/p", "/p/out", ["content/*"], updates, "newCfgHash");
+    const merged = mergeManifest(
+      existing,
+      "/p",
+      "/p/out",
+      ["content/*"],
+      updates,
+      "newCfgHash"
+    );
     expect(merged.collections).toHaveLength(2);
     expect(merged.configHash).toBe("newCfgHash");
     const faq = merged.collections.find((c) => c.name === "faq");

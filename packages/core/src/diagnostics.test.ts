@@ -2,6 +2,7 @@
  * Unit tests for the diagnostic formatting system.
  */
 import { describe, expect, it } from "vitest";
+
 import {
   type Diagnostic,
   formatDiagnosticsReport,
@@ -38,7 +39,11 @@ describe("formatDiagnosticsReport", () => {
       const report = formatDiagnosticsReport({
         diagnostics: [
           makeDiag({ code: "E001", severity: "error", message: "Bad field" }),
-          makeDiag({ code: "W001", severity: "warning", message: "Deprecated" }),
+          makeDiag({
+            code: "W001",
+            severity: "warning",
+            message: "Deprecated",
+          }),
         ],
         format: "pretty",
         title: "Lint",
@@ -52,7 +57,9 @@ describe("formatDiagnosticsReport", () => {
 
     it("includes collection and field in output", () => {
       const report = formatDiagnosticsReport({
-        diagnostics: [makeDiag({ collection: "faq", file: "moq.en.mdx", field: "title" })],
+        diagnostics: [
+          makeDiag({ collection: "faq", file: "moq.en.mdx", field: "title" }),
+        ],
         format: "pretty",
         title: "Lint",
         success: false,

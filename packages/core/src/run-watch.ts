@@ -11,6 +11,7 @@
 import { EventEmitter } from "node:events";
 import fs from "node:fs";
 import path from "node:path";
+
 import { loadProjectConfig } from "./config.js";
 import { type BuildOptions, type BuildResult, runBuild } from "./run-build.js";
 import { resolveSourcePatterns } from "./sources.js";
@@ -68,9 +69,15 @@ export type WatchEventMap = {
  */
 export interface WatchHandle {
   /** Subscribe to watch events */
-  on<K extends keyof WatchEventMap>(event: K, listener: (...args: WatchEventMap[K]) => void): this;
+  on<K extends keyof WatchEventMap>(
+    event: K,
+    listener: (...args: WatchEventMap[K]) => void
+  ): this;
   /** Unsubscribe from watch events */
-  off<K extends keyof WatchEventMap>(event: K, listener: (...args: WatchEventMap[K]) => void): this;
+  off<K extends keyof WatchEventMap>(
+    event: K,
+    listener: (...args: WatchEventMap[K]) => void
+  ): this;
   /** Stop watching and release resources */
   stop(): void;
   /** Whether the watcher is still active */
@@ -184,7 +191,7 @@ export function runWatch(options: WatchOptions): WatchHandle {
       isBuilding = false;
       if (pendingRebuild && _active) {
         pendingRebuild = false;
-        doBuild(false);
+        void doBuild(false);
       }
     }
   }
@@ -201,12 +208,12 @@ export function runWatch(options: WatchOptions): WatchHandle {
     if (debounceTimer) clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
       debounceTimer = null;
-      doBuild(false);
+      void doBuild(false);
     }, debounceMs);
   }
 
   // Bootstrap: load config to discover source patterns, then start watchers
-  (async () => {
+  void (async () => {
     try {
       let projectConfig = {};
       try {
@@ -220,13 +227,17 @@ export function runWatch(options: WatchOptions): WatchHandle {
       // Start filesystem watchers
       for (const root of watchRoots) {
         try {
-          const watcher = fs.watch(root, { recursive: true }, (_eventType, filename) => {
-            if (!filename || !_active) return;
-            const relative = path.relative(root, path.join(root, filename));
-            if (isRelevantFile(relative)) {
-              scheduleRebuild(relative);
+          const watcher = fs.watch(
+            root,
+            { recursive: true },
+            (_eventType, filename) => {
+              if (!filename || !_active) return;
+              const relative = path.relative(root, path.join(root, filename));
+              if (isRelevantFile(relative)) {
+                scheduleRebuild(relative);
+              }
             }
-          });
+          );
           watchers.push(watcher);
         } catch {
           // Directory might not exist; skip silently

@@ -1,23 +1,22 @@
 {
   "name": "@contenz/core",
-  "version": "0.1.6",
+  "version": "0.2.0",
   "description": "Content validation and codegen from MDX/Markdown with Zod",
-  "license": "MPL-2.0",
-  "publishConfig": {
-    "access": "public"
-  },
   "keywords": [
+    "codegen",
     "content",
     "markdown",
     "mdx",
-    "zod",
     "validation",
-    "codegen"
+    "zod"
+  ],
+  "license": "MPL-2.0",
+  "files": [
+    "dist"
   ],
   "type": "module",
-  "engines": {
-    "node": ">=20"
-  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -30,40 +29,40 @@
       "default": "./dist/api.js"
     }
   },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "files": [
-    "dist"
-  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
-    "build": "tsup",
+    "build": "tsup && tsc --emitDeclarationOnly --declarationMap",
     "dev": "tsup --watch",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
-    "lint": "biome check src",
-    "lint:fix": "biome check src --write",
-    "format": "biome format --write src",
-    "check": "biome check src",
+    "lint": "oxlint src",
+    "lint:fix": "oxlint --fix src",
+    "format": "oxfmt --write src",
+    "check": "oxlint src",
     "knip": "knip"
   },
   "dependencies": {
     "@orama/orama": "^3.1.18",
     "@orama/plugin-data-persistence": "^3.1.18",
     "fast-glob": "^3.3.3",
-    "p-map": "^7.0.4",
+    "p-map": "^7.0.6",
     "picocolors": "^1.1.1",
-    "tsx": "^4.22.4",
+    "tsx": "^4.23.4",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.16",
-    "@types/node": "^25.9.1",
-    "@vitest/coverage-istanbul": "^4.1.8",
-    "knip": "^6.15.0",
+    "@types/node": "^26.1.2",
+    "@vitest/coverage-istanbul": "^4.1.10",
+    "knip": "^6.31.0",
     "tsup": "^8.5.1",
-    "typescript": "^6.0.3",
-    "vitest": "^4.1.8"
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  },
+  "engines": {
+    "node": ">=24"
   }
 }

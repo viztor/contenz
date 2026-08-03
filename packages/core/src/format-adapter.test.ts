@@ -2,6 +2,7 @@
  * Unit tests for the format adapter registry and built-in JSON adapter.
  */
 import { describe, expect, it } from "vitest";
+
 import {
   buildAdapterList,
   type FormatAdapter,
@@ -11,7 +12,10 @@ import {
 
 describe("jsonAdapter", () => {
   it("extracts meta from valid JSON", () => {
-    const result = jsonAdapter.extract('{"title":"Hello","count":42}', "test.json");
+    const result = jsonAdapter.extract(
+      '{"title":"Hello","count":42}',
+      "test.json"
+    );
     expect(result.meta).toEqual({ title: "Hello", count: 42 });
     expect(result.body).toBeUndefined();
   });

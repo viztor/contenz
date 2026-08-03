@@ -3,11 +3,8 @@ import { defineConfig } from "tsup";
 export default defineConfig({
   entry: ["src/index.ts"],
   format: ["esm"],
-  dts: {
-    compilerOptions: {
-      ignoreDeprecations: "6.0",
-    },
-  },
+  // tsup's rollup-plugin-dts does not support TypeScript 7; .d.ts via tsc
+  dts: false,
   clean: true,
-  target: "node18",
+  target: "node24",
 });

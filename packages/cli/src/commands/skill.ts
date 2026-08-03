@@ -1,37 +1,44 @@
 import { runSkill } from "@contenz/core/api";
-import { defineCommand } from "citty";
-import { printAndExit } from "../output.js";
+import { buildCommand } from "@stricli/core";
 
-export const skillCommand = defineCommand({
-  meta: {
-    name: "skill",
-    description: "Generate an AI agent SKILL.md file for the current project",
-  },
-  args: {
-    cwd: {
-      type: "string",
-      description: "Project root",
-      default: ".",
+import type { ContenzContext } from "../context.js";
+import { fail, log, printResult } from "../output.js";
+import { cwdFlag, type SkillFormat } from "../shared.js";
+
+interface SkillFlags {
+  cwd: string;
+  format: SkillFormat;
+}
+
+async function skill(this: ContenzContext, flags: SkillFlags): Promise<void> {
+  const result = await runSkill(flags.cwd);
+
+  if (flags.format === "json") {
+    printResult(this, result, "json");
+    return;
+  }
+
+  if (result.success && result.data) {
+    log(this, result.data);
+  } else {
+    fail(this, `Failed to generate skill: ${result.error}`);
+  }
+}
+
+export const skillCommandDef = buildCommand({
+  func: skill,
+  parameters: {
+    flags: {
+      cwd: cwdFlag,
+      format: {
+        kind: "enum",
+        values: ["md", "json"] as const,
+        brief: "Output format: md (default) or json",
+        default: "md",
+      },
     },
-    format: {
-      type: "string",
-      description: "Output format: json, md (default is md)",
-      default: "md",
-    },
   },
-  async run({ args }) {
-    const result = await runSkill(args.cwd);
-    
-    if (args.format === "json") {
-      printAndExit(result, "json");
-    } else {
-      if (result.success && result.data) {
-        console.log(result.data);
-        process.exit(0);
-      } else {
-        console.error("Failed to generate skill:", result.error);
-        process.exit(1);
-      }
-    }
+  docs: {
+    brief: "Generate an AI agent SKILL.md file for the current project",
   },
 });

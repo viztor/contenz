@@ -1,6 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+
 import fg from "fast-glob";
+
 import type { ContenzConfig } from "./types.js";
 
 const DEFAULT_SOURCES = ["content/*"] as const;
@@ -17,7 +19,12 @@ function isAbsoluteLikePath(value: string): boolean {
 }
 
 function isProjectRelativePath(value: string): boolean {
-  return value !== "." && value !== ".." && !value.startsWith("../") && !isAbsoluteLikePath(value);
+  return (
+    value !== "." &&
+    value !== ".." &&
+    !value.startsWith("../") &&
+    !isAbsoluteLikePath(value)
+  );
 }
 
 export function normalizeLegacyContentDir(contentDir: string): string {
@@ -139,7 +146,9 @@ export async function discoverCollections(
   }
 
   return {
-    collections: [...discovered.values()].sort((a, b) => a.name.localeCompare(b.name)),
+    collections: [...discovered.values()].sort((a, b) =>
+      a.name.localeCompare(b.name)
+    ),
     errors,
   };
 }

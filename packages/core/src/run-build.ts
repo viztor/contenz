@@ -7,6 +7,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 import pMap from "p-map";
+
 import { getContentType, getSchemaForType, resolveConfig } from "./config.js";
 import {
   type Diagnostic,
@@ -16,6 +17,14 @@ import {
   schemaLoadFailed,
 } from "./diagnostics.js";
 import {
+  generateLocaleIndexFile,
+  generateLocaleResolverFile,
+  generateSharedTypesFile,
+  generateSplitLocaleCollectionFile,
+  generateSplitRootIndexFile,
+  type SplitCollectionMeta,
+} from "./generator-split.js";
+import {
   calculateI18nStats,
   type FlatCollectionData,
   generateFlatCollectionFile,
@@ -24,14 +33,6 @@ import {
   generateTypeFromZod,
   type I18nCollectionData,
 } from "./generator.js";
-import {
-  generateLocaleIndexFile,
-  generateLocaleResolverFile,
-  generateSharedTypesFile,
-  generateSplitLocaleCollectionFile,
-  generateSplitRootIndexFile,
-  type SplitCollectionMeta,
-} from "./generator-split.js";
 import {
   computeCollectionInputHash,
   computeConfigHash,
@@ -104,7 +105,10 @@ async function generateMultiTypeCollectionFile(
     const metaTypeName = `${pascalName}Meta`;
     const schema = schemaModule[`${typeName}Meta`] || schemaModule[typeName];
     if (schema && typeof schema === "object" && "_def" in schema) {
-      output += generateTypeFromZod(schema as import("zod").ZodTypeAny, metaTypeName);
+      output += generateTypeFromZod(
+        schema as import("zod").ZodTypeAny,
+        metaTypeName
+      );
       output += "\n\n";
     } else {
       output += `export interface ${metaTypeName} {\n  [key: string]: unknown;\n}\n\n`;
@@ -115,7 +119,9 @@ async function generateMultiTypeCollectionFile(
   for (const [typeName, itemsMap] of typeGroups) {
     if (typeName === defaultTypeName) continue;
     const pascalName = typeName.charAt(0).toUpperCase() + typeName.slice(1);
-    const items = Array.from(itemsMap.values()).sort((a, b) => a.slug.localeCompare(b.slug));
+    const items = Array.from(itemsMap.values()).sort((a, b) =>
+      a.slug.localeCompare(b.slug)
+    );
 
     if (i18n) {
       output += `export interface ${pascalName}Entry extends ${pascalName}Meta {
@@ -133,7 +139,10 @@ ${locales.map((l) => `    ${l}?: ${pascalName}Entry;`).join("\n")}
 export const ${typeName}s: Record<string, ${pascalName}Item> = `;
       const dataObj: Record<string, unknown> = {};
       for (const item of items as I18nCollectionData[]) {
-        const itemData: Record<string, unknown> = { slug: item.slug, locales: {} };
+        const itemData: Record<string, unknown> = {
+          slug: item.slug,
+          locales: {},
+        };
         for (const [locale, entry] of Object.entries(item.locales)) {
           (itemData.locales as Record<string, unknown>)[locale] = {
             slug: item.slug,
@@ -194,7 +203,13 @@ async function processOneCollection(
 > {
   const diagnostics: Diagnostic[] = [];
   const searchDocs: SearchDocument[] = [];
-  const { name: collectionName, collectionPath, config, schema: schemaModule, contentFiles } = ctx;
+  const {
+    name: collectionName,
+    collectionPath,
+    config,
+    schema: schemaModule,
+    contentFiles,
+  } = ctx;
 
   if (!schemaModule) {
     diagnostics.push(schemaLoadFailed("build", collectionName));
@@ -206,27 +221,35 @@ async function processOneCollection(
     diagnostics.push(schemaExportMissing("build", collectionName));
     return { ok: false, diagnostics };
   }
-  const defaultSchema = rawSchema as import("zod").ZodSchema;
+  const defaultSchema = rawSchema;
 
   const effectiveConfig = {
     ...config,
     types: config.types?.length ? config.types : schemaModule.types,
   };
 
-  const typeGroups = new Map<string, Map<string, I18nCollectionData | FlatCollectionData>>();
+  const typeGroups = new Map<
+    string,
+    Map<string, I18nCollectionData | FlatCollectionData>
+  >();
   const defaultTypeName = "default";
   let parseErrors = 0;
   const detectedLocales = new Set<string>();
 
   for (const file of contentFiles) {
     const filePath = path.join(collectionPath, file);
-    const parsed = parseFileName(file, effectiveConfig.i18n, effectiveConfig.slugPattern);
+    const parsed = parseFileName(
+      file,
+      effectiveConfig.i18n,
+      effectiveConfig.slugPattern
+    );
     if (!parsed) {
       diagnostics.push({
         code: "CONTENT_FILE_SKIPPED",
         severity: "warning",
         category: "content",
-        message: "Skipped file because it does not match the expected naming pattern.",
+        message:
+          "Skipped file because it does not match the expected naming pattern.",
         source: "build",
         collection: collectionName,
         file,
@@ -261,7 +284,8 @@ async function processOneCollection(
         }
       }
 
-      const contentType = getContentType(file, effectiveConfig) ?? defaultTypeName;
+      const contentType =
+        getContentType(file, effectiveConfig) ?? defaultTypeName;
       const schema =
         contentType !== defaultTypeName
           ? (getSchemaForType(schemaModule, contentType) ?? defaultSchema)
@@ -310,7 +334,7 @@ async function processOneCollection(
           slug: parsed.slug,
           file,
           meta: result.meta,
-        } as FlatCollectionData);
+        });
       }
 
       // Collect search document for this parsed content file
@@ -374,9 +398,13 @@ async function processOneCollection(
   }
 
   const itemsMap = typeGroups.get(defaultTypeName) ?? new Map();
-  const items = Array.from(itemsMap.values()).sort((a, b) => a.slug.localeCompare(b.slug));
+  const items = Array.from(itemsMap.values()).sort((a, b) =>
+    a.slug.localeCompare(b.slug)
+  );
   const metaTypeName =
-    ((schemaModule as Record<string, unknown>).metaTypeName as string | undefined) ??
+    ((schemaModule as Record<string, unknown>).metaTypeName as
+      | string
+      | undefined) ??
     `${collectionName.charAt(0).toUpperCase() + collectionName.slice(1)}Meta`;
 
   if (effectiveConfig.i18n) {
@@ -384,7 +412,10 @@ async function processOneCollection(
     const ri = effectiveConfig.resolvedI18n;
     const stats = calculateI18nStats(i18nItems);
 
-    if (ri?.coverageThreshold != null && stats.coverage < ri.coverageThreshold) {
+    if (
+      ri?.coverageThreshold != null &&
+      stats.coverage < ri.coverageThreshold
+    ) {
       diagnostics.push({
         code: "I18N_COVERAGE_BELOW_THRESHOLD",
         severity: effectiveConfig.strict ? "error" : "warning",
@@ -463,7 +494,11 @@ async function processOneCollection(
 
     return {
       ok: true,
-      indexMeta: { name: collectionName, hasI18n: effectiveConfig.i18n, metaTypeName },
+      indexMeta: {
+        name: collectionName,
+        hasI18n: effectiveConfig.i18n,
+        metaTypeName,
+      },
       outputName: isSplit ? "" : `${collectionName}.ts`,
       diagnostics,
       inputHash,
@@ -487,7 +522,11 @@ async function processOneCollection(
 
   return {
     ok: true,
-    indexMeta: { name: collectionName, hasI18n: effectiveConfig.i18n, metaTypeName },
+    indexMeta: {
+      name: collectionName,
+      hasI18n: effectiveConfig.i18n,
+      metaTypeName,
+    },
     outputName: `${collectionName}.ts`,
     diagnostics,
     inputHash,
@@ -597,11 +636,14 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
 
   const force = options.force ?? false;
   const dryRun = options.dryRun ?? false;
-  const projectConfigHash = computeConfigHash(baseConfig as unknown as Record<string, unknown>);
+  const projectConfigHash = computeConfigHash(
+    baseConfig as unknown as Record<string, unknown>
+  );
   const manifest = !force && !dryRun ? await loadManifest(cwd) : null;
 
   /** Collections we can skip (cached hash matches, output exists) */
-  const skipped: { name: string; outputName: string; indexMeta: IndexMeta }[] = [];
+  const skipped: { name: string; outputName: string; indexMeta: IndexMeta }[] =
+    [];
   /** Collections we need to build */
   const toBuild: { ctx: CollectionContext; inputHash: string }[] = [];
 
@@ -640,7 +682,7 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
       skipped.push({
         name: ctx.name,
         outputName: `${ctx.name}.ts`,
-        indexMeta: indexMeta as IndexMeta,
+        indexMeta: indexMeta,
       });
     } else {
       toBuild.push({ ctx, inputHash });
@@ -649,7 +691,13 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
 
   const results = await pMap(
     toBuild,
-    ({ ctx }) => processOneCollection(ctx, outputDir, dryRun, workspace.projectConfig.hooks),
+     async ({ ctx }) =>
+      processOneCollection(
+        ctx,
+        outputDir,
+        dryRun,
+        workspace.projectConfig.hooks
+      ),
     {
       concurrency: BUILD_CONCURRENCY,
     }
@@ -710,7 +758,7 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
               r.indexMeta.metaTypeName ??
               `${r.indexMeta.name.charAt(0).toUpperCase() + r.indexMeta.name.slice(1)}Meta`,
             entryTypeName,
-            schema: r.defaultSchema as import("zod").ZodTypeAny | undefined,
+            schema: r.defaultSchema,
           },
           items: r.i18nItems,
         });
@@ -720,7 +768,8 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
 
     const sortedLocales = [...allDetectedLocales].sort();
     const fallbackMap = baseConfig.resolvedI18n?.fallbackMap ?? {};
-    const includeFallbackMeta = baseConfig.resolvedI18n?.includeFallbackMetadata === true;
+    const includeFallbackMeta =
+      baseConfig.resolvedI18n?.includeFallbackMetadata === true;
 
     // Generate shared types
     await generateSharedTypesFile(
@@ -813,7 +862,11 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
     // --- 8. Update Search Index ---
     const projectConfig = resolveConfig(workspace.projectConfig);
     if (projectConfig.buildSearchIndex) {
-      if (force || allNewDocs.length > 0 || results.length - succeeded.length > 0) {
+      if (
+        force ||
+        allNewDocs.length > 0 ||
+        results.length - succeeded.length > 0
+      ) {
         // On force builds, always start fresh to avoid duplicate IDs.
         let searchIndex = force ? null : await loadSearchIndex(cwd);
         if (searchIndex) {

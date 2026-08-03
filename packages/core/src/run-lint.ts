@@ -7,7 +7,12 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 import pMap from "p-map";
-import { extractRelations, getContentType, getSchemaForType } from "./config.js";
+
+import {
+  extractRelations,
+  getContentType,
+  getSchemaForType,
+} from "./config.js";
 import {
   type Diagnostic,
   type DiagnosticFormat,
@@ -43,6 +48,12 @@ export interface LintOptions {
   dir?: string;
   collection?: string;
   coverage?: boolean;
+  /**
+   * Check translation completeness against the declared `i18n.locales` list
+   * and emit I18N_MISSING_TRANSLATION / I18N_COVERAGE_BELOW_THRESHOLD
+   * diagnostics (CLI: --translations). Default: false.
+   */
+  translations?: boolean;
   /** Report only; do not write coverage report file */
   dryRun?: boolean;
 }
@@ -59,7 +70,11 @@ interface FirstPassResult {
   collectionName: string;
   slugs: Set<string>;
   diagnostics: Diagnostic[];
-  coverageEntry: { name: string; total: number; locales: Record<string, number> };
+  coverageEntry: {
+    name: string;
+    total: number;
+    locales: Record<string, number>;
+  };
   circularRefs: string[];
   selfRefs: string[];
   errorCount: number;
@@ -68,13 +83,24 @@ interface FirstPassResult {
 
 async function firstPassOneCollection(
   ctx: CollectionContext,
-  availableCollections: string[]
+  availableCollections: string[],
+  checkTranslations: boolean
 ): Promise<FirstPassResult> {
-  const { name: collectionName, collectionPath, config, schema: schemaModule, contentFiles } = ctx;
+  const {
+    name: collectionName,
+    collectionPath,
+    config,
+    schema: schemaModule,
+    contentFiles,
+  } = ctx;
   const diagnostics: Diagnostic[] = [];
   const slugs = new Set<string>();
-  const slugLocales = new Map<string, Set<string>>();
-  const itemsForCircularCheck = new Map<string, { slug: string; relatedSlugs: string[] }>();
+  /** slug → (locale → file) */
+  const slugLocales = new Map<string, Map<string, string>>();
+  const itemsForCircularCheck = new Map<
+    string,
+    { slug: string; relatedSlugs: string[] }
+  >();
   const validationResults: ValidationResult[] = [];
 
   if (!schemaModule) {
@@ -105,7 +131,7 @@ async function firstPassOneCollection(
       validationResults: [],
     };
   }
-  const defaultSchema = rawSchema as import("zod").ZodSchema;
+  const defaultSchema = rawSchema;
 
   const effectiveConfig = {
     ...config,
@@ -134,13 +160,18 @@ async function firstPassOneCollection(
 
   for (const file of contentFiles) {
     const filePath = path.join(collectionPath, file);
-    const parsed = parseFileName(file, effectiveConfig.i18n, effectiveConfig.slugPattern);
+    const parsed = parseFileName(
+      file,
+      effectiveConfig.i18n,
+      effectiveConfig.slugPattern
+    );
     if (!parsed) {
       diagnostics.push({
         code: "CONTENT_FILE_SKIPPED",
         severity: "warning",
         category: "content",
-        message: "Skipped file because it does not match the expected naming pattern.",
+        message:
+          "Skipped file because it does not match the expected naming pattern.",
         source: "lint",
         collection: collectionName,
         file,
@@ -157,30 +188,43 @@ async function firstPassOneCollection(
       const validation = validateMeta(result.meta, schema, file);
       validationResults.push(validation);
       if (effectiveConfig.i18n && parsed.locale) {
-        if (!slugLocales.has(parsed.slug)) slugLocales.set(parsed.slug, new Set());
-        slugLocales.get(parsed.slug)?.add(parsed.locale);
+        if (!slugLocales.has(parsed.slug))
+          slugLocales.set(parsed.slug, new Map());
+        slugLocales.get(parsed.slug)?.set(parsed.locale, file);
       }
       const relatedSlugs: string[] = [];
       for (const field of Object.keys(relations)) {
         const value = result.meta[field];
         if (Array.isArray(value)) {
-          relatedSlugs.push(...value.filter((v): v is string => typeof v === "string"));
+          relatedSlugs.push(
+            ...value.filter((v): v is string => typeof v === "string")
+          );
         }
       }
       if (!itemsForCircularCheck.has(parsed.slug)) {
-        itemsForCircularCheck.set(parsed.slug, { slug: parsed.slug, relatedSlugs: [] });
+        itemsForCircularCheck.set(parsed.slug, {
+          slug: parsed.slug,
+          relatedSlugs: [],
+        });
       }
       const existing = itemsForCircularCheck.get(parsed.slug);
       if (!existing) {
         validationResults.push({
           valid: false,
-          errors: [{ file, field: "internal", message: "Failed to initialize relation tracking" }],
+          errors: [
+            {
+              file,
+              field: "internal",
+              message: "Failed to initialize relation tracking",
+            },
+          ],
           warnings: [],
         });
         continue;
       }
       for (const slug of relatedSlugs) {
-        if (!existing.relatedSlugs.includes(slug)) existing.relatedSlugs.push(slug);
+        if (!existing.relatedSlugs.includes(slug))
+          existing.relatedSlugs.push(slug);
       }
     } catch {
       validationResults.push({
@@ -194,7 +238,10 @@ async function firstPassOneCollection(
   for (const result of validationResults) {
     for (const error of result.errors) {
       diagnostics.push({
-        code: error.field === "parse" ? "CONTENT_PARSE_FAILED" : "META_VALIDATION_FAILED",
+        code:
+          error.field === "parse"
+            ? "CONTENT_PARSE_FAILED"
+            : "META_VALIDATION_FAILED",
         severity: "error",
         category: error.field === "parse" ? "content" : "validation",
         message: error.message,
@@ -217,20 +264,87 @@ async function firstPassOneCollection(
     }
   }
 
-  const errorCount = validationResults.reduce((sum, r) => sum + r.errors.length, 0);
+  let errorCount = validationResults.reduce(
+    (sum, r) => sum + r.errors.length,
+    0
+  );
 
-  const { circularRefs, selfRefs } = detectCircularReferences(itemsForCircularCheck);
+  // ── i18n completeness against declared locales ────────────────────────
+  // Opt-in via `translations: true` (CLI: --translations) so default lint
+  // output stays clean. Requires predefined supported locales in config
+  // (i18n: { locales: [...] }); inferred-locale projects are never checked.
+  const declaredLocales = config.resolvedI18n?.enabled
+    ? config.resolvedI18n.locales
+    : [];
+  if (checkTranslations && effectiveConfig.i18n && declaredLocales.length > 0) {
+    const defaultLocale = config.resolvedI18n?.defaultLocale ?? null;
+    const severity = effectiveConfig.strict
+      ? ("error" as const)
+      : ("warning" as const);
+    let completeSlugs = 0;
+
+    for (const [slug, present] of slugLocales) {
+      const missing = declaredLocales.filter((locale) => !present.has(locale));
+      if (missing.length === 0) {
+        completeSlugs += 1;
+        continue;
+      }
+      const sourceFile =
+        (defaultLocale ? present.get(defaultLocale) : undefined) ??
+        present.values().next().value;
+      for (const locale of missing) {
+        diagnostics.push({
+          code: "I18N_MISSING_TRANSLATION",
+          severity,
+          category: "i18n",
+          message: `"${slug}" is missing locale "${locale}"${sourceFile ? ` (translate from ${sourceFile})` : ""}.`,
+          source: "lint",
+          collection: collectionName,
+          file: sourceFile,
+          slug,
+          locale,
+        });
+        if (effectiveConfig.strict) errorCount += 1;
+      }
+    }
+
+    const threshold = config.resolvedI18n?.coverageThreshold ?? null;
+    if (threshold !== null && slugLocales.size > 0) {
+      const coverage = completeSlugs / slugLocales.size;
+      if (coverage < threshold) {
+        diagnostics.push({
+          code: "I18N_COVERAGE_BELOW_THRESHOLD",
+          severity,
+          category: "i18n",
+          message: `Translation coverage ${Math.round(coverage * 100)}% is below threshold ${Math.round(threshold * 100)}%.`,
+          source: "lint",
+          collection: collectionName,
+        });
+        if (effectiveConfig.strict) errorCount += 1;
+      }
+    }
+  }
+
+  const { circularRefs, selfRefs } = detectCircularReferences(
+    itemsForCircularCheck
+  );
   const coverageEntry = effectiveConfig.i18n
     ? (() => {
         const locales: Record<string, number> = {};
-        for (const localeSet of slugLocales.values()) {
-          for (const locale of localeSet) {
+        // Seed declared locales so untranslated ones appear as 0 in the report
+        for (const locale of declaredLocales) locales[locale] = 0;
+        for (const localeMap of slugLocales.values()) {
+          for (const locale of localeMap.keys()) {
             locales[locale] = (locales[locale] ?? 0) + 1;
           }
         }
         return { name: collectionName, total: slugLocales.size, locales };
       })()
-    : { name: collectionName, total: slugs.size, locales: {} as Record<string, number> };
+    : {
+        name: collectionName,
+        total: slugs.size,
+        locales: {} as Record<string, number>,
+      };
 
   return {
     collectionName,
@@ -255,7 +369,13 @@ async function secondPassOneCollection(
   collectionSlugs: Map<string, Set<string>>,
   availableCollections: string[]
 ): Promise<SecondPassResult> {
-  const { name: collectionName, collectionPath, config, schema: schemaModule, contentFiles } = ctx;
+  const {
+    name: collectionName,
+    collectionPath,
+    config,
+    schema: schemaModule,
+    contentFiles,
+  } = ctx;
   const diagnostics: Diagnostic[] = [];
   const missingRefs: MissingRef[] = [];
   let relationErrors = 0;
@@ -263,9 +383,11 @@ async function secondPassOneCollection(
   if (!schemaModule) return { diagnostics, relationErrors: 0, missingRefs };
 
   const relations: Relations =
-    schemaModule.relations ?? extractRelations(schemaModule, availableCollections);
+    schemaModule.relations ??
+    extractRelations(schemaModule, availableCollections);
   // Note: deprecation warning for auto-detection is emitted in firstPassOneCollection
-  if (Object.keys(relations).length === 0) return { diagnostics, relationErrors: 0, missingRefs };
+  if (Object.keys(relations).length === 0)
+    return { diagnostics, relationErrors: 0, missingRefs };
 
   for (const file of contentFiles) {
     const filePath = path.join(collectionPath, file);
@@ -324,14 +446,20 @@ async function secondPassOneCollection(
 
 async function generateCoverageReportFile(
   outputPath: string,
-  collections: { name: string; total: number; locales: Record<string, number> }[],
+  collections: {
+    name: string;
+    total: number;
+    locales: Record<string, number>;
+  }[],
   circularRefs: string[],
   selfRefs: string[],
   missingRefs: MissingRef[],
   errorCount: number
 ): Promise<void> {
   const timestamp = new Date().toISOString();
-  const allLocales = [...new Set(collections.flatMap((c) => Object.keys(c.locales)))].sort();
+  const allLocales = [
+    ...new Set(collections.flatMap((c) => Object.keys(c.locales))),
+  ].sort();
   let output = `# Content Coverage Report
 
 Generated: ${timestamp}
@@ -345,7 +473,8 @@ Generated: ${timestamp}
     const localeCounts = allLocales.map((l) => locales[l] ?? 0);
     const complete = allLocales.length > 0 ? Math.min(...localeCounts) : total;
     const coverage = total > 0 ? Math.round((complete / total) * 100) : 100;
-    const localeStr = allLocales.length > 0 ? ` ${localeCounts.join(" | ")} |` : "";
+    const localeStr =
+      allLocales.length > 0 ? ` ${localeCounts.join(" | ")} |` : "";
     output += `| ${name} | ${total} |${localeStr} ${complete} | ${coverage}% |\n`;
   }
   output += "\n## Missing Translations\n";
@@ -368,7 +497,10 @@ Generated: ${timestamp}
     }
   }
   output += "\n## Relation Validation\n\n";
-  output += errorCount > 0 ? `**${errorCount} error(s) found.**\n\n` : "All relations valid.\n\n";
+  output +=
+    errorCount > 0
+      ? `**${errorCount} error(s) found.**\n\n`
+      : "All relations valid.\n\n";
   if (missingRefs.length > 0) {
     output += "### Errors (Missing References)\n\n";
     const groupedBySlug = new Map<string, MissingRef[]>();
@@ -396,7 +528,8 @@ Generated: ${timestamp}
     output +=
       "### Info (Circular References)\n\n_Circular references are allowed but noted for awareness._\n\n";
     for (const ref of circularRefs.slice(0, 20)) output += `- ${ref}\n`;
-    if (circularRefs.length > 20) output += `- _...and ${circularRefs.length - 20} more_\n`;
+    if (circularRefs.length > 20)
+      output += `- _...and ${circularRefs.length - 20} more_\n`;
   }
   await fs.writeFile(outputPath, output, "utf-8");
 }
@@ -509,7 +642,12 @@ export async function runLint(options: LintOptions): Promise<LintResult> {
 
   const firstPassResults = await pMap(
     collections,
-    (ctx) => firstPassOneCollection(ctx, availableCollections),
+     async (ctx) =>
+      firstPassOneCollection(
+        ctx,
+        availableCollections,
+        options.translations === true
+      ),
     { concurrency: LINT_CONCURRENCY }
   );
 
@@ -517,7 +655,11 @@ export async function runLint(options: LintOptions): Promise<LintResult> {
   let totalErrors = 0;
   const allCircularRefs: string[] = [];
   const allSelfRefs: string[] = [];
-  const coverageReport: { name: string; total: number; locales: Record<string, number> }[] = [];
+  const coverageReport: {
+    name: string;
+    total: number;
+    locales: Record<string, number>;
+  }[] = [];
 
   for (const r of firstPassResults) {
     diagnostics.push(...r.diagnostics);
@@ -530,7 +672,8 @@ export async function runLint(options: LintOptions): Promise<LintResult> {
 
   const secondPassResults = await pMap(
     collections,
-    (ctx) => secondPassOneCollection(ctx, collectionSlugs, availableCollections),
+     async (ctx) =>
+      secondPassOneCollection(ctx, collectionSlugs, availableCollections),
     { concurrency: LINT_CONCURRENCY }
   );
 
@@ -588,7 +731,9 @@ export async function runLint(options: LintOptions): Promise<LintResult> {
       metadata: { coveragePath },
       footer:
         `Sources: ${sources.join(", ")}` +
-        (coveragePath ? `\nCoverage report: ${path.relative(cwd, coveragePath)}` : ""),
+        (coveragePath
+          ? `\nCoverage report: ${path.relative(cwd, coveragePath)}`
+          : ""),
     }),
     diagnostics,
     coveragePath,

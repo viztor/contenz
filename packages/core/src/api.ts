@@ -83,7 +83,11 @@ export {
   type SearchResultItem,
 } from "./run-search.js";
 export { type RunSkillResult, runSkill } from "./run-skill.js";
-export { runStatus, type StatusOptions, type StatusResult } from "./run-status.js";
+export {
+  runStatus,
+  type StatusOptions,
+  type StatusResult,
+} from "./run-status.js";
 export {
   runWatch,
   type WatchChangeEvent,
@@ -105,7 +109,11 @@ export {
   saveSearchIndex,
 } from "./search-index.js";
 export type { DiscoveredCollection } from "./sources.js";
-export { discoverCollections, globContentFiles, resolveSourcePatterns } from "./sources.js";
+export {
+  discoverCollections,
+  globContentFiles,
+  resolveSourcePatterns,
+} from "./sources.js";
 export type { ContenzConfig, SchemaModule } from "./types.js";
 export type { ValidationError, ValidationResult } from "./validator.js";
 export { validateMeta } from "./validator.js";

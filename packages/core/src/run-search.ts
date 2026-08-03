@@ -5,6 +5,7 @@
  * current filesystem state, including content added since the last build.
  */
 import path from "node:path";
+
 import type { ContentOpResult } from "./ops/index.js";
 import { parseContentFile, parseFileName } from "./parser.js";
 import { createWorkspace } from "./workspace.js";
@@ -42,8 +43,13 @@ export interface SearchResultData {
 
 // ── File-based search ───────────────────────────────────────────────────────
 
-async function searchBruteForce(opts: SearchOptions): Promise<SearchResultData> {
-  const ws = await createWorkspace({ cwd: opts.cwd, collection: opts.collection });
+async function searchBruteForce(
+  opts: SearchOptions
+): Promise<SearchResultData> {
+  const ws = await createWorkspace({
+    cwd: opts.cwd,
+    collection: opts.collection,
+  });
   const col = ws.getCollection(opts.collection);
 
   if (!col) {
@@ -71,7 +77,8 @@ async function searchBruteForce(opts: SearchOptions): Promise<SearchResultData> 
     if (opts.fields && Object.keys(opts.fields).length > 0) {
       const matches = Object.entries(opts.fields).every(
         ([field, expected]) =>
-          content.meta[field] !== undefined && String(content.meta[field]) === expected
+          content.meta[field] !== undefined &&
+          String(content.meta[field]) === expected
       );
       if (!matches) continue;
     }
@@ -97,7 +104,9 @@ async function searchBruteForce(opts: SearchOptions): Promise<SearchResultData> 
 
 // ── Public API ──────────────────────────────────────────────────────────────
 
-export async function runSearch(opts: SearchOptions): Promise<ContentOpResult<SearchResultData>> {
+export async function runSearch(
+  opts: SearchOptions
+): Promise<ContentOpResult<SearchResultData>> {
   try {
     const cwd = path.resolve(process.cwd(), opts.cwd ?? ".");
 
@@ -105,7 +114,10 @@ export async function runSearch(opts: SearchOptions): Promise<ContentOpResult<Se
     const ws = await createWorkspace({ cwd, collection: opts.collection });
     const col = ws.getCollection(opts.collection);
     if (!col) {
-      return { success: false, error: `Collection not found: ${opts.collection}` };
+      return {
+        success: false,
+        error: `Collection not found: ${opts.collection}`,
+      };
     }
 
     // Always use brute-force (file-based) search for the programmatic API.
@@ -114,6 +126,9 @@ export async function runSearch(opts: SearchOptions): Promise<ContentOpResult<Se
     const data = await searchBruteForce(opts);
     return { success: true, data };
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : String(error) };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
   }
 }

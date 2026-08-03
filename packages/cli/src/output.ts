@@ -1,62 +1,92 @@
 /**
  * Shared output utilities for CLI commands.
- * Handles JSON envelope vs pretty-print formatting in one place.
+ * Handles JSON envelope vs pretty-print formatting; sets process.exitCode.
+ *
+ * Takes ContenzContext as an explicit argument (not `this`) so bundlers and
+ * oxc/no-this-in-exported-function stay happy.
  */
 
 import type { ContentOpResult } from "@contenz/core/api";
 
+import type { ContenzContext } from "./context.js";
+import type { OutputFormat } from "./shared.js";
+
 /**
- * Print the result and exit with appropriate code.
+ * Print the result and set exit code (does not process.exit — Stricli owns that).
  */
-export function printAndExit(result: ContentOpResult, format: string): never {
-	if (format === "json") {
-		console.log(JSON.stringify(result, null, 2));
-	} else {
-		if (result.success && result.data) {
-			prettyPrint(result.data);
-		} else {
-			console.error(`Error: ${result.error ?? "Unknown error"}`);
-			if (result.diagnostics?.length) {
-				for (const d of result.diagnostics) {
-					console.error(`  ${d.field ? `${d.field}: ` : ""}${d.message}`);
-				}
-			}
-		}
-	}
-	process.exit(result.success ? 0 : 1);
+export function printResult(
+  ctx: ContenzContext,
+  result: ContentOpResult,
+  format: OutputFormat | string
+): void {
+  if (format === "json") {
+    ctx.process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+  } else if (result.success && result.data !== undefined) {
+    prettyPrint(ctx, result.data);
+  } else {
+    ctx.process.stderr.write(`Error: ${result.error ?? "Unknown error"}\n`);
+    if (result.diagnostics?.length) {
+      for (const d of result.diagnostics) {
+        ctx.process.stderr.write(
+          `  ${d.field ? `${d.field}: ` : ""}${d.message}\n`
+        );
+      }
+    }
+  }
+  if (!result.success) {
+    ctx.process.exitCode = 1;
+  }
 }
 
-function prettyPrint(data: unknown, indent = 0): void {
-	if (data === null || data === undefined) return;
-	const pad = "  ".repeat(indent);
+function prettyPrint(ctx: ContenzContext, data: unknown, indent = 0): void {
+  if (data === null || data === undefined) return;
+  const pad = "  ".repeat(indent);
 
-	if (Array.isArray(data)) {
-		for (const item of data) {
-			prettyPrint(item, indent);
-			if (typeof item === "object") console.log();
-		}
-		return;
-	}
+  if (Array.isArray(data)) {
+    for (const item of data) {
+      prettyPrint(ctx, item, indent);
+      if (typeof item === "object" && item !== null) {
+        ctx.process.stdout.write("\n");
+      }
+    }
+    return;
+  }
 
-	if (typeof data === "object") {
-		for (const [key, value] of Object.entries(
-			data as Record<string, unknown>,
-		)) {
-			if (
-				typeof value === "object" &&
-				value !== null &&
-				!Array.isArray(value)
-			) {
-				console.log(`${pad}${key}:`);
-				prettyPrint(value, indent + 1);
-			} else if (Array.isArray(value)) {
-				console.log(`${pad}${key}: ${value.join(", ")}`);
-			} else {
-				console.log(`${pad}${key}: ${value}`);
-			}
-		}
-		return;
-	}
+  if (typeof data === "object") {
+    for (const [key, value] of Object.entries(
+      data as Record<string, unknown>
+    )) {
+      if (
+        typeof value === "object" &&
+        value !== null &&
+        !Array.isArray(value)
+      ) {
+        ctx.process.stdout.write(`${pad}${key}:\n`);
+        prettyPrint(ctx, value, indent + 1);
+      } else if (Array.isArray(value)) {
+        ctx.process.stdout.write(`${pad}${key}: ${value.join(", ")}\n`);
+      } else {
+        ctx.process.stdout.write(`${pad}${key}: ${value}\n`);
+      }
+    }
+    return;
+  }
 
-	console.log(`${pad}${data}`);
+  ctx.process.stdout.write(`${pad}${data}\n`);
+}
+
+/** Write a line to stdout */
+export function log(ctx: ContenzContext, message: string): void {
+  ctx.process.stdout.write(`${message}\n`);
+}
+
+/** Write a line to stderr */
+export function logError(ctx: ContenzContext, message: string): void {
+  ctx.process.stderr.write(`${message}\n`);
+}
+
+/** Fail the command with a message and exit code 1 */
+export function fail(ctx: ContenzContext, message: string): void {
+  ctx.process.stderr.write(`${message}\n`);
+  ctx.process.exitCode = 1;
 }

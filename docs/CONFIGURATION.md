@@ -28,7 +28,7 @@ Contenz supports two collection discovery modes that can be used **independently
 ### Options
 
 | Option | Type | Default | Description |
-|--------|------|---------|-------------|
+| --- | --- | --- | --- |
 | `sources` | `string[]` | `["content/*"]` | Discovery patterns. `content/*` = direct child folders. `docs` = treat `docs/` as one collection. |
 | `collections` | `Record<string, CollectionDeclaration>` | `undefined` | Inline collection declarations — see [Centralized collections](#centralized-collections) below. |
 | `outputDir` | `string` | `"generated/content"` | Directory for generated TypeScript files. |
@@ -39,7 +39,7 @@ Contenz supports two collection discovery modes that can be used **independently
 | `ignore` | `string[]` | `["README.md", "_*"]` | Glob patterns to ignore under each collection. |
 | `adapters` | `FormatAdapter[]` | `[]` | Format adapters for content file parsing. Register adapters for `.md`/`.mdx` (via `@contenz/adapter-mdx`). JSON is built-in. |
 | `hooks` | `object` | `undefined` | Extension hooks for tapping into the build lifecycle (`beforeBuild`, `transformItem`, `afterBuild`). |
-| `contentDir` | `string` | *(deprecated)* | Use `sources: ["<contentDir>/*"]` instead. |
+| `contentDir` | `string` | _(deprecated)_ | Use `sources: ["<contentDir>/*"]` instead. |
 
 ### Centralized collections
 
@@ -73,13 +73,14 @@ export const config: ContenzConfig = {
 Each entry in `collections` is a `CollectionDeclaration`:
 
 | Field | Type | Required | Description |
-|-------|------|----------|-------------|
+| --- | --- | --- | --- |
 | `path` | `string` | ✅ | Directory containing content files (relative to project root). |
 | `schema` | `ZodSchema` | ❌ | Inline Zod schema. If omitted, falls back to `schema.ts` in the directory. |
 | `relations` | `Relations` | ❌ | Relation mapping for this collection. |
 | `config` | `CollectionConfig` | ❌ | Collection-level config overrides (`types`, `extensions`, `i18n`, etc.). |
 
 **Precedence rules:**
+
 - If `collections.faq` is declared **and** `content/faq/schema.ts` exists, the inline `schema` wins.
 - If `sources` discovers a collection with the same name as a `collections` entry, the inline declaration wins.
 - You can mix both: use `sources` for auto-discovered collections and `collections` for others.
@@ -97,8 +98,8 @@ export const config: CollectionConfig = {
     { name: "topic", pattern: /^topic-/ },
     { name: "term", pattern: /.*/ },
   ],
-  slugPattern: /^(.+)\.(\w+)\.(mdx?)$/,  // optional
-  i18n: true,                             // override project i18n for this collection
+  slugPattern: /^(.+)\.(\w+)\.(mdx?)$/, // optional
+  i18n: true, // override project i18n for this collection
   extensions: ["mdx"],
   ignore: ["_drafts/*"],
 };
@@ -107,7 +108,7 @@ export const config: CollectionConfig = {
 ### Options
 
 | Option | Type | Description |
-|--------|------|-------------|
+| --- | --- | --- |
 | `types` | `ContentType[]` | Multi-type collection: `{ name, pattern }`. First matching pattern wins. **Optional** when the schema exports `types` (see [Schema authoring – Multi-type](#multi-type-collection)). |
 | `slugPattern` | `RegExp` | Custom regex to extract slug (and optionally locale) from filename. |
 | `i18n` | `boolean \| I18nConfigShape` | Override i18n for this collection. |
@@ -129,12 +130,12 @@ const schema = z.object({
   category: z.enum(["products", "ordering"]),
 });
 
-export const { meta, relations, computed } = defineCollection({ 
+export const { meta, relations, computed } = defineCollection({
   schema,
   computed: {
     readingTime: (item) => Math.ceil((item.body || "").split(" ").length / 200),
     permalink: (item) => `/faq/${item.slug}`,
-  }
+  },
 });
 ```
 
@@ -163,12 +164,13 @@ const topicSchema = z.object({
   summary: z.string().optional(),
 });
 
-export const { termMeta, topicMeta, meta, relations, types } = defineMultiTypeCollection({
-  schemas: {
-    topic: { schema: topicSchema, pattern: /^topic-/ },
-    term: { schema: termSchema, pattern: /.*/ },
-  },
-});
+export const { termMeta, topicMeta, meta, relations, types } =
+  defineMultiTypeCollection({
+    schemas: {
+      topic: { schema: topicSchema, pattern: /^topic-/ },
+      term: { schema: termSchema, pattern: /.*/ },
+    },
+  });
 ```
 
 Filenames are matched against `pattern` in order (object key order); first match wins. The schema module’s exported `types` are used when the collection config does not set `types`.
@@ -178,9 +180,10 @@ Use plain schemas and set `config.types` in `content/<collection>/config.ts`:
 
 ```ts
 // schema.ts
-export const { termMeta, topicMeta, meta, relations } = defineMultiTypeCollection({
-  schemas: { term: termSchema, topic: topicSchema },
-});
+export const { termMeta, topicMeta, meta, relations } =
+  defineMultiTypeCollection({
+    schemas: { term: termSchema, topic: topicSchema },
+  });
 
 // config.ts
 export const config: CollectionConfig = {
@@ -201,7 +204,7 @@ Fields that reference other collections can be validated so slugs exist in the t
 export const { meta, relations } = defineCollection({
   schema,
   relations: {
-    glossaryLinks: "glossary",   // any field name → target collection
+    glossaryLinks: "glossary", // any field name → target collection
     authorRef: "team",
     seeAlso: "faq",
   },
@@ -243,6 +246,7 @@ export const config: ContenzConfig = {
 ```
 
 The MDX adapter handles both `.md` and `.mdx` files with **dual syntax support**:
+
 - **Frontmatter** (`---` YAML/JSON `---`) — works in both `.md` and `.mdx` files
 - **Export syntax** (`export const meta = { ... }`) — MDX-specific
 

@@ -16,12 +16,22 @@ export interface ViewResult {
   body?: string;
 }
 
-export async function runView(opts: ViewOptions): Promise<ContentOpResult<ViewResult>> {
+export async function runView(
+  opts: ViewOptions
+): Promise<ContentOpResult<ViewResult>> {
   try {
-    const result = await readContent(opts.cwd, opts.collection, opts.slug, opts.locale);
+    const result = await readContent(
+      opts.cwd,
+      opts.collection,
+      opts.slug,
+      opts.locale
+    );
 
     if (!result) {
-      return { success: false, error: `Content not found: ${opts.collection}/${opts.slug}` };
+      return {
+        success: false,
+        error: `Content not found: ${opts.collection}/${opts.slug}`,
+      };
     }
 
     return {
@@ -35,6 +45,9 @@ export async function runView(opts: ViewOptions): Promise<ContentOpResult<ViewRe
       },
     };
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : String(error) };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
   }
 }

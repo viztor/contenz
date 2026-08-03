@@ -9,11 +9,9 @@
  * node_modules/@contenz/core symlinked to packages/core.
  */
 
-import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { beforeAll, describe, expect, it } from "vitest";
+
 import {
   runBuild,
   runLint,
@@ -25,80 +23,21 @@ import {
   runSearch,
   runSchema,
 } from "@contenz/core/api";
+import { beforeAll, describe, expect, it } from "vitest";
 
-// ── Paths ───────────────────────────────────────────────────────────────────
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const cliRoot = path.resolve(__dirname, "..", "cli");
-const coreRoot = path.resolve(__dirname, "..", "core");
-const adapterMdxRoot = path.resolve(__dirname, "..", "adapter-mdx");
-const binPath = path.join(cliRoot, "bin", "run.mjs");
-
-const fixture = (name: string) => path.join(__dirname, "fixtures", name);
-
-// ── Helpers ─────────────────────────────────────────────────────────────────
-
-const CLI_TIMEOUT_MS = 10_000;
-
-function runCli(
-  args: string[],
-  cwd: string
-): { status: number | null; stdout: string; stderr: string } {
-  const result = spawnSync(process.execPath, [binPath, ...args], {
-    cwd,
-    encoding: "utf-8",
-    env: { ...process.env, FORCE_COLOR: "0" },
-    timeout: CLI_TIMEOUT_MS,
-  });
-  if (result.signal === "SIGTERM") {
-    return {
-      status: 1,
-      stdout: result.stdout ?? "",
-      stderr: `[TIMEOUT after ${CLI_TIMEOUT_MS}ms] ${result.stderr ?? ""}`,
-    };
-  }
-  return {
-    status: result.status,
-    stdout: result.stdout ?? "",
-    stderr: result.stderr ?? "",
-  };
-}
-
-/** Ensure a symlink from projectDir/node_modules/<pkg> → targetPath */
-function ensureSymlink(projectDir: string, pkg: string, target: string): void {
-  const linkPath = path.join(projectDir, "node_modules", ...pkg.split("/"));
-  try {
-    const stat = fs.lstatSync(linkPath);
-    if (stat.isSymbolicLink()) {
-      const resolved = path.resolve(path.dirname(linkPath), fs.readlinkSync(linkPath));
-      if (fs.existsSync(resolved)) return;
-      fs.rmSync(linkPath, { recursive: true, force: true });
-    } else {
-      return; // real directory, leave it
-    }
-  } catch { /* doesn't exist yet */ }
-  fs.mkdirSync(path.dirname(linkPath), { recursive: true });
-  fs.symlinkSync(target, linkPath);
-}
-
-const FIXTURES_WITH_SCHEMA = [
-  "minimal",
-  "i18n",
-  "multi-type",
-  "mixed-sources",
-  "invalid-schema",
-  "invalid-relation",
-  "centralized",
-];
+import { cliRoot, fixture, linkAllFixtures, runCli } from "./setup.js";
 
 beforeAll(() => {
-  const zodRoot = path.join(coreRoot, "node_modules", "zod");
-  for (const name of FIXTURES_WITH_SCHEMA) {
-    ensureSymlink(fixture(name), "@contenz/core", coreRoot);
-    ensureSymlink(fixture(name), "@contenz/adapter-mdx", adapterMdxRoot);
-  }
-  // Centralized fixture imports zod directly in contenz.config.ts
-  ensureSymlink(fixture("centralized"), "zod", zodRoot);
+  linkAllFixtures([
+    "minimal",
+    "i18n",
+    "i18n-partial",
+    "multi-type",
+    "mixed-sources",
+    "invalid-schema",
+    "invalid-relation",
+    "centralized",
+  ]);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -116,7 +55,9 @@ describe("cli: centralized (inline collections, no schema.ts)", () => {
   it("build exits 0 and generates output", () => {
     const r = runCli(["build"], cwd);
     expect(r.status).toBe(0);
-    expect(fs.existsSync(path.join(cwd, "generated", "content", "notes.ts"))).toBe(true);
+    expect(
+      fs.existsSync(path.join(cwd, "generated", "content", "notes.ts"))
+    ).toBe(true);
   });
 
   it("build output contains content data", () => {
@@ -142,8 +83,12 @@ describe("cli: minimal (flat, no i18n)", () => {
   it("build exits 0 and generates output", () => {
     const r = runCli(["build"], cwd);
     expect(r.status).toBe(0);
-    expect(fs.existsSync(path.join(cwd, "generated", "content", "faq.ts"))).toBe(true);
-    expect(fs.existsSync(path.join(cwd, "generated", "content", "index.ts"))).toBe(true);
+    expect(
+      fs.existsSync(path.join(cwd, "generated", "content", "faq.ts"))
+    ).toBe(true);
+    expect(
+      fs.existsSync(path.join(cwd, "generated", "content", "index.ts"))
+    ).toBe(true);
   });
 
   it("lint --format json returns structured output", () => {
@@ -167,7 +112,9 @@ describe("cli: minimal (flat, no i18n)", () => {
   it("build --force exits 0", () => {
     const r = runCli(["build", "--force"], cwd);
     expect(r.status).toBe(0);
-    expect(fs.existsSync(path.join(cwd, "generated", "content", "faq.ts"))).toBe(true);
+    expect(
+      fs.existsSync(path.join(cwd, "generated", "content", "faq.ts"))
+    ).toBe(true);
   });
 });
 
@@ -179,9 +126,15 @@ describe("cli: incremental build", () => {
     if (fs.existsSync(manifestPath)) fs.unlinkSync(manifestPath);
     runCli(["build"], cwd);
     expect(fs.existsSync(manifestPath)).toBe(true);
-    const first = fs.readFileSync(path.join(cwd, "generated", "content", "faq.ts"), "utf-8");
+    const first = fs.readFileSync(
+      path.join(cwd, "generated", "content", "faq.ts"),
+      "utf-8"
+    );
     runCli(["build"], cwd);
-    const second = fs.readFileSync(path.join(cwd, "generated", "content", "faq.ts"), "utf-8");
+    const second = fs.readFileSync(
+      path.join(cwd, "generated", "content", "faq.ts"),
+      "utf-8"
+    );
     expect(second).toBe(first);
   });
 
@@ -194,7 +147,11 @@ describe("cli: incremental build", () => {
     const docsBefore = fs.readFileSync(docsPath, "utf-8");
     const faqBefore = fs.readFileSync(faqPath, "utf-8");
     const original = fs.readFileSync(faqContentPath, "utf-8");
-    fs.writeFileSync(faqContentPath, original.replace("What is contenz?", "What is contenz? (e2e)"), "utf-8");
+    fs.writeFileSync(
+      faqContentPath,
+      original.replace("What is contenz?", "What is contenz? (e2e)"),
+      "utf-8"
+    );
     runCli(["build"], mixedCwd);
     const docsAfter = fs.readFileSync(docsPath, "utf-8");
     const faqAfter = fs.readFileSync(faqPath, "utf-8");
@@ -215,10 +172,69 @@ describe("cli: i18n", () => {
   it("build generates i18n collection", () => {
     const r = runCli(["build"], cwd);
     expect(r.status).toBe(0);
-    const out = fs.readFileSync(path.join(cwd, "generated", "content", "faq.ts"), "utf-8");
+    const out = fs.readFileSync(
+      path.join(cwd, "generated", "content", "faq.ts"),
+      "utf-8"
+    );
     expect(out).toContain("locales");
     expect(out).toContain("en");
     expect(out).toContain("zh");
+  });
+});
+
+describe("cli: i18n-partial (declared locales, missing translations)", () => {
+  const cwd = fixture("i18n-partial");
+
+  it("plain lint stays clean (translation check is opt-in)", () => {
+    const r = runCli(["lint"], cwd);
+    expect(r.status).toBe(0);
+    expect(r.stdout).not.toContain("I18N_MISSING_TRANSLATION");
+  });
+
+  it("lint --translations exits 0 with missing-translation warnings (non-strict)", () => {
+    const r = runCli(["lint", "--translations"], cwd);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("I18N_MISSING_TRANSLATION");
+  });
+
+  it("lint --translations --format json emits agent-pipeable missing-translation diagnostics", () => {
+    const r = runCli(["lint", "--translations", "--format", "json"], cwd);
+    expect(r.status).toBe(0);
+
+    const parsed = JSON.parse(r.stdout) as {
+      diagnostics: Array<{
+        code: string;
+        severity: string;
+        collection?: string;
+        slug?: string;
+        locale?: string;
+        file?: string;
+      }>;
+    };
+
+    // The agent contract: filter by code, then each diagnostic carries
+    // collection + slug + missing locale + source file to translate from.
+    const missing = parsed.diagnostics.filter(
+      (d) => d.code === "I18N_MISSING_TRANSLATION"
+    );
+    expect(missing).toHaveLength(3);
+    for (const d of missing) {
+      expect(d.collection).toBe("faq");
+      expect(d.slug).toBeTruthy();
+      expect(d.locale).toBeTruthy();
+      expect(d.file).toMatch(/\.en\.json$/);
+    }
+    expect(missing).toContainEqual(
+      expect.objectContaining({
+        slug: "moq",
+        locale: "ja",
+        file: "moq.en.json",
+      })
+    );
+
+    expect(
+      parsed.diagnostics.some((d) => d.code === "I18N_COVERAGE_BELOW_THRESHOLD")
+    ).toBe(true);
   });
 });
 
@@ -232,7 +248,10 @@ describe("cli: multi-type", () => {
   it("build generates typed exports", () => {
     const r = runCli(["build"], cwd);
     expect(r.status).toBe(0);
-    const out = fs.readFileSync(path.join(cwd, "generated", "content", "terms.ts"), "utf-8");
+    const out = fs.readFileSync(
+      path.join(cwd, "generated", "content", "terms.ts"),
+      "utf-8"
+    );
     expect(out).toContain("terms");
     expect(out).toContain("topics");
   });
@@ -248,8 +267,15 @@ describe("cli: mixed-sources", () => {
   it("build generates outputs for multiple sources", () => {
     const r = runCli(["build"], cwd);
     expect(r.status).toBe(0);
-    expect(fs.readFileSync(path.join(cwd, "generated", "content", "docs.ts"), "utf-8")).toContain("Getting started");
-    expect(fs.readFileSync(path.join(cwd, "generated", "content", "faq.ts"), "utf-8")).toContain("What is contenz?");
+    expect(
+      fs.readFileSync(
+        path.join(cwd, "generated", "content", "docs.ts"),
+        "utf-8"
+      )
+    ).toContain("Getting started");
+    expect(
+      fs.readFileSync(path.join(cwd, "generated", "content", "faq.ts"), "utf-8")
+    ).toContain("What is contenz?");
   });
 });
 
@@ -360,7 +386,9 @@ describe("cli: list", () => {
     expect(r.status).toBe(0);
     const parsed = JSON.parse(r.stdout);
     expect(parsed.success).toBe(true);
-    const faq = parsed.data.collections.find((c: { name: string }) => c.name === "faq");
+    const faq = parsed.data.collections.find(
+      (c: { name: string }) => c.name === "faq"
+    );
     expect(faq).toBeDefined();
     expect(faq.items).toBeGreaterThan(0);
   });
@@ -386,11 +414,15 @@ describe("cli: view", () => {
     expect(r.status).toBe(0);
     const parsed = JSON.parse(r.stdout);
     expect(parsed.data.slug).toBe("hello");
-    expect(parsed.data.meta.question).toBe("What is the minimum order quantity?");
+    expect(parsed.data.meta.question).toBe(
+      "What is the minimum order quantity?"
+    );
   });
 
   it("view missing slug exits 1", () => {
-    expect(runCli(["view", "faq", "nope", "--format", "json"], cwd).status).toBe(1);
+    expect(
+      runCli(["view", "faq", "nope", "--format", "json"], cwd).status
+    ).toBe(1);
   });
 });
 
@@ -398,14 +430,30 @@ describe("cli: create", () => {
   const cwd = fixture("minimal");
 
   it("create with missing required field fails", () => {
-    const r = runCli(["create", "faq", "e2e-invalid", "--set", "category=products", "--format", "json"], cwd);
+    const r = runCli(
+      [
+        "create",
+        "faq",
+        "e2e-invalid",
+        "--set",
+        "category=products",
+        "--format",
+        "json",
+      ],
+      cwd
+    );
     expect(r.status).toBe(1);
     const newFile = path.join(cwd, "content", "faq", "e2e-invalid.md");
     if (fs.existsSync(newFile)) fs.unlinkSync(newFile);
   });
 
   it("create in nonexistent collection exits 1", () => {
-    expect(runCli(["create", "nonexistent", "test", "--set", "a=b", "--format", "json"], cwd).status).toBe(1);
+    expect(
+      runCli(
+        ["create", "nonexistent", "test", "--set", "a=b", "--format", "json"],
+        cwd
+      ).status
+    ).toBe(1);
   });
 });
 
@@ -416,7 +464,18 @@ describe("cli: update", () => {
     const faqPath = path.join(cwd, "content", "faq", "hello.json");
     const original = fs.readFileSync(faqPath, "utf-8");
     try {
-      const r = runCli(["update", "faq", "hello", "--set", "question=Updated?", "--format", "json"], cwd);
+      const r = runCli(
+        [
+          "update",
+          "faq",
+          "hello",
+          "--set",
+          "question=Updated?",
+          "--format",
+          "json",
+        ],
+        cwd
+      );
       expect(r.status).toBe(0);
       const parsed = JSON.parse(r.stdout);
       expect(parsed.data.meta.question).toBe("Updated?");
@@ -427,7 +486,10 @@ describe("cli: update", () => {
   });
 
   it("update nonexistent exits 1", () => {
-    expect(runCli(["update", "faq", "nope", "--set", "q=x", "--format", "json"], cwd).status).toBe(1);
+    expect(
+      runCli(["update", "faq", "nope", "--set", "q=x", "--format", "json"], cwd)
+        .status
+    ).toBe(1);
   });
 
   it("update with no mutations exits 1", () => {
@@ -438,22 +500,32 @@ describe("cli: update", () => {
 
 describe("cli: init", () => {
   it("scaffolds a starter project", () => {
-    const cwd = fs.mkdtempSync(path.join(require("node:os").tmpdir(), "contenz-init-"));
+    const cwd = fs.mkdtempSync(
+      path.join(require("node:os").tmpdir(), "contenz-init-")
+    );
     try {
       const r = runCli(["init"], cwd);
       expect(r.status).toBe(0);
       expect(r.stdout).toContain("Initialized contenz");
       expect(fs.existsSync(path.join(cwd, "contenz.config.ts"))).toBe(true);
-      expect(fs.existsSync(path.join(cwd, "content", "pages", "schema.ts"))).toBe(true);
+      expect(
+        fs.existsSync(path.join(cwd, "content", "pages", "schema.ts"))
+      ).toBe(true);
     } finally {
       fs.rmSync(cwd, { recursive: true, force: true });
     }
   });
 
   it("refuses to overwrite without --force", () => {
-    const cwd = fs.mkdtempSync(path.join(require("node:os").tmpdir(), "contenz-init-"));
+    const cwd = fs.mkdtempSync(
+      path.join(require("node:os").tmpdir(), "contenz-init-")
+    );
     try {
-      fs.writeFileSync(path.join(cwd, "contenz.config.ts"), "export const config = {};", "utf-8");
+      fs.writeFileSync(
+        path.join(cwd, "contenz.config.ts"),
+        "export const config = {};",
+        "utf-8"
+      );
       const r = runCli(["init"], cwd);
       expect(r.status).toBe(1);
     } finally {
@@ -489,7 +561,10 @@ describe("api: runBuild", () => {
   });
 
   it("format json returns parseable report", async () => {
-    const result = await runBuild({ cwd: fixture("invalid-schema"), format: "json" });
+    const result = await runBuild({
+      cwd: fixture("invalid-schema"),
+      format: "json",
+    });
     const parsed = JSON.parse(result.report);
     expect(parsed.success).toBe(false);
     expect(parsed.data.title).toBe("Build diagnostics");
@@ -535,7 +610,9 @@ describe("api: runList", () => {
   it("lists all collections", async () => {
     const result = await runList({ cwd });
     expect(result.success).toBe(true);
-    const data = result.data as { collections: Array<{ name: string; fields?: string[] }> };
+    const data = result.data as {
+      collections: Array<{ name: string; fields?: string[] }>;
+    };
     const faq = data.collections.find((c) => c.name === "faq");
     expect(faq).toBeDefined();
     expect(faq?.fields).toContain("question");
@@ -560,7 +637,9 @@ describe("api: runView", () => {
   it("returns content item", async () => {
     const result = await runView({ cwd, collection: "faq", slug: "hello" });
     expect(result.success).toBe(true);
-    expect(result.data?.meta.question).toBe("What is the minimum order quantity?");
+    expect(result.data?.meta.question).toBe(
+      "What is the minimum order quantity?"
+    );
   });
 
   it("returns error for missing slug", async () => {
@@ -580,7 +659,10 @@ describe("api: runCreate", () => {
         cwd,
         collection: "faq",
         slug: "e2e-api",
-        meta: { question: "What is a programmatic test?", category: "products" },
+        meta: {
+          question: "What is a programmatic test?",
+          category: "products",
+        },
       });
       expect(result.success).toBe(true);
       expect(result.data?.slug).toBe("e2e-api");
@@ -656,19 +738,28 @@ describe("cli: search", () => {
   });
 
   it("search with no matches returns empty", () => {
-    const r = runCli(["search", "faq", "nonexistent-slug-xyz", "--format", "json"], cwd);
+    const r = runCli(
+      ["search", "faq", "nonexistent-slug-xyz", "--format", "json"],
+      cwd
+    );
     expect(r.status).toBe(0);
     const parsed = JSON.parse(r.stdout);
     expect(parsed.data.items.length).toBe(0);
   });
 
   it("search nonexistent collection exits 1", () => {
-    const r = runCli(["search", "nonexistent", "hello", "--format", "json"], cwd);
+    const r = runCli(
+      ["search", "nonexistent", "hello", "--format", "json"],
+      cwd
+    );
     expect(r.status).toBe(1);
   });
 
   it("search with field filter", () => {
-    const r = runCli(["search", "faq", "--field", "category=products", "--format", "json"], cwd);
+    const r = runCli(
+      ["search", "faq", "--field", "category=products", "--format", "json"],
+      cwd
+    );
     expect(r.status).toBe(0);
     const parsed = JSON.parse(r.stdout);
     expect(parsed.success).toBe(true);
@@ -689,13 +780,21 @@ describe("api: runSearch", () => {
   });
 
   it("returns empty for no matches", async () => {
-    const result = await runSearch({ cwd, collection: "faq", query: "nonexistent-xyz" });
+    const result = await runSearch({
+      cwd,
+      collection: "faq",
+      query: "nonexistent-xyz",
+    });
     expect(result.success).toBe(true);
     expect(result.data?.items.length).toBe(0);
   });
 
   it("filters by field value", async () => {
-    const result = await runSearch({ cwd, collection: "faq", fields: { category: "products" } });
+    const result = await runSearch({
+      cwd,
+      collection: "faq",
+      fields: { category: "products" },
+    });
     expect(result.success).toBe(true);
     for (const item of result.data?.items ?? []) {
       expect(item.meta.category).toBe("products");

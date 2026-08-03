@@ -11,11 +11,9 @@
  *   - Schema introspection: multi-type, enum values, optional fields
  */
 
-import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+
 import {
   runBuild,
   runLint,
@@ -28,75 +26,19 @@ import {
   runSchema,
   createWorkspace,
 } from "@contenz/core/api";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-// ── Paths ───────────────────────────────────────────────────────────────────
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const cliRoot = path.resolve(__dirname, "..", "cli");
-const coreRoot = path.resolve(__dirname, "..", "core");
-const adapterMdxRoot = path.resolve(__dirname, "..", "adapter-mdx");
-const binPath = path.join(cliRoot, "bin", "run.mjs");
-
-const fixture = (name: string) => path.join(__dirname, "fixtures", name);
-
-// ── Helpers ─────────────────────────────────────────────────────────────────
-
-const CLI_TIMEOUT_MS = 10_000;
-
-function runCli(
-  args: string[],
-  cwd: string
-): { status: number | null; stdout: string; stderr: string } {
-  const result = spawnSync(process.execPath, [binPath, ...args], {
-    cwd,
-    encoding: "utf-8",
-    env: { ...process.env, FORCE_COLOR: "0" },
-    timeout: CLI_TIMEOUT_MS,
-  });
-  if (result.signal === "SIGTERM") {
-    return {
-      status: 1,
-      stdout: result.stdout ?? "",
-      stderr: `[TIMEOUT after ${CLI_TIMEOUT_MS}ms] ${result.stderr ?? ""}`,
-    };
-  }
-  return {
-    status: result.status,
-    stdout: result.stdout ?? "",
-    stderr: result.stderr ?? "",
-  };
-}
-
-function ensureSymlink(projectDir: string, pkg: string, target: string): void {
-  const linkPath = path.join(projectDir, "node_modules", ...pkg.split("/"));
-  try {
-    const stat = fs.lstatSync(linkPath);
-    if (stat.isSymbolicLink()) {
-      const resolved = path.resolve(path.dirname(linkPath), fs.readlinkSync(linkPath));
-      if (fs.existsSync(resolved)) return;
-      fs.rmSync(linkPath, { recursive: true, force: true });
-    } else {
-      return;
-    }
-  } catch { /* doesn't exist yet */ }
-  fs.mkdirSync(path.dirname(linkPath), { recursive: true });
-  fs.symlinkSync(target, linkPath);
-}
-
-const FIXTURES_WITH_SCHEMA = [
-  "minimal",
-  "i18n",
-  "multi-type",
-  "mixed-sources",
-  "invalid-schema",
-  "invalid-relation",
-];
+import { fixture, linkAllFixtures, runCli } from "./setup.js";
 
 beforeAll(() => {
-  for (const name of FIXTURES_WITH_SCHEMA) {
-    ensureSymlink(fixture(name), "@contenz/core", coreRoot);
-    ensureSymlink(fixture(name), "@contenz/adapter-mdx", adapterMdxRoot);
-  }
+  linkAllFixtures([
+    "minimal",
+    "i18n",
+    "multi-type",
+    "mixed-sources",
+    "invalid-schema",
+    "invalid-relation",
+  ]);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -107,13 +49,25 @@ describe("i18n: locale-aware CRUD lifecycle", () => {
   const cwd = fixture("i18n");
 
   it("view returns locale-specific content (en)", async () => {
-    const result = await runView({ cwd, collection: "faq", slug: "moq", locale: "en" });
+    const result = await runView({
+      cwd,
+      collection: "faq",
+      slug: "moq",
+      locale: "en",
+    });
     expect(result.success).toBe(true);
-    expect(result.data?.meta.question).toBe("What is the minimum order quantity?");
+    expect(result.data?.meta.question).toBe(
+      "What is the minimum order quantity?"
+    );
   });
 
   it("view returns locale-specific content (zh)", async () => {
-    const result = await runView({ cwd, collection: "faq", slug: "moq", locale: "zh" });
+    const result = await runView({
+      cwd,
+      collection: "faq",
+      slug: "moq",
+      locale: "zh",
+    });
     expect(result.success).toBe(true);
     expect(result.data?.meta.question).toBe("最低起订量是多少？");
   });
@@ -121,7 +75,9 @@ describe("i18n: locale-aware CRUD lifecycle", () => {
   it("list items shows locale info for i18n collection", async () => {
     const result = await runList({ cwd, collection: "faq" });
     expect(result.success).toBe(true);
-    const data = result.data as { items: Array<{ slug: string; locale?: string }> };
+    const data = result.data as {
+      items: Array<{ slug: string; locale?: string }>;
+    };
     expect(data.items.length).toBeGreaterThanOrEqual(2);
     // Should have both en and zh for moq
     const locales = data.items.map((i) => i.locale).filter(Boolean);
@@ -156,17 +112,32 @@ describe("i18n: locale-aware CRUD lifecycle", () => {
       expect(fs.existsSync(newFileZh)).toBe(true);
 
       // View EN
-      const viewEn = await runView({ cwd, collection: "faq", slug: "e2e-i18n", locale: "en" });
+      const viewEn = await runView({
+        cwd,
+        collection: "faq",
+        slug: "e2e-i18n",
+        locale: "en",
+      });
       expect(viewEn.success).toBe(true);
       expect(viewEn.data?.meta.question).toBe("E2E i18n test?");
 
       // View ZH
-      const viewZh = await runView({ cwd, collection: "faq", slug: "e2e-i18n", locale: "zh" });
+      const viewZh = await runView({
+        cwd,
+        collection: "faq",
+        slug: "e2e-i18n",
+        locale: "zh",
+      });
       expect(viewZh.success).toBe(true);
       expect(viewZh.data?.meta.question).toBe("国际化端到端测试？");
 
       // Search by locale — en only
-      const searchEn = await runSearch({ cwd, collection: "faq", query: "e2e-i18n", locale: "en" });
+      const searchEn = await runSearch({
+        cwd,
+        collection: "faq",
+        query: "e2e-i18n",
+        locale: "en",
+      });
       expect(searchEn.success).toBe(true);
       expect(searchEn.data?.items.length).toBe(1);
       expect(searchEn.data?.items[0].locale).toBe("en");
@@ -192,7 +163,12 @@ describe("i18n: locale-aware CRUD lifecycle", () => {
       expect(result.data?.meta.category).toBe("products");
 
       // Verify ZH is unchanged
-      const viewZh = await runView({ cwd, collection: "faq", slug: "moq", locale: "zh" });
+      const viewZh = await runView({
+        cwd,
+        collection: "faq",
+        slug: "moq",
+        locale: "zh",
+      });
       expect(viewZh.data?.meta.question).toBe("最低起订量是多少？");
     } finally {
       fs.writeFileSync(filePath, original, "utf-8");
@@ -216,7 +192,10 @@ describe("i18n: locale-aware CRUD lifecycle", () => {
   it("i18n build generates locale-grouped output", async () => {
     const buildResult = await runBuild({ cwd, force: true });
     expect(buildResult.success).toBe(true);
-    const output = fs.readFileSync(path.join(cwd, "generated", "content", "faq.ts"), "utf-8");
+    const output = fs.readFileSync(
+      path.join(cwd, "generated", "content", "faq.ts"),
+      "utf-8"
+    );
     expect(output).toContain("locales");
     expect(output).toContain("en");
     expect(output).toContain("zh");
@@ -240,7 +219,11 @@ describe("multi-type: type routing and schema introspection", () => {
   });
 
   it("schema introspects specific type (topic)", async () => {
-    const result = await runSchema({ cwd, collection: "terms", contentType: "topic" });
+    const result = await runSchema({
+      cwd,
+      collection: "terms",
+      contentType: "topic",
+    });
     expect(result.success).toBe(true);
     expect(result.data?.contentType).toBe("topic");
     expect(result.data?.schema.fields.title).toBeDefined();
@@ -250,7 +233,11 @@ describe("multi-type: type routing and schema introspection", () => {
   });
 
   it("schema introspects specific type (term)", async () => {
-    const result = await runSchema({ cwd, collection: "terms", contentType: "term" });
+    const result = await runSchema({
+      cwd,
+      collection: "terms",
+      contentType: "term",
+    });
     expect(result.success).toBe(true);
     expect(result.data?.contentType).toBe("term");
     expect(result.data?.schema.fields.term).toBeDefined();
@@ -258,20 +245,34 @@ describe("multi-type: type routing and schema introspection", () => {
   });
 
   it("schema rejects nonexistent type", async () => {
-    const result = await runSchema({ cwd, collection: "terms", contentType: "nonexistent" });
+    const result = await runSchema({
+      cwd,
+      collection: "terms",
+      contentType: "nonexistent",
+    });
     expect(result.success).toBe(false);
     expect(result.error).toContain("nonexistent");
   });
 
   it("view reads term-type content correctly", async () => {
-    const result = await runView({ cwd, collection: "terms", slug: "moq", locale: "en" });
+    const result = await runView({
+      cwd,
+      collection: "terms",
+      slug: "moq",
+      locale: "en",
+    });
     expect(result.success).toBe(true);
     expect(result.data?.meta.term).toBe("MOQ");
     expect(result.data?.meta.definition).toBe("Minimum order quantity.");
   });
 
   it("view reads topic-type content correctly", async () => {
-    const result = await runView({ cwd, collection: "terms", slug: "topic-getting-started", locale: "en" });
+    const result = await runView({
+      cwd,
+      collection: "terms",
+      slug: "topic-getting-started",
+      locale: "en",
+    });
     expect(result.success).toBe(true);
     expect(result.data?.meta.title).toBe("Getting started");
     expect(result.data?.meta.description).toBe("Introduction to the glossary");
@@ -287,14 +288,22 @@ describe("multi-type: type routing and schema introspection", () => {
   });
 
   it("search finds items across types by slug", async () => {
-    const result = await runSearch({ cwd, collection: "terms", query: "topic" });
+    const result = await runSearch({
+      cwd,
+      collection: "terms",
+      query: "topic",
+    });
     expect(result.success).toBe(true);
     expect(result.data?.items.length).toBeGreaterThan(0);
     expect(result.data?.items[0].slug).toContain("topic");
   });
 
   it("search finds term-type items by field filter", async () => {
-    const result = await runSearch({ cwd, collection: "terms", fields: { term: "MOQ" } });
+    const result = await runSearch({
+      cwd,
+      collection: "terms",
+      fields: { term: "MOQ" },
+    });
     expect(result.success).toBe(true);
     expect(result.data?.items.length).toBeGreaterThan(0);
     expect(result.data?.items[0].meta.term).toBe("MOQ");
@@ -303,7 +312,10 @@ describe("multi-type: type routing and schema introspection", () => {
   it("build generates typed multi-type output", async () => {
     const buildResult = await runBuild({ cwd, force: true });
     expect(buildResult.success).toBe(true);
-    const output = fs.readFileSync(path.join(cwd, "generated", "content", "terms.ts"), "utf-8");
+    const output = fs.readFileSync(
+      path.join(cwd, "generated", "content", "terms.ts"),
+      "utf-8"
+    );
     expect(output).toContain("terms");
     expect(output).toContain("topics");
   });
@@ -316,14 +328,24 @@ describe("multi-type: type routing and schema introspection", () => {
         collection: "terms",
         slug: "e2e-term",
         locale: "en",
-        meta: { term: "E2E Test", definition: "A test spanning the full stack." },
+        meta: {
+          term: "E2E Test",
+          definition: "A test spanning the full stack.",
+        },
       });
       expect(createResult.success).toBe(true);
 
-      const viewResult = await runView({ cwd, collection: "terms", slug: "e2e-term", locale: "en" });
+      const viewResult = await runView({
+        cwd,
+        collection: "terms",
+        slug: "e2e-term",
+        locale: "en",
+      });
       expect(viewResult.success).toBe(true);
       expect(viewResult.data?.meta.term).toBe("E2E Test");
-      expect(viewResult.data?.meta.definition).toBe("A test spanning the full stack.");
+      expect(viewResult.data?.meta.definition).toBe(
+        "A test spanning the full stack."
+      );
     } finally {
       if (fs.existsSync(newFile)) fs.unlinkSync(newFile);
     }
@@ -353,7 +375,11 @@ describe("mixed-sources: cross-collection operations", () => {
   });
 
   it("view works for root-level collection (docs)", async () => {
-    const result = await runView({ cwd, collection: "docs", slug: "getting-started" });
+    const result = await runView({
+      cwd,
+      collection: "docs",
+      slug: "getting-started",
+    });
     expect(result.success).toBe(true);
     expect(result.data?.meta.title).toBe("Getting started");
   });
@@ -366,11 +392,19 @@ describe("mixed-sources: cross-collection operations", () => {
   });
 
   it("search across different source collections", async () => {
-    const faqSearch = await runSearch({ cwd, collection: "faq", query: "hello" });
+    const faqSearch = await runSearch({
+      cwd,
+      collection: "faq",
+      query: "hello",
+    });
     expect(faqSearch.success).toBe(true);
     expect(faqSearch.data?.items.length).toBeGreaterThan(0);
 
-    const docsSearch = await runSearch({ cwd, collection: "docs", query: "getting" });
+    const docsSearch = await runSearch({
+      cwd,
+      collection: "docs",
+      query: "getting",
+    });
     expect(docsSearch.success).toBe(true);
     expect(docsSearch.data?.items.length).toBeGreaterThan(0);
   });
@@ -402,7 +436,10 @@ describe("full lifecycle: create → view → search → update → lint → bui
       cwd,
       collection: "faq",
       slug,
-      meta: { question: "What is an end-to-end lifecycle test?", category: "products" },
+      meta: {
+        question: "What is an end-to-end lifecycle test?",
+        category: "products",
+      },
     });
     expect(createResult.success).toBe(true);
     expect(createResult.data?.slug).toBe(slug);
@@ -412,7 +449,9 @@ describe("full lifecycle: create → view → search → update → lint → bui
     const view = runCli(["view", "faq", slug, "--format", "json"], cwd);
     expect(view.status).toBe(0);
     const viewData = JSON.parse(view.stdout);
-    expect(viewData.data.meta.question).toBe("What is an end-to-end lifecycle test?");
+    expect(viewData.data.meta.question).toBe(
+      "What is an end-to-end lifecycle test?"
+    );
     expect(viewData.data.meta.category).toBe("products");
 
     // 4. Search for the created item
@@ -423,7 +462,10 @@ describe("full lifecycle: create → view → search → update → lint → bui
     expect(searchData.data.items[0].slug).toBe(slug);
 
     // 5. Search by field value
-    const fieldSearch = runCli(["search", "faq", "--field", "category=products", "--format", "json"], cwd);
+    const fieldSearch = runCli(
+      ["search", "faq", "--field", "category=products", "--format", "json"],
+      cwd
+    );
     expect(fieldSearch.status).toBe(0);
     const fieldSearchData = JSON.parse(fieldSearch.stdout);
     const lifecycleItem = fieldSearchData.data.items.find(
@@ -436,16 +478,23 @@ describe("full lifecycle: create → view → search → update → lint → bui
       cwd,
       collection: "faq",
       slug,
-      set: { question: "Updated lifecycle test question?", category: "ordering" },
+      set: {
+        question: "Updated lifecycle test question?",
+        category: "ordering",
+      },
     });
     expect(updateResult.success).toBe(true);
-    expect(updateResult.data?.meta.question).toBe("Updated lifecycle test question?");
+    expect(updateResult.data?.meta.question).toBe(
+      "Updated lifecycle test question?"
+    );
     expect(updateResult.data?.meta.category).toBe("ordering");
 
     // 7. Verify view reflects the update
     const viewAfter = runCli(["view", "faq", slug, "--format", "json"], cwd);
     const viewAfterData = JSON.parse(viewAfter.stdout);
-    expect(viewAfterData.data.meta.question).toBe("Updated lifecycle test question?");
+    expect(viewAfterData.data.meta.question).toBe(
+      "Updated lifecycle test question?"
+    );
     expect(viewAfterData.data.meta.category).toBe("ordering");
 
     // 8. Lint validates the updated content
@@ -525,7 +574,11 @@ describe("error handling: validation failures and edge cases", () => {
   });
 
   it("search with limit=1 caps results", async () => {
-    const result = await runSearch({ cwd: minimalCwd, collection: "faq", limit: 1 });
+    const result = await runSearch({
+      cwd: minimalCwd,
+      collection: "faq",
+      limit: 1,
+    });
     expect(result.success).toBe(true);
     expect(result.data?.items.length).toBeLessThanOrEqual(1);
   });
@@ -545,11 +598,16 @@ describe("error handling: validation failures and edge cases", () => {
     expect(lintResult.success).toBe(false);
     const parsed = JSON.parse(lintResult.report);
     expect(parsed.diagnostics.length).toBeGreaterThan(0);
-    expect(parsed.diagnostics[0].message || "").toMatch(/too small|at least|character|string/i);
+    expect(parsed.diagnostics[0].message || "").toMatch(
+      /too small|at least|character|string/i
+    );
   });
 
   it("lint detects invalid relation (nonexistent slug)", async () => {
-    const lintResult = await runLint({ cwd: invalidRelationCwd, format: "json" });
+    const lintResult = await runLint({
+      cwd: invalidRelationCwd,
+      format: "json",
+    });
     expect(lintResult.success).toBe(false);
     const parsed = JSON.parse(lintResult.report);
     expect(parsed.diagnostics.length).toBeGreaterThan(0);
@@ -603,7 +661,10 @@ describe("workspace: advanced workspace scenarios", () => {
   });
 
   it("workspace filters to single collection when specified", async () => {
-    const ws = await createWorkspace({ cwd: fixture("mixed-sources"), collection: "faq" });
+    const ws = await createWorkspace({
+      cwd: fixture("mixed-sources"),
+      collection: "faq",
+    });
     const faq = ws.getCollection("faq");
     const docs = ws.getCollection("docs");
     expect(faq).toBeDefined();
@@ -623,7 +684,10 @@ describe("workspace: advanced workspace scenarios", () => {
 
 describe("schema: advanced introspection", () => {
   it("introspects enum options", async () => {
-    const result = await runSchema({ cwd: fixture("minimal"), collection: "faq" });
+    const result = await runSchema({
+      cwd: fixture("minimal"),
+      collection: "faq",
+    });
     expect(result.success).toBe(true);
     const category = result.data?.schema.fields.category;
     expect(category).toBeDefined();
@@ -659,8 +723,14 @@ describe("schema: advanced introspection", () => {
   });
 
   it("schema for i18n collection matches non-i18n schema", async () => {
-    const i18nResult = await runSchema({ cwd: fixture("i18n"), collection: "faq" });
-    const minResult = await runSchema({ cwd: fixture("minimal"), collection: "faq" });
+    const i18nResult = await runSchema({
+      cwd: fixture("i18n"),
+      collection: "faq",
+    });
+    const minResult = await runSchema({
+      cwd: fixture("minimal"),
+      collection: "faq",
+    });
     expect(i18nResult.success).toBe(true);
     expect(minResult.success).toBe(true);
     // Both have the same schema shape (question + category)
@@ -690,9 +760,15 @@ describe("data integrity: update preserves body and unrelated fields", () => {
       expect(updateResult.success).toBe(true);
 
       // View should show updated category but same body
-      const viewResult = await runView({ cwd, collection: "faq", slug: "hello" });
+      const viewResult = await runView({
+        cwd,
+        collection: "faq",
+        slug: "hello",
+      });
       expect(viewResult.data?.meta.category).toBe("ordering");
-      expect(viewResult.data?.meta.question).toBe("What is the minimum order quantity?");
+      expect(viewResult.data?.meta.question).toBe(
+        "What is the minimum order quantity?"
+      );
     } finally {
       fs.writeFileSync(filePath, original, "utf-8");
     }
@@ -722,9 +798,15 @@ describe("data integrity: update preserves body and unrelated fields", () => {
 
   it("double build produces same output (idempotent)", async () => {
     await runBuild({ cwd, force: true });
-    const first = fs.readFileSync(path.join(cwd, "generated", "content", "faq.ts"), "utf-8");
+    const first = fs.readFileSync(
+      path.join(cwd, "generated", "content", "faq.ts"),
+      "utf-8"
+    );
     await runBuild({ cwd, force: true });
-    const second = fs.readFileSync(path.join(cwd, "generated", "content", "faq.ts"), "utf-8");
+    const second = fs.readFileSync(
+      path.join(cwd, "generated", "content", "faq.ts"),
+      "utf-8"
+    );
     expect(second).toBe(first);
   });
 

@@ -1,26 +1,11 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
-  "project": [
-    "src/**/*.ts"
-  ],
-  "ignoreDependencies": [
-    "tsx"
-  ],
+  "project": ["src/**/*.ts"],
+  "ignoreDependencies": ["tsx"],
   "ignoreIssues": {
-    "src/config.ts": [
-      "exports"
-    ],
-    "src/generator.ts": [
-      "exports",
-      "types"
-    ],
-    "src/parser.ts": [
-      "exports",
-      "types"
-    ],
-    "src/validator.ts": [
-      "exports",
-      "types"
-    ]
+    "src/config.ts": ["exports"],
+    "src/generator.ts": ["exports", "types"],
+    "src/parser.ts": ["exports", "types"],
+    "src/validator.ts": ["exports", "types"]
   }
 }

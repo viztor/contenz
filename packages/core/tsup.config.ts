@@ -6,9 +6,10 @@ export default defineConfig({
     api: "src/api.ts",
   },
   format: ["esm"],
-  target: "node18",
+  target: "node24",
   outDir: "dist",
   sourcemap: true,
-  dts: true,
+  // tsup's rollup-plugin-dts does not support TypeScript 7; .d.ts via tsc
+  dts: false,
   clean: true,
 });

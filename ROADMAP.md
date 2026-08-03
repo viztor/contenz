@@ -18,6 +18,7 @@ Status: **complete**
 Goal: Reduce duplicated build/lint orchestration and establish a stable diagnostics model.
 
 Outcome:
+
 - Shared source discovery and config normalization
 - `contenz init` for existing-project scaffolding
 - Structured diagnostics with `pretty`, `json`, and `github` output formats
@@ -29,6 +30,7 @@ Status: **complete**
 Goal: Make the normal content-edit loop fast enough for daily use.
 
 Outcome:
+
 - Manifest-backed incremental build engine
 - `build --force`, `build --dry-run`, `lint --dry-run`
 - `contenz watch` and `contenz status`
@@ -40,6 +42,7 @@ Status: **complete**
 Goal: Move i18n from filename grouping into a broader runtime model.
 
 Outcome:
+
 - Richer i18n config shape with locale fallback rules
 - Coverage thresholds and stale translation detection
 - Backward-compatible `i18n: true` flag
@@ -51,6 +54,7 @@ Status: **complete**
 Goal: Freeze and document the pre-`v0.2` core API surface.
 
 Outcome:
+
 - `docs/CONFIGURATION.md` — centralized and cascaded config patterns
 - `docs/CONTENT-MODEL.md` — metadata formats (frontmatter, export const meta, JSON)
 - `docs/CLI.md` — all 11 commands documented
@@ -67,6 +71,7 @@ Outcome:
 Status: **complete**
 
 Outcome:
+
 - Schema introspection layer (`introspectSchema`, `introspectField`)
 - Content I/O module (`readContent`, `writeContent`, `updateContent`)
 - CLI commands: `create`, `update`, `view`, `search`, `list`, `schema`
@@ -77,6 +82,7 @@ Outcome:
 Status: **complete**
 
 Completed:
+
 - ✅ Format adapter pipeline (`FormatAdapter` interface, `registerAdapters()`)
 - ✅ JSON content adapter (built-in, first-class `.json` support)
 - ✅ `@contenz/adapter-mdx` — MD/MDX format adapter with both frontmatter and `export const meta`
@@ -89,6 +95,7 @@ Completed:
 Status: **complete**
 
 Deliverables:
+
 - **Smart Init:** `contenz init` detects Next.js, offers preset selection, scaffolds route handlers
 - **Skill Generator:** `contenz skill` generates AI agent skill files tailored to the project's actual schema
 
@@ -101,6 +108,7 @@ Status: **complete**
 **Goal:** Make generated content robust to query, and establish stable extension hooks.
 
 **Deliverables:**
+
 - **Query API:** `@contenz/client` type-safe helpers for filtering, sorting, pagination, and relation joins
 - **Extension Hooks:** Lifecycle hooks (`beforeBuild`, `transformItem`, `afterBuild`)
 - **Computed Fields:** Fields dynamically derived from other content at build time

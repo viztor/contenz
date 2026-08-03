@@ -2,6 +2,7 @@
  * Unit tests for runSearch: brute-force and indexed paths.
  */
 import { describe, expect, it } from "vitest";
+
 import { runSearch } from "../run-search.js";
 import { prepareFixture } from "../test-fixtures.js";
 
@@ -11,11 +12,13 @@ describe("runSearch", () => {
     // List collections first to find a valid one
     const { runList } = await import("../ops/index.js");
     const listResult = await runList({ cwd });
-    const cols = (listResult.data as { collections: Array<{ name: string }> }).collections;
+    const cols = (listResult.data as { collections: Array<{ name: string }> })
+      .collections;
 
     // Get items in first collection
     const itemsResult = await runList({ cwd, collection: cols[0].name });
-    const items = (itemsResult.data as { items: Array<{ slug: string }> }).items;
+    const items = (itemsResult.data as { items: Array<{ slug: string }> })
+      .items;
 
     if (items.length > 0) {
       // Search for a partial slug
@@ -36,7 +39,8 @@ describe("runSearch", () => {
     const cwd = await prepareFixture("minimal");
     const { runList } = await import("../ops/index.js");
     const listResult = await runList({ cwd });
-    const cols = (listResult.data as { collections: Array<{ name: string }> }).collections;
+    const cols = (listResult.data as { collections: Array<{ name: string }> })
+      .collections;
 
     const result = await runSearch({
       cwd,
@@ -62,7 +66,8 @@ describe("runSearch", () => {
     const cwd = await prepareFixture("minimal");
     const { runList } = await import("../ops/index.js");
     const listResult = await runList({ cwd });
-    const cols = (listResult.data as { collections: Array<{ name: string }> }).collections;
+    const cols = (listResult.data as { collections: Array<{ name: string }> })
+      .collections;
 
     // Search with limit 1
     const result = await runSearch({
@@ -79,11 +84,13 @@ describe("runSearch", () => {
     const cwd = await prepareFixture("i18n");
     const { runList } = await import("../ops/index.js");
     const listResult = await runList({ cwd });
-    const cols = (listResult.data as { collections: Array<{ name: string }> }).collections;
+    const cols = (listResult.data as { collections: Array<{ name: string }> })
+      .collections;
     const i18nCol = cols[0]; // i18n fixture has at least one collection
 
     const itemsResult = await runList({ cwd, collection: i18nCol.name });
-    const items = (itemsResult.data as { items: Array<{ slug: string }> }).items;
+    const items = (itemsResult.data as { items: Array<{ slug: string }> })
+      .items;
 
     if (items.length > 0) {
       const result = await runSearch({

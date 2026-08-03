@@ -1,7 +1,6 @@
 # Contenz Codebase Reference
 
-> **Purpose**: Developer reference for maintainers and AI agents working on the contenz monorepo.
-> Contains architecture overview, module map, known issues, and actionable cleanup items.
+> **Purpose**: Developer reference for maintainers and AI agents working on the contenz monorepo. Contains architecture overview, module map, known issues, and actionable cleanup items.
 
 ---
 
@@ -11,33 +10,43 @@
 contenz/
 ├── packages/
 │   ├── core/          # @contenz/core — schema validation, codegen, workspace, introspection
-│   ├── cli/           # @contenz/cli — citty-based CLI (12 commands)
+│   ├── cli/           # @contenz/cli — Stricli CLI (12 commands + bash completion)
+│   ├── client/        # @contenz/client — runtime createContent / createT / query
 │   ├── adapter-mdx/   # @contenz/adapter-mdx — MD/MDX format adapter (peer dep on core)
-│   └── e2e/           # @contenz/e2e — integration tests (7 fixture projects)
-├── docs/              # Project documentation (8 files)
+│   └── e2e/           # @contenz/e2e — integration tests + fixtures
+├── docs/              # Project documentation
+├── skills/            # Agent skill for contenz workflows
 ├── turbo.json         # Turborepo task config
-└── package.json       # Workspace root (npm workspaces)
+├── oxlint.config.ts   # Root type-aware oxlint (Ultracite)
+├── oxfmt.config.ts    # Root oxfmt
+└── package.json       # Workspace root (pnpm workspaces)
 ```
 
 ### Package Dependency Graph
 
 ```
 adapter-mdx ──peer──▸ core
-cli ──────────dep───▸ core
+cli ──────────dep───▸ core, @stricli/core, @stricli/auto-complete
+client ─────── (no runtime dep on core)
 e2e ──────────dev───▸ core, cli, adapter-mdx
 ```
 
+Internal monorepo deps use `workspace:*`. Engines: **Node.js LTS ≥ 24**.
+
 ### Build Tooling
 
-| Tool | Version | Purpose |
-|---|---|---|
-| TypeScript | 6.x | Type checking (`tsc --noEmit`) |
-| tsup | 8.x | Bundling (core, cli, adapter-mdx) |
-| Vitest | 4.x | Testing (core, e2e) |
-| Biome | 2.x | Linting + formatting (core) |
-| Turbo | 2.x | Task orchestration |
-| Zod | 4.x (3.25 compat) | Schema validation runtime |
-| Husky | 9.x | Git hooks |
+| Tool       | Version | Purpose                                       |
+| ---------- | ------- | --------------------------------------------- |
+| TypeScript | 7.x     | Type checking + declaration emit              |
+| tsup       | 8.x     | JS bundling (core, cli, client, adapter-mdx)  |
+| Vitest     | 4.x     | Testing (core, client, cli, adapter-mdx, e2e) |
+| oxlint     | 1.x     | Type-aware lint (Ultracite presets)           |
+| oxfmt      | 0.x     | Formatting                                    |
+| Turbo      | 2.x     | Task orchestration                            |
+| pnpm       | 11.x    | Package manager                               |
+| Zod        | 4.x     | Schema validation runtime                     |
+| Stricli    | 1.x     | CLI framework                                 |
+| Husky      | 9.x     | Git hooks                                     |
 
 ---
 
@@ -46,7 +55,7 @@ e2e ──────────dev───▸ core, cli, adapter-mdx
 The core package has **two export entry points**:
 
 | Entry | Path | Purpose |
-|---|---|---|
+| --- | --- | --- |
 | `@contenz/core` | `src/index.ts` | User-facing API: `defineCollection`, types, workspace, content I/O |
 | `@contenz/core/api` | `src/api.ts` | Full programmatic API: all pipelines, introspection, search, etc. |
 
@@ -125,8 +134,10 @@ All pipelines use `createWorkspace()` as the single config-loading path.
 
 ## @contenz/cli — Command Map
 
+Built with **Stricli** (`app.ts` route map + `buildCommand` per command). Entry: `cli.ts` → `run(app, argv, context)`.
+
 | Command | Source | Core Function |
-|---|---|---|
+| --- | --- | --- |
 | `init` | `commands/init.ts` | Scaffolds project (standalone) |
 | `build` | `commands/build.ts` | `runBuild()` |
 | `lint` | `commands/lint.ts` | `runLint()` |
@@ -138,10 +149,15 @@ All pipelines use `createWorkspace()` as the single config-loading path.
 | `update` | `commands/update.ts` | `runUpdate()` |
 | `search` | `commands/search.ts` | `runSearch()` |
 | `schema` | `commands/schema.ts` | `runSchema()` |
+| `skill` | `commands/skill.ts` | `runSkill()` |
+| `install` / `uninstall` | (auto-complete) | bash completion hooks (hidden) |
 
 ### CLI Shared Utilities
 
-- `output.ts` — `printAndExit(result, format)` handles JSON vs pretty output for all content ops
+- `shared.ts` — typed flag specs (`cwd`, formats, variadic `--set`)
+- `output.ts` — `printResult` / `fail` (JSON vs pretty; sets `exitCode`)
+- `context.ts` — injectable `ContenzContext` for tests + completion
+- `bash-complete.ts` — shell completion proposals
 
 ---
 
@@ -150,6 +166,7 @@ All pipelines use `createWorkspace()` as the single config-loading path.
 Single file: `src/index.ts` (226 lines). Exports `mdxAdapter: FormatAdapter`.
 
 Handles both `.md` and `.mdx` files:
+
 - **MDX**: `export const meta = { ... }` via brace-balanced scanner
 - **MD**: `---` YAML/JSON frontmatter
 - Auto-detects format per-file
@@ -194,23 +211,28 @@ Built-in defaults: `extensions: ["md", "mdx", "json"]`, `sources: ["content/*"]`
 
 ## Cleanup Items
 
-> 🎉 **All known technical debt has been addressed!**
-> 
-> - The studio package was removed.
-> - The global mutable adapter registry was moved to workspace state.
-> - `run-content-ops.ts` was successfully split into the `ops/` directory.
-> - Import rewriting for tests is using the stable `rewriteFixtureImports` method.
-> - The API export overlap (`index.ts` vs `api.ts`) was cleanly decoupled.
+Addressed recently:
+
+- Preview package / `contenz preview` removed
+- citty → Stricli CLI migration
+- pnpm workspaces + `workspace:*` internal deps
+- oxlint + oxfmt (Ultracite) quality gates
+- Node LTS (`>=24`, tsup `node24`, CI `lts/*`)
+- e2e shared `setup.ts` + zod fixture linking under pnpm
+
+Still useful later: `contenz doctor`, publish tarball verify, raise core coverage floor.
 
 ---
 
 ## Test Architecture
 
-| Package | Runner | Files | Tests |
-|---|---|---|---|
-| core | Vitest | 7 test files | 72 |
-| adapter-mdx | Vitest | 1 test file | 16 |
-| e2e | Vitest | 2 test files | 114 |
+| Package     | Runner | Scope                                                |
+| ----------- | ------ | ---------------------------------------------------- |
+| core        | Vitest | unit + pipeline (~176 tests)                         |
+| client      | Vitest | query / localize / createContent                     |
+| cli         | Vitest | Stricli help/version/enum smoke (injectable context) |
+| adapter-mdx | Vitest | format adapter                                       |
+| e2e         | Vitest | CLI + API fixtures (~183 tests)                      |
 
 ### Core Tests
 
@@ -220,15 +242,15 @@ Core tests live alongside source files (`*.test.ts`). They use `test-fixtures.ts
 
 E2E tests live in `packages/e2e/`. They use 6 fixture projects under `packages/e2e/fixtures/`:
 
-| Fixture | Purpose |
-|---|---|
-| `minimal` | Basic single-collection, flat |
-| `centralized` | Inline collections config (no schema.ts) |
-| `i18n` | Multi-locale collection |
-| `multi-type` | Collection with multiple content types |
-| `mixed-sources` | Multiple source patterns |
-| `invalid-schema` | Schema validation error cases |
-| `invalid-relation` | Relation validation error cases |
+| Fixture            | Purpose                                  |
+| ------------------ | ---------------------------------------- |
+| `minimal`          | Basic single-collection, flat            |
+| `centralized`      | Inline collections config (no schema.ts) |
+| `i18n`             | Multi-locale collection                  |
+| `multi-type`       | Collection with multiple content types   |
+| `mixed-sources`    | Multiple source patterns                 |
+| `invalid-schema`   | Schema validation error cases            |
+| `invalid-relation` | Relation validation error cases          |
 
 E2E tests spawn CLI processes and validate output. They symlink `@contenz/core` and `@contenz/adapter-mdx` into fixture `node_modules/` in `beforeAll`.
 

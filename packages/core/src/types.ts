@@ -1,4 +1,5 @@
 import type { ZodSchema } from "zod";
+
 import type { FormatAdapter } from "./format-adapter.js";
 
 /**
@@ -45,7 +46,10 @@ export interface CollectionDeclaration {
   /** Inline relations mapping for this collection */
   relations?: Relations;
   /** Computed fields derived from raw content or metadata */
-  computed?: Record<string, (item: ParsedContent) => unknown | Promise<unknown>>;
+  computed?: Record<
+    string,
+    (item: ParsedContent) => unknown | Promise<unknown>
+  >;
   /** Collection-level config overrides */
   config?: CollectionConfig;
 }
@@ -147,9 +151,16 @@ export interface ContenzConfig {
    * Extension hooks for tapping into the build lifecycle.
    */
   hooks?: {
-    beforeBuild?: (workspace: import("./workspace.js").Workspace) => void | Promise<void>;
-    transformItem?: (item: ParsedContent, collectionName: string) => void | Promise<void>;
-    afterBuild?: (result: import("./run-build.js").BuildResult) => void | Promise<void>;
+    beforeBuild?: (
+      workspace: import("./workspace.js").Workspace
+    ) => void | Promise<void>;
+    transformItem?: (
+      item: ParsedContent,
+      collectionName: string
+    ) => void | Promise<void>;
+    afterBuild?: (
+      result: import("./run-build.js").BuildResult
+    ) => void | Promise<void>;
   };
 }
 
@@ -219,7 +230,10 @@ export interface SchemaModule {
   /** Relations mapping for this collection */
   relations?: Relations;
   /** Computed fields derived from raw content or metadata */
-  computed?: Record<string, (item: ParsedContent) => unknown | Promise<unknown>>;
+  computed?: Record<
+    string,
+    (item: ParsedContent) => unknown | Promise<unknown>
+  >;
   /** Content types with filename patterns; when present, overrides config.types when config does not set types */
   types?: ContentType[];
 }

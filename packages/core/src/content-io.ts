@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+
 import {
   type ContentExtension,
   parseContentFile,
@@ -110,17 +111,24 @@ export interface WriteContentOptions {
  * Writes a new content item or overwrites an existing one completely.
  * Loads workspace once — adapters are registered automatically.
  */
-export async function writeContent(options: WriteContentOptions): Promise<ContentLocation> {
-  const ws = await createWorkspace({ cwd: options.cwd, collection: options.collectionName });
+export async function writeContent(
+  options: WriteContentOptions
+): Promise<ContentLocation> {
+  const ws = await createWorkspace({
+    cwd: options.cwd,
+    collection: options.collectionName,
+  });
   const col = ws.getCollection(options.collectionName);
   if (!col) {
     throw new Error(`Collection not found: ${options.collectionName}`);
   }
 
-  const ext = options.ext ?? (col.config.extensions[0] as ContentExtension) ?? "mdx";
+  const ext =
+    options.ext ?? (col.config.extensions[0]) ?? "mdx";
   let fileName = `${options.slug}.${ext}`;
   if (col.config.i18n) {
-    const localeToUse = options.locale ?? col.config.resolvedI18n?.defaultLocale;
+    const localeToUse =
+      options.locale ?? col.config.resolvedI18n?.defaultLocale;
     if (!localeToUse) {
       throw new Error("Locale is required when i18n is enabled");
     }
@@ -130,7 +138,12 @@ export async function writeContent(options: WriteContentOptions): Promise<Conten
   const filePath = path.join(col.collectionPath, fileName);
   await fs.mkdir(path.dirname(filePath), { recursive: true });
 
-  const content = serializeContentFile(options.meta, options.body ?? "", ext, col.config.adapters);
+  const content = serializeContentFile(
+    options.meta,
+    options.body ?? "",
+    ext,
+    col.config.adapters
+  );
   await fs.writeFile(filePath, content, "utf-8");
 
   return {

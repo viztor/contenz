@@ -62,7 +62,12 @@ export function parseLocaleFromURL(
   url: string | URL,
   options: ParseLocaleFromURLOptions
 ): ParsedLocaleURL {
-  const { locales, defaultLocale, strategy = "prefix", queryParam = "lang" } = options;
+  const {
+    locales,
+    defaultLocale,
+    strategy = "prefix",
+    queryParam = "lang",
+  } = options;
 
   // Normalize locales to lowercase for comparison
   const localeSet = new Set(locales.map((l) => l.toLowerCase()));
@@ -70,7 +75,8 @@ export function parseLocaleFromURL(
 
   let parsedUrl: URL;
   try {
-    parsedUrl = typeof url === "string" ? new URL(url, "http://localhost") : url;
+    parsedUrl =
+      typeof url === "string" ? new URL(url, "http://localhost") : url;
   } catch {
     return {
       locale: defaultLocale,
@@ -88,7 +94,11 @@ export function parseLocaleFromURL(
         explicit: true,
       };
     }
-    return { locale: defaultLocale, pathname: parsedUrl.pathname, explicit: false };
+    return {
+      locale: defaultLocale,
+      pathname: parsedUrl.pathname,
+      explicit: false,
+    };
   }
 
   // Prefix strategy
@@ -107,7 +117,11 @@ export function parseLocaleFromURL(
     };
   }
 
-  return { locale: defaultLocale, pathname: parsedUrl.pathname, explicit: false };
+  return {
+    locale: defaultLocale,
+    pathname: parsedUrl.pathname,
+    explicit: false,
+  };
 }
 
 // ── negotiateLocale ─────────────────────────────────────────────────────────
@@ -148,7 +162,7 @@ export function negotiateLocale(
       const [locale, ...params] = part.trim().split(";");
       let quality = 1;
       for (const param of params) {
-        const match = param.trim().match(/^q=(\d+(\.\d+)?)$/);
+        const match = /^q=(\d+(\.\d+)?)$/.exec(param.trim());
         if (match) {
           quality = Number.parseFloat(match[1]);
         }

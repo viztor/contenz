@@ -11,7 +11,10 @@ export const presets = {
       date: z.date().describe("Publish date"),
       excerpt: z.string().optional().describe("Short summary of the post"),
       tags: z.array(z.string()).default([]).describe("Categorization tags"),
-      draft: z.boolean().default(false).describe("If true, this post should not be published"),
+      draft: z
+        .boolean()
+        .default(false)
+        .describe("If true, this post should not be published"),
     });
   },
 
@@ -22,8 +25,15 @@ export const presets = {
   docsPage() {
     return z.object({
       title: z.string().min(1, "Title is required").describe("The page title"),
-      description: z.string().optional().describe("Description for SEO and previews"),
-      order: z.number().int().optional().describe("Order in the sidebar navigation"),
+      description: z
+        .string()
+        .optional()
+        .describe("Description for SEO and previews"),
+      order: z
+        .number()
+        .int()
+        .optional()
+        .describe("Order in the sidebar navigation"),
     });
   },
 

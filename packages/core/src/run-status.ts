@@ -4,6 +4,7 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
+
 import {
   computeCollectionInputHash,
   computeConfigHash,
@@ -38,7 +39,11 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
 
   let ws: Awaited<ReturnType<typeof createWorkspace>>;
   try {
-    ws = await createWorkspace({ cwd, sources: options.sources, dir: options.dir });
+    ws = await createWorkspace({
+      cwd,
+      sources: options.sources,
+      dir: options.dir,
+    });
   } catch {
     return {
       status: "needs-build",

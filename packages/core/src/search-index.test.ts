@@ -4,7 +4,9 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import {
   addDocumentsToIndex,
   buildSearchDocument,
@@ -26,7 +28,14 @@ afterEach(async () => {
 
 describe("buildSearchDocument", () => {
   it("builds a document with correct id format", () => {
-    const doc = buildSearchDocument("faq", "moq", "en", "moq.en.mdx", { title: "MOQ" }, "body");
+    const doc = buildSearchDocument(
+      "faq",
+      "moq",
+      "en",
+      "moq.en.mdx",
+      { title: "MOQ" },
+      "body"
+    );
     expect(doc.id).toBe("faq:moq:en");
     expect(doc.collection).toBe("faq");
     expect(doc.slug).toBe("moq");
@@ -37,7 +46,14 @@ describe("buildSearchDocument", () => {
   });
 
   it("uses _ for locale when undefined", () => {
-    const doc = buildSearchDocument("faq", "moq", undefined, "moq.mdx", {}, undefined);
+    const doc = buildSearchDocument(
+      "faq",
+      "moq",
+      undefined,
+      "moq.mdx",
+      {},
+      undefined
+    );
     expect(doc.id).toBe("faq:moq:_");
     expect(doc.locale).toBe("_");
     expect(doc.body).toBe("");
@@ -58,7 +74,14 @@ describe("buildSearchDocument", () => {
   });
 
   it("does not spread non-string meta fields", () => {
-    const doc = buildSearchDocument("faq", "moq", "en", "f", { count: 42, nested: { x: 1 } }, "");
+    const doc = buildSearchDocument(
+      "faq",
+      "moq",
+      "en",
+      "f",
+      { count: 42, nested: { x: 1 } },
+      ""
+    );
     expect(doc.count).toBeUndefined();
     expect(doc.nested).toBeUndefined();
   });
@@ -91,8 +114,22 @@ describe("createSearchIndex + add + query", () => {
   it("finds documents by meta field content", async () => {
     const index = await createSearchIndex(["title"]);
     await addDocumentsToIndex(index, [
-      buildSearchDocument("faq", "moq", "en", "f1", { title: "Minimum Order Quantity" }, ""),
-      buildSearchDocument("faq", "lead", "en", "f2", { title: "Lead Time" }, ""),
+      buildSearchDocument(
+        "faq",
+        "moq",
+        "en",
+        "f1",
+        { title: "Minimum Order Quantity" },
+        ""
+      ),
+      buildSearchDocument(
+        "faq",
+        "lead",
+        "en",
+        "f2",
+        { title: "Lead Time" },
+        ""
+      ),
     ]);
 
     const hits = await querySearchIndex(index, { query: "minimum" });
@@ -104,10 +141,20 @@ describe("createSearchIndex + add + query", () => {
     const index = await createSearchIndex(["title"]);
     await addDocumentsToIndex(index, [
       buildSearchDocument("faq", "moq", "en", "f1", { title: "MOQ" }, ""),
-      buildSearchDocument("glossary", "moq", "en", "f2", { title: "MOQ term" }, ""),
+      buildSearchDocument(
+        "glossary",
+        "moq",
+        "en",
+        "f2",
+        { title: "MOQ term" },
+        ""
+      ),
     ]);
 
-    const hits = await querySearchIndex(index, { query: "moq", collection: "faq" });
+    const hits = await querySearchIndex(index, {
+      query: "moq",
+      collection: "faq",
+    });
     expect(hits.every((h) => h.meta.title !== "MOQ term")).toBe(true);
   });
 
@@ -115,7 +162,14 @@ describe("createSearchIndex + add + query", () => {
     const index = await createSearchIndex(["title"]);
     await addDocumentsToIndex(index, [
       buildSearchDocument("faq", "moq", "en", "f1", { title: "MOQ" }, ""),
-      buildSearchDocument("faq", "moq", "zh", "f2", { title: "最小订购量" }, ""),
+      buildSearchDocument(
+        "faq",
+        "moq",
+        "zh",
+        "f2",
+        { title: "最小订购量" },
+        ""
+      ),
     ]);
 
     const hits = await querySearchIndex(index, { query: "moq", locale: "en" });
@@ -126,7 +180,14 @@ describe("createSearchIndex + add + query", () => {
   it("applies field filters", async () => {
     const index = await createSearchIndex(["title", "category"]);
     await addDocumentsToIndex(index, [
-      buildSearchDocument("faq", "moq", "en", "f1", { title: "MOQ", category: "products" }, ""),
+      buildSearchDocument(
+        "faq",
+        "moq",
+        "en",
+        "f1",
+        { title: "MOQ", category: "products" },
+        ""
+      ),
       buildSearchDocument(
         "faq",
         "lead",
@@ -147,7 +208,14 @@ describe("createSearchIndex + add + query", () => {
   it("respects limit", async () => {
     const index = await createSearchIndex(["title"]);
     const docs = Array.from({ length: 20 }, (_, i) =>
-      buildSearchDocument("faq", `item-${i}`, "en", `f${i}`, { title: `Item ${i}` }, "common text")
+      buildSearchDocument(
+        "faq",
+        `item-${i}`,
+        "en",
+        `f${i}`,
+        { title: `Item ${i}` },
+        "common text"
+      )
     );
     await addDocumentsToIndex(index, docs);
 
@@ -168,10 +236,19 @@ describe("createSearchIndex + add + query", () => {
 describe("discardDocuments", () => {
   it("removes documents from the index", async () => {
     const index = await createSearchIndex(["title"]);
-    const doc = buildSearchDocument("faq", "moq", "en", "f", { title: "MOQ" }, "");
+    const doc = buildSearchDocument(
+      "faq",
+      "moq",
+      "en",
+      "f",
+      { title: "MOQ" },
+      ""
+    );
     await addDocumentsToIndex(index, [doc]);
 
-    expect((await querySearchIndex(index, { query: "moq" })).length).toBeGreaterThan(0);
+    expect(
+      (await querySearchIndex(index, { query: "moq" })).length
+    ).toBeGreaterThan(0);
 
     await discardDocuments(index, ["faq:moq:en"]);
     expect(await querySearchIndex(index, { query: "moq" })).toEqual([]);
@@ -181,15 +258,31 @@ describe("discardDocuments", () => {
     const index = await createSearchIndex([]);
     // Orama handles non-existent removes gracefully in latest versions,
     // but just in case we wrap it in a try-catch in the implementation if needed.
-    await expect(discardDocuments(index, ["nonexistent:id:_"])).resolves.not.toThrow();
+    await expect(
+      discardDocuments(index, ["nonexistent:id:_"])
+    ).resolves.not.toThrow();
   });
 });
 
 describe("collectMetaFieldNames", () => {
   it("collects string-valued meta field names", () => {
     const docs = [
-      buildSearchDocument("faq", "a", "en", "f", { title: "T", category: "C", count: 5 }, ""),
-      buildSearchDocument("faq", "b", "en", "f", { title: "T2", tags: ["x", "y"] }, ""),
+      buildSearchDocument(
+        "faq",
+        "a",
+        "en",
+        "f",
+        { title: "T", category: "C", count: 5 },
+        ""
+      ),
+      buildSearchDocument(
+        "faq",
+        "b",
+        "en",
+        "f",
+        { title: "T2", tags: ["x", "y"] },
+        ""
+      ),
     ];
     const names = collectMetaFieldNames(docs);
     expect(names).toContain("title");

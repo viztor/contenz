@@ -1,46 +1,61 @@
 import { runView } from "@contenz/core/api";
-import { defineCommand } from "citty";
-import { printAndExit } from "../output.js";
+import { buildCommand } from "@stricli/core";
 
-export const viewCommand = defineCommand({
-	meta: {
-		name: "view",
-		description: "View a content item by collection and slug",
-	},
-	args: {
-		collection: {
-			type: "positional",
-			description: "Collection name",
-			required: true,
-		},
-		slug: {
-			type: "positional",
-			description: "Content slug",
-			required: true,
-		},
-		locale: {
-			type: "string",
-			description: "Locale to read (defaults to default locale)",
-			required: false,
-		},
-		cwd: {
-			type: "string",
-			description: "Project root",
-			default: ".",
-		},
-		format: {
-			type: "string",
-			description: "Output format: json or pretty",
-			default: "json",
-		},
-	},
-	async run({ args }) {
-		const result = await runView({
-			cwd: args.cwd,
-			collection: args.collection,
-			slug: args.slug,
-			locale: args.locale,
-		});
-		printAndExit(result, args.format);
-	},
+import type { ContenzContext } from "../context.js";
+import { printResult } from "../output.js";
+import {
+  cwdFlag,
+  localeFlag,
+  outputFormatFlag,
+  type OutputFormat,
+} from "../shared.js";
+
+interface ViewFlags {
+  cwd: string;
+  locale?: string;
+  format: OutputFormat;
+}
+
+async function view(
+  this: ContenzContext,
+  flags: ViewFlags,
+  collection: string,
+  slug: string
+): Promise<void> {
+  const result = await runView({
+    cwd: flags.cwd,
+    collection,
+    slug,
+    locale: flags.locale,
+  });
+  printResult(this, result, flags.format);
+}
+
+export const viewCommandDef = buildCommand({
+  func: view,
+  parameters: {
+    positional: {
+      kind: "tuple",
+      parameters: [
+        {
+          brief: "Collection name",
+          parse: String,
+          placeholder: "collection",
+        },
+        {
+          brief: "Content slug",
+          parse: String,
+          placeholder: "slug",
+        },
+      ],
+    },
+    flags: {
+      cwd: cwdFlag,
+      locale: localeFlag,
+      format: outputFormatFlag,
+    },
+  },
+  docs: {
+    brief: "View a content item by collection and slug",
+  },
 });

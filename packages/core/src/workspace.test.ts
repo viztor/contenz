@@ -2,6 +2,7 @@
  * Unit tests for the workspace loader.
  */
 import { describe, expect, it } from "vitest";
+
 import { prepareFixture } from "./test-fixtures.js";
 import { createWorkspace } from "./workspace.js";
 

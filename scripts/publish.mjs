@@ -17,7 +17,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
 
 // Packages in dependency order (core first, then dependents)
-const PACKAGES = ["core", "client", "preview", "adapter-mdx", "cli"];
+const PACKAGES = ["core", "client", "adapter-mdx", "cli"];
 
 const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run");
@@ -31,17 +31,22 @@ function run(cmd, cwd) {
   }
 }
 
-console.log(`\n🚀 Publishing @contenz packages${dryRun ? " (dry run)" : ""}...\n`);
+console.log(
+  `\n🚀 Publishing @contenz packages${dryRun ? " (dry run)" : ""}...\n`
+);
 
 // Build all packages first
 console.log("━━━ Building ━━━");
-run("npm run build", root);
+run("pnpm run build", root);
 
 // Publish in order
 for (const pkg of PACKAGES) {
   const pkgDir = path.join(root, "packages", pkg);
   const pkgJson = JSON.parse(
-    (await import("node:fs")).readFileSync(path.join(pkgDir, "package.json"), "utf-8")
+    (await import("node:fs")).readFileSync(
+      path.join(pkgDir, "package.json"),
+      "utf-8"
+    )
   );
 
   if (pkgJson.private) {
@@ -52,7 +57,7 @@ for (const pkg of PACKAGES) {
   console.log(`\n━━━ Publishing ${pkgJson.name}@${pkgJson.version} ━━━`);
 
   const publishCmd = [
-    "npm publish --access public",
+    "pnpm publish --access public --no-git-checks",
     otp ? `--otp ${otp}` : "",
   ]
     .filter(Boolean)

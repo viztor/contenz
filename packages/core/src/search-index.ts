@@ -8,8 +8,18 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
-import { create, insertMultiple, type Orama, remove, search } from "@orama/orama";
-import { persistToFile, restoreFromFile } from "@orama/plugin-data-persistence/server";
+
+import {
+  create,
+  insertMultiple,
+  type Orama,
+  remove,
+  search,
+} from "@orama/orama";
+import {
+  persistToFile,
+  restoreFromFile,
+} from "@orama/plugin-data-persistence/server";
 
 const CONTENZ_DIR = ".contenz";
 const INDEX_FILENAME = "search-index.json";
@@ -61,8 +71,11 @@ export type ContenzSearchIndex = Orama<any>;
 /**
  * Create a fresh, empty Orama index.
  */
-export async function createSearchIndex(metaFields: string[] = []): Promise<ContenzSearchIndex> {
-  return await create({
+export async function createSearchIndex(
+  metaFields: string[] = []
+): Promise<ContenzSearchIndex> {
+  // Orama `create` is synchronous; keep async signature for API stability.
+  return create({
     schema: buildSchema(metaFields),
   });
 }
@@ -70,7 +83,9 @@ export async function createSearchIndex(metaFields: string[] = []): Promise<Cont
 /**
  * Load a previously serialized search index from `.contenz/search-index.json`.
  */
-export async function loadSearchIndex(cwd: string): Promise<ContenzSearchIndex | null> {
+export async function loadSearchIndex(
+  cwd: string
+): Promise<ContenzSearchIndex | null> {
   const indexPath = path.join(cwd, CONTENZ_DIR, INDEX_FILENAME);
   try {
     const db = await restoreFromFile("json", indexPath);
@@ -120,7 +135,10 @@ export function buildSearchDocument(
   for (const [key, value] of Object.entries(meta)) {
     if (typeof value === "string") {
       doc[key] = value;
-    } else if (Array.isArray(value) && value.every((v) => typeof v === "string")) {
+    } else if (
+      Array.isArray(value) &&
+      value.every((v) => typeof v === "string")
+    ) {
       doc[key] = value.join(" ");
     }
   }
@@ -128,7 +146,10 @@ export function buildSearchDocument(
   return doc;
 }
 
-export async function discardDocuments(index: ContenzSearchIndex, ids: string[]): Promise<void> {
+export async function discardDocuments(
+  index: ContenzSearchIndex,
+  ids: string[]
+): Promise<void> {
   for (const id of ids) {
     await remove(index, id);
   }

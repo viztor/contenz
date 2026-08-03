@@ -26,17 +26,28 @@ export interface SchemaResultData {
 
 // ── Implementation ──────────────────────────────────────────────────────────
 
-export async function runSchema(opts: SchemaOptions): Promise<ContentOpResult<SchemaResultData>> {
+export async function runSchema(
+  opts: SchemaOptions
+): Promise<ContentOpResult<SchemaResultData>> {
   try {
-    const ws = await createWorkspace({ cwd: opts.cwd, collection: opts.collection });
+    const ws = await createWorkspace({
+      cwd: opts.cwd,
+      collection: opts.collection,
+    });
     const col = ws.getCollection(opts.collection);
 
     if (!col) {
-      return { success: false, error: `Collection not found: ${opts.collection}` };
+      return {
+        success: false,
+        error: `Collection not found: ${opts.collection}`,
+      };
     }
 
     if (!col.schema) {
-      return { success: false, error: `No schema found for collection: ${opts.collection}` };
+      return {
+        success: false,
+        error: `No schema found for collection: ${opts.collection}`,
+      };
     }
 
     // Determine which schema to introspect
@@ -44,7 +55,7 @@ export async function runSchema(opts: SchemaOptions): Promise<ContentOpResult<Sc
     let contentType: string | null = null;
 
     if (opts.contentType) {
-      const key = `${opts.contentType}Meta` as `${string}Meta`;
+      const key = `${opts.contentType}Meta`;
       const typed = col.schema[key];
       if (!typed) {
         return {
@@ -62,7 +73,10 @@ export async function runSchema(opts: SchemaOptions): Promise<ContentOpResult<Sc
     }
 
     if (!targetSchema) {
-      return { success: false, error: `No schema found for collection: ${opts.collection}` };
+      return {
+        success: false,
+        error: `No schema found for collection: ${opts.collection}`,
+      };
     }
 
     const introspected = introspectSchema(targetSchema);
@@ -74,10 +88,13 @@ export async function runSchema(opts: SchemaOptions): Promise<ContentOpResult<Sc
         collection: opts.collection,
         contentType,
         schema: introspected,
-        relations: relations as Record<string, string> | null,
+        relations: relations,
       },
     };
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : String(error) };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
   }
 }

@@ -1,6 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { runBuild } from "./run-build.js";
 import { runStatus } from "./run-status.js";
 import { prepareFixture } from "./test-fixtures.js";
@@ -8,7 +10,11 @@ import { prepareFixture } from "./test-fixtures.js";
 const tempDirs: string[] = [];
 
 afterEach(async () => {
-  await Promise.all(tempDirs.splice(0).map((dir) => fs.rm(dir, { recursive: true, force: true })));
+  await Promise.all(
+    tempDirs
+      .splice(0)
+      .map( async (dir) => fs.rm(dir, { recursive: true, force: true }))
+  );
 });
 
 async function useFixture(name: string): Promise<string> {
@@ -26,7 +32,9 @@ describe("runStatus", () => {
     expect(result.status).toBe("needs-build");
     expect(result.dirtyCollections.length).toBeGreaterThan(0);
     expect(result.freshCollections).toEqual([]);
-    expect(result.message).toMatch(/need rebuild|No collections|Invalid|Failed/);
+    expect(result.message).toMatch(
+      /need rebuild|No collections|Invalid|Failed/
+    );
   });
 
   it("returns up-to-date after successful build", async () => {

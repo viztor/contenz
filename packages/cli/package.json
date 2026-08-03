@@ -1,45 +1,48 @@
 {
   "name": "@contenz/cli",
-  "version": "0.1.6",
+  "version": "0.2.0",
   "description": "CLI for contenz (content validation and codegen)",
-  "license": "MPL-2.0",
-  "publishConfig": {
-    "access": "public"
-  },
   "keywords": [
-    "contenz",
     "cli",
     "content",
+    "contenz",
     "markdown",
     "mdx"
   ],
-  "type": "module",
-  "engines": {
-    "node": ">=20"
-  },
+  "license": "MPL-2.0",
   "bin": {
+    "__contenz_bash_complete": "./bin/bash-complete.mjs",
     "contenz": "./bin/run.mjs"
   },
   "files": [
     "dist",
     "bin"
   ],
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsup",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "oxlint src",
+    "lint:fix": "oxlint --fix src"
   },
   "dependencies": {
-    "@contenz/core": "^0.1.6",
-    "@contenz/preview": "^0.1.6",
-    "@hono/node-server": "^2.0.4",
-    "citty": "^0.2.2",
-    "get-port-please": "^3.2.0",
-    "hono": "^4.12.23",
-    "tsx": "^4.22.4"
+    "@contenz/core": "workspace:*",
+    "@stricli/auto-complete": "^1.3.0",
+    "@stricli/core": "^1.3.0",
+    "tsx": "^4.23.4"
   },
   "devDependencies": {
-    "@types/node": "^25.9.1",
+    "@types/node": "^26.1.2",
     "tsup": "^8.5.1",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  },
+  "engines": {
+    "node": ">=24"
   }
 }

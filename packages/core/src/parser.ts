@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+
 import { getAdapterForExtension } from "./format-adapter.js";
 import type { ParsedContent, ResolvedConfig } from "./types.js";
 
@@ -53,7 +54,7 @@ export function parseFileName(
   if (i18nEnabled) {
     // BCP 47 locale: xx, xxx, xx-XX, xx-Xxxx, xx-Xxxx-XX, etc.
     const localePattern = "[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?";
-    const match = fileName.match(new RegExp(`^(.+)\\.(${localePattern})\\.(${alt})$`));
+    const match = new RegExp(`^(.+)\\.(${localePattern})\\.(${alt})$`).exec(fileName);
     if (!match) return null;
     return {
       slug: match[1],
@@ -62,7 +63,7 @@ export function parseFileName(
     };
   }
 
-  const match = fileName.match(new RegExp(`^(.+)\\.(${alt})$`));
+  const match = new RegExp(`^(.+)\\.(${alt})$`).exec(fileName);
   if (!match) return null;
   return {
     slug: match[1],
@@ -129,20 +130,24 @@ export async function parseContentFile(
     const expectedFormat = config.i18n
       ? "{slug}.{locale}.mdx, {slug}.{locale}.md, or {slug}.{locale}.json"
       : "{slug}.mdx, {slug}.md, or {slug}.json";
-    throw new Error(`Invalid file name format: ${fileName}. Expected ${expectedFormat}`);
+    throw new Error(
+      `Invalid file name format: ${fileName}. Expected ${expectedFormat}`
+    );
   }
 
   const source = await fs.readFile(filePath, "utf-8");
   const adapter = getAdapterForExtension(parsed.ext, config.adapters);
 
   if (!adapter) {
-    throw new Error(`No format adapter registered for extension: .${parsed.ext}`);
+    throw new Error(
+      `No format adapter registered for extension: .${parsed.ext}`
+    );
   }
 
   const { meta, body } = adapter.extract(source, filePath);
 
   return {
-    meta: meta ?? ({} as Record<string, unknown>),
+    meta: meta ?? ({}),
     filePath,
     slug: parsed.slug,
     locale: parsed.locale,

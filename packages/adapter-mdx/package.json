@@ -1,22 +1,21 @@
 {
   "name": "@contenz/adapter-mdx",
-  "version": "0.1.6",
+  "version": "0.2.0",
   "description": "Unified MD/MDX format adapter for contenz",
-  "license": "MPL-2.0",
-  "publishConfig": {
-    "access": "public"
-  },
   "keywords": [
+    "adapter",
     "contenz",
-    "mdx",
-    "markdown",
     "frontmatter",
-    "adapter"
+    "markdown",
+    "mdx"
+  ],
+  "license": "MPL-2.0",
+  "files": [
+    "dist"
   ],
   "type": "module",
-  "engines": {
-    "node": ">=20"
-  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -24,25 +23,29 @@
       "default": "./dist/index.js"
     }
   },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "files": [
-    "dist"
-  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
-    "build": "tsup",
+    "build": "tsup && tsc --emitDeclarationOnly --declarationMap",
     "dev": "tsup --watch",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint src",
+    "lint:fix": "oxlint --fix src"
   },
   "devDependencies": {
-    "typescript": "^6.0.3",
-    "@types/node": "^25.9.1",
+    "@contenz/core": "workspace:*",
+    "@types/node": "^26.1.2",
     "tsup": "^8.5.1",
-    "vitest": "^4.1.8"
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
   },
   "peerDependencies": {
-    "@contenz/core": "^0.1.6"
+    "@contenz/core": "^0.2.0"
+  },
+  "engines": {
+    "node": ">=24"
   }
 }

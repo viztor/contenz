@@ -1,13 +1,19 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { runBuild } from "./run-build.js";
 import { prepareFixture } from "./test-fixtures.js";
 
 const tempDirs: string[] = [];
 
 afterEach(async () => {
-  await Promise.all(tempDirs.splice(0).map((dir) => fs.rm(dir, { recursive: true, force: true })));
+  await Promise.all(
+    tempDirs
+      .splice(0)
+      .map( async (dir) => fs.rm(dir, { recursive: true, force: true }))
+  );
 });
 
 async function useFixture(name: string): Promise<string> {
@@ -27,7 +33,9 @@ describe("runBuild", () => {
     expect(result.diagnostics).toEqual([]);
     expect(result.generated).toEqual(["faq.ts", "index.ts"]);
     expect(result.report).toContain("Build diagnostics");
-    expect(result.report).toContain("0 error(s), 0 warning(s), 0 info message(s)");
+    expect(result.report).toContain(
+      "0 error(s), 0 warning(s), 0 info message(s)"
+    );
 
     const collectionOutput = await fs.readFile(
       path.join(cwd, "generated", "content", "faq.ts"),
@@ -39,10 +47,16 @@ describe("runBuild", () => {
     );
 
     expect(collectionOutput).toContain("export interface FaqMeta");
-    expect(collectionOutput).toContain('question": "What is the minimum order quantity?"');
+    expect(collectionOutput).toContain(
+      'question": "What is the minimum order quantity?"'
+    );
     expect(collectionOutput).toContain("export const faqStats = {");
-    expect(indexOutput).toContain('export { faq, faqSlugs, faqStats } from "./faq.js";');
-    expect(indexOutput).toContain('export type { FaqMeta, FaqEntry } from "./faq.js";');
+    expect(indexOutput).toContain(
+      'export { faq, faqSlugs, faqStats } from "./faq.js";'
+    );
+    expect(indexOutput).toContain(
+      'export type { FaqMeta, FaqEntry } from "./faq.js";'
+    );
   });
 
   it("returns a failed result and skips collection output when validation fails", async () => {
@@ -66,7 +80,9 @@ describe("runBuild", () => {
     expect(result.report).toContain("META_VALIDATION_FAILED");
     expect(result.report).toContain("Too small");
 
-    await expect(fs.access(path.join(cwd, "generated", "content", "faq.ts"))).rejects.toThrow();
+    await expect(
+      fs.access(path.join(cwd, "generated", "content", "faq.ts"))
+    ).rejects.toThrow();
 
     const indexOutput = await fs.readFile(
       path.join(cwd, "generated", "content", "index.ts"),
@@ -92,11 +108,19 @@ describe("runBuild", () => {
       "utf-8"
     );
 
-    expect(collectionOutput).toContain("export const terms: Record<string, TermItem> =");
-    expect(collectionOutput).toContain("export const topics: Record<string, TopicItem> =");
+    expect(collectionOutput).toContain(
+      "export const terms: Record<string, TermItem> ="
+    );
+    expect(collectionOutput).toContain(
+      "export const topics: Record<string, TopicItem> ="
+    );
     expect(collectionOutput).toContain("topic-getting-started");
-    expect(indexOutput).toContain('export { terms, termsSlugs, termsStats } from "./terms.js";');
-    expect(indexOutput).toContain('export { topics, topicsSlugs, topicsStats } from "./terms.js";');
+    expect(indexOutput).toContain(
+      'export { terms, termsSlugs, termsStats } from "./terms.js";'
+    );
+    expect(indexOutput).toContain(
+      'export { topics, topicsSlugs, topicsStats } from "./terms.js";'
+    );
     expect(indexOutput).toContain(
       'export type { TopicMeta, TopicEntry, TopicItem } from "./terms.js";'
     );
@@ -153,7 +177,10 @@ describe("runBuild", () => {
       path.join(cwd, "generated", "content", "docs.ts"),
       "utf-8"
     );
-    const faqOutput = await fs.readFile(path.join(cwd, "generated", "content", "faq.ts"), "utf-8");
+    const faqOutput = await fs.readFile(
+      path.join(cwd, "generated", "content", "faq.ts"),
+      "utf-8"
+    );
     const indexOutput = await fs.readFile(
       path.join(cwd, "generated", "content", "index.ts"),
       "utf-8"
@@ -161,8 +188,12 @@ describe("runBuild", () => {
 
     expect(docsOutput).toContain('"title": "Getting started"');
     expect(faqOutput).toContain('"question": "What is contenz?"');
-    expect(indexOutput).toContain('export { docs, docsSlugs, docsStats } from "./docs.js";');
-    expect(indexOutput).toContain('export { faq, faqSlugs, faqStats } from "./faq.js";');
+    expect(indexOutput).toContain(
+      'export { docs, docsSlugs, docsStats } from "./docs.js";'
+    );
+    expect(indexOutput).toContain(
+      'export { faq, faqSlugs, faqStats } from "./faq.js";'
+    );
   });
 
   it("dryRun returns success and generated list but does not write files", async () => {
@@ -246,7 +277,10 @@ describe("runBuild", () => {
     const originalFaqContent = await fs.readFile(faqContentPath, "utf-8");
     await fs.writeFile(
       faqContentPath,
-      originalFaqContent.replace("What is contenz?", "What is contenz? (updated)"),
+      originalFaqContent.replace(
+        "What is contenz?",
+        "What is contenz? (updated)"
+      ),
       "utf-8"
     );
     const result = await runBuild({ cwd });

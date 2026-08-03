@@ -1,4 +1,5 @@
 import type { ZodSchema } from "zod";
+
 import type { ContentType, Relations, SchemaModule } from "./types.js";
 
 /**
@@ -70,7 +71,10 @@ export function defineCollection(
 export function defineCollection(
   options: DefineCollectionSingleOptions | DefineCollectionMultiOptions
 ): SchemaModule &
-  ({ meta: ZodSchema; relations?: Relations } | Record<string, ZodSchema | Relations | undefined>) {
+  (
+    | { meta: ZodSchema; relations?: Relations }
+    | Record<string, ZodSchema | Relations | undefined>
+  ) {
   if ("schema" in options) {
     const { schema, relations } = options;
     const out: SchemaModule & Record<string, unknown> = {
@@ -100,11 +104,11 @@ export function defineCollection(
   for (const [name, value] of Object.entries(schemas)) {
     const schema =
       typeof value === "object" && value !== null && "schema" in value
-        ? (value as SchemaWithPattern).schema
-        : (value as ZodSchema);
+        ? (value).schema
+        : (value);
     const pattern =
       typeof value === "object" && value !== null && "pattern" in value
-        ? (value as SchemaWithPattern).pattern
+        ? (value).pattern
         : undefined;
 
     const exportKey = `${name}Meta`;
@@ -122,7 +126,8 @@ export function defineCollection(
   }
   if (types.length > 0) result.types = types;
 
-  return result as unknown as SchemaModule & Record<string, ZodSchema | Relations | undefined>;
+  return result as unknown as SchemaModule &
+    Record<string, ZodSchema | Relations | undefined>;
 }
 
 /**

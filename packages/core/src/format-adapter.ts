@@ -13,7 +13,10 @@ export interface FormatAdapter {
   /** File extensions this adapter handles (without leading dot) */
   extensions: string[];
   /** Extract metadata and body from source content */
-  extract(source: string, filePath: string): { meta: Record<string, unknown>; body?: string };
+  extract(
+    source: string,
+    filePath: string
+  ): { meta: Record<string, unknown>; body?: string };
   /** Serialize metadata and body back to file content */
   serialize(meta: Record<string, unknown>, body?: string): string;
 }
@@ -26,7 +29,11 @@ export const jsonAdapter: FormatAdapter = {
   extract(source: string): { meta: Record<string, unknown>; body?: string } {
     try {
       const parsed = JSON.parse(source);
-      if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
+      if (
+        typeof parsed === "object" &&
+        parsed !== null &&
+        !Array.isArray(parsed)
+      ) {
         return { meta: parsed as Record<string, unknown> };
       }
       return { meta: {} };
@@ -46,7 +53,9 @@ export const jsonAdapter: FormatAdapter = {
  * Build a list of format adapters, prepending custom adapters to the built-ins.
  * Prepending ensures custom adapters take priority over built-ins for the same extension.
  */
-export function buildAdapterList(customAdapters: FormatAdapter[] = []): FormatAdapter[] {
+export function buildAdapterList(
+  customAdapters: FormatAdapter[] = []
+): FormatAdapter[] {
   const adapters = [jsonAdapter];
   for (const adapter of customAdapters) {
     // Avoid duplicates: remove existing adapters with overlapping extensions

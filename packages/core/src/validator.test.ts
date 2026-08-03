@@ -1,18 +1,31 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { detectCircularReferences, validateMeta, validateRelations } from "./validator.js";
+
+import {
+  detectCircularReferences,
+  validateMeta,
+  validateRelations,
+} from "./validator.js";
 
 describe("validateMeta", () => {
   it("returns valid when meta matches schema", () => {
     const schema = z.object({ title: z.string(), count: z.number() });
-    const result = validateMeta({ title: "Hi", count: 1 }, schema as never, "test.mdx");
+    const result = validateMeta(
+      { title: "Hi", count: 1 },
+      schema,
+      "test.mdx"
+    );
     expect(result.valid).toBe(true);
     expect(result.errors).toHaveLength(0);
   });
 
   it("returns errors when meta fails validation", () => {
     const schema = z.object({ title: z.string().min(1), count: z.number() });
-    const result = validateMeta({ title: "", count: "not-a-number" }, schema as never, "test.mdx");
+    const result = validateMeta(
+      { title: "", count: "not-a-number" },
+      schema,
+      "test.mdx"
+    );
     expect(result.valid).toBe(false);
     expect(result.errors.length).toBeGreaterThan(0);
     expect(result.errors[0]).toMatchObject({
@@ -69,6 +82,8 @@ describe("detectCircularReferences", () => {
     items.set("b", { slug: "b", relatedSlugs: ["a"] });
     const { circularRefs } = detectCircularReferences(items);
     expect(circularRefs.length).toBeGreaterThan(0);
-    expect(circularRefs.some((c) => c.includes("a") && c.includes("b"))).toBe(true);
+    expect(circularRefs.some((c) => c.includes("a") && c.includes("b"))).toBe(
+      true
+    );
   });
 });

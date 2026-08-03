@@ -6,6 +6,7 @@
  */
 
 import path from "node:path";
+
 import {
   loadCollectionConfig,
   loadProjectConfig,
@@ -87,7 +88,9 @@ export interface CreateWorkspaceOptions {
  * Throws on critical config errors. Discovery errors are captured non-fatally
  * in `workspace.discoveryErrors`.
  */
-export async function createWorkspace(options: CreateWorkspaceOptions): Promise<Workspace> {
+export async function createWorkspace(
+  options: CreateWorkspaceOptions
+): Promise<Workspace> {
   const cwd = options.cwd;
   const projectConfig = await loadProjectConfig(cwd);
   const resolvedConfig = resolveConfig(projectConfig);
@@ -96,14 +99,18 @@ export async function createWorkspace(options: CreateWorkspaceOptions): Promise<
 
   const sources =
     options.sources ??
-    (options.dir ? [normalizeLegacyContentDir(options.dir)] : resolvedConfig.sources);
+    (options.dir
+      ? [normalizeLegacyContentDir(options.dir)]
+      : resolvedConfig.sources);
 
   const discovery = await discoverCollections(cwd, sources);
   let discoveredCollections = discovery.collections;
 
   // Filter to single collection if requested
   if (options.collection) {
-    discoveredCollections = discoveredCollections.filter((c) => c.name === options.collection);
+    discoveredCollections = discoveredCollections.filter(
+      (c) => c.name === options.collection
+    );
   }
 
   // Load each discovered collection's config, schema, and content file list
@@ -136,32 +143,43 @@ export async function createWorkspace(options: CreateWorkspaceOptions): Promise<
   // Merge inline declared collections (from config.collections)
   const inlineEntries = projectConfig.collections ?? {};
   const inlineContexts: CollectionContext[] = await Promise.all(
-    Object.entries(inlineEntries).map(async ([name, decl]: [string, CollectionDeclaration]) => {
-      const collectionPath = path.resolve(cwd, decl.path);
-      const collectionConfig = decl.config ?? (await loadCollectionConfig(collectionPath));
-      const config = resolveConfig(projectConfig, collectionConfig);
+    Object.entries(inlineEntries).map(
+      async ([name, decl]: [string, CollectionDeclaration]) => {
+        const collectionPath = path.resolve(cwd, decl.path);
+        const collectionConfig =
+          decl.config ?? (await loadCollectionConfig(collectionPath));
+        const config = resolveConfig(projectConfig, collectionConfig);
 
-      // Build schema module from inline schema or fall back to file
-      let schema: SchemaModule | null = null;
-      if (decl.schema) {
-        schema = { meta: decl.schema, relations: decl.relations, computed: decl.computed };
-      } else {
-        schema = await loadSchemaModule(collectionPath);
+        // Build schema module from inline schema or fall back to file
+        let schema: SchemaModule | null = null;
+        if (decl.schema) {
+          schema = {
+            meta: decl.schema,
+            relations: decl.relations,
+            computed: decl.computed,
+          };
+        } else {
+          schema = await loadSchemaModule(collectionPath);
+        }
+
+        const contentFiles = await globContentFiles(
+          collectionPath,
+          config.extensions,
+          config.ignore
+        );
+
+        detectSlugCollisions(name, contentFiles, config);
+
+        return {
+          name,
+          collectionPath,
+          config,
+          collectionConfig,
+          schema,
+          contentFiles,
+        };
       }
-
-      const contentFiles = await globContentFiles(collectionPath, config.extensions, config.ignore);
-
-      detectSlugCollisions(name, contentFiles, config);
-
-      return {
-        name,
-        collectionPath,
-        config,
-        collectionConfig,
-        schema,
-        contentFiles,
-      };
-    })
+    )
   );
 
   // Merge: inline declarations override filesystem-discovered collections
@@ -172,7 +190,9 @@ export async function createWorkspace(options: CreateWorkspaceOptions): Promise<
   for (const ctx of inlineContexts) {
     collectionMap.set(ctx.name, ctx); // inline wins
   }
-  const collections = [...collectionMap.values()].sort((a, b) => a.name.localeCompare(b.name));
+  const collections = [...collectionMap.values()].sort((a, b) =>
+    a.name.localeCompare(b.name)
+  );
 
   return {
     cwd,
@@ -195,7 +215,12 @@ function detectSlugCollisions(
   const slugMap = new Map<string, string[]>();
   for (const file of contentFiles) {
     const fileName = path.basename(file);
-    const parsed = parseFileName(fileName, config.i18n, config.slugPattern, config.extensions);
+    const parsed = parseFileName(
+      fileName,
+      config.i18n,
+      config.slugPattern,
+      config.extensions
+    );
     if (!parsed) continue;
 
     const key = config.i18n ? `${parsed.slug}.${parsed.locale}` : parsed.slug;

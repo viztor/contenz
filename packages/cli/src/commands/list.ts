@@ -1,34 +1,47 @@
 import { runList } from "@contenz/core/api";
-import { defineCommand } from "citty";
-import { printAndExit } from "../output.js";
+import { buildCommand } from "@stricli/core";
 
-export const listCommand = defineCommand({
-	meta: {
-		name: "list",
-		description: "List collections or content items within a collection",
-	},
-	args: {
-		collection: {
-			type: "positional",
-			description: "Collection name (omit to list all collections)",
-			required: false,
-		},
-		cwd: {
-			type: "string",
-			description: "Project root",
-			default: ".",
-		},
-		format: {
-			type: "string",
-			description: "Output format: json or pretty",
-			default: "json",
-		},
-	},
-	async run({ args }) {
-		const result = await runList({
-			cwd: args.cwd,
-			collection: args.collection,
-		});
-		printAndExit(result, args.format);
-	},
+import type { ContenzContext } from "../context.js";
+import { printResult } from "../output.js";
+import { cwdFlag, outputFormatFlag, type OutputFormat } from "../shared.js";
+
+interface ListFlags {
+  cwd: string;
+  format: OutputFormat;
+}
+
+async function list(
+  this: ContenzContext,
+  flags: ListFlags,
+  collection?: string
+): Promise<void> {
+  const result = await runList({
+    cwd: flags.cwd,
+    collection,
+  });
+  printResult(this, result, flags.format);
+}
+
+export const listCommandDef = buildCommand({
+  func: list,
+  parameters: {
+    positional: {
+      kind: "tuple",
+      parameters: [
+        {
+          brief: "Collection name (omit to list all collections)",
+          parse: String,
+          placeholder: "collection",
+          optional: true,
+        },
+      ],
+    },
+    flags: {
+      cwd: cwdFlag,
+      format: outputFormatFlag,
+    },
+  },
+  docs: {
+    brief: "List collections or content items within a collection",
+  },
 });

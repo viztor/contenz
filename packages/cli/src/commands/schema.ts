@@ -1,41 +1,55 @@
 import { runSchema } from "@contenz/core/api";
-import { defineCommand } from "citty";
-import { printAndExit } from "../output.js";
+import { buildCommand } from "@stricli/core";
 
-export const schemaCommand = defineCommand({
-	meta: {
-		name: "schema",
-		description:
-			"Introspect the schema of a collection (fields, types, descriptions)",
-	},
-	args: {
-		collection: {
-			type: "positional",
-			description: "Collection name",
-			required: true,
-		},
-		type: {
-			type: "string",
-			description: "Content type (for multi-type collections)",
-			required: false,
-		},
-		cwd: {
-			type: "string",
-			description: "Project root",
-			default: ".",
-		},
-		format: {
-			type: "string",
-			description: "Output format: json or pretty",
-			default: "json",
-		},
-	},
-	async run({ args }) {
-		const result = await runSchema({
-			cwd: args.cwd,
-			collection: args.collection,
-			contentType: args.type,
-		});
-		printAndExit(result, args.format);
-	},
+import type { ContenzContext } from "../context.js";
+import { printResult } from "../output.js";
+import {
+  contentTypeFlag,
+  cwdFlag,
+  outputFormatFlag,
+  type OutputFormat,
+} from "../shared.js";
+
+interface SchemaFlags {
+  cwd: string;
+  type?: string;
+  format: OutputFormat;
+}
+
+async function schema(
+  this: ContenzContext,
+  flags: SchemaFlags,
+  collection: string
+): Promise<void> {
+  const result = await runSchema({
+    cwd: flags.cwd,
+    collection,
+    contentType: flags.type,
+  });
+  printResult(this, result, flags.format);
+}
+
+export const schemaCommandDef = buildCommand({
+  func: schema,
+  parameters: {
+    positional: {
+      kind: "tuple",
+      parameters: [
+        {
+          brief: "Collection name",
+          parse: String,
+          placeholder: "collection",
+        },
+      ],
+    },
+    flags: {
+      cwd: cwdFlag,
+      type: contentTypeFlag,
+      format: outputFormatFlag,
+    },
+  },
+  docs: {
+    brief:
+      "Introspect the schema of a collection (fields, types, descriptions)",
+  },
 });

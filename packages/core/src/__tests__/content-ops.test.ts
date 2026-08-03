@@ -2,7 +2,9 @@
  * Unit tests for AI-native content operations (runList, runView, runCreate, runUpdate).
  */
 import fs from "node:fs/promises";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { runCreate, runList, runUpdate, runView } from "../ops/index.js";
 import { prepareFixture } from "../test-fixtures.js";
 
@@ -15,7 +17,9 @@ describe("runList", () => {
 
     expect(result.success).toBe(true);
     expect(result.data).toHaveProperty("collections");
-    const data = result.data as { collections: Array<{ name: string; items: number }> };
+    const data = result.data as {
+      collections: Array<{ name: string; items: number }>;
+    };
     expect(data.collections.length).toBeGreaterThan(0);
 
     for (const col of data.collections) {
@@ -52,10 +56,12 @@ describe("runView", () => {
     cwd = await prepareFixture("minimal");
     // Get a slug from listing
     const listResult = await runList({ cwd });
-    const cols = (listResult.data as { collections: Array<{ name: string }> }).collections;
+    const cols = (listResult.data as { collections: Array<{ name: string }> })
+      .collections;
     const colName = cols[0].name;
     const itemsResult = await runList({ cwd, collection: colName });
-    const items = (itemsResult.data as { items: Array<{ slug: string }> }).items;
+    const items = (itemsResult.data as { items: Array<{ slug: string }> })
+      .items;
     const slug = items[0].slug;
 
     const result = await runView({ cwd, collection: colName, slug });
@@ -68,9 +74,14 @@ describe("runView", () => {
   it("returns error for nonexistent slug", async () => {
     cwd = await prepareFixture("minimal");
     const listResult = await runList({ cwd });
-    const cols = (listResult.data as { collections: Array<{ name: string }> }).collections;
+    const cols = (listResult.data as { collections: Array<{ name: string }> })
+      .collections;
 
-    const result = await runView({ cwd, collection: cols[0].name, slug: "nonexistent-slug-xyz" });
+    const result = await runView({
+      cwd,
+      collection: cols[0].name,
+      slug: "nonexistent-slug-xyz",
+    });
     expect(result.success).toBe(false);
     expect(result.error).toContain("not found");
   });
@@ -88,14 +99,22 @@ describe("runCreate", () => {
     cwd = await prepareFixture("minimal");
     // Get collection info and schema
     const listResult = await runList({ cwd });
-    const cols = (listResult.data as { collections: Array<{ name: string; fields?: string[] }> })
-      .collections;
+    const cols = (
+      listResult.data as {
+        collections: Array<{ name: string; fields?: string[] }>;
+      }
+    ).collections;
     const colName = cols[0].name;
 
     // View an existing item to understand the schema shape
     const itemsResult = await runList({ cwd, collection: colName });
-    const items = (itemsResult.data as { items: Array<{ slug: string }> }).items;
-    const existing = await runView({ cwd, collection: colName, slug: items[0].slug });
+    const items = (itemsResult.data as { items: Array<{ slug: string }> })
+      .items;
+    const existing = await runView({
+      cwd,
+      collection: colName,
+      slug: items[0].slug,
+    });
 
     if (existing.success && existing.data) {
       // Create with same meta shape
@@ -110,7 +129,11 @@ describe("runCreate", () => {
       expect(result.data?.slug).toBe("test-created-item");
 
       // Verify it can be read back
-      const readBack = await runView({ cwd, collection: colName, slug: "test-created-item" });
+      const readBack = await runView({
+        cwd,
+        collection: colName,
+        slug: "test-created-item",
+      });
       expect(readBack.success).toBe(true);
     }
   });
@@ -118,7 +141,8 @@ describe("runCreate", () => {
   it("rejects create with invalid meta", async () => {
     cwd = await prepareFixture("minimal");
     const listResult = await runList({ cwd });
-    const cols = (listResult.data as { collections: Array<{ name: string }> }).collections;
+    const cols = (listResult.data as { collections: Array<{ name: string }> })
+      .collections;
 
     const result = await runCreate({
       cwd,
@@ -141,9 +165,11 @@ describe("runUpdate", () => {
   it("returns error when no mutations specified", async () => {
     cwd = await prepareFixture("minimal");
     const listResult = await runList({ cwd });
-    const cols = (listResult.data as { collections: Array<{ name: string }> }).collections;
+    const cols = (listResult.data as { collections: Array<{ name: string }> })
+      .collections;
     const items = await runList({ cwd, collection: cols[0].name });
-    const slug = (items.data as { items: Array<{ slug: string }> }).items[0].slug;
+    const slug = (items.data as { items: Array<{ slug: string }> }).items[0]
+      .slug;
 
     const result = await runUpdate({
       cwd,
@@ -157,7 +183,8 @@ describe("runUpdate", () => {
   it("returns error for nonexistent slug", async () => {
     cwd = await prepareFixture("minimal");
     const listResult = await runList({ cwd });
-    const cols = (listResult.data as { collections: Array<{ name: string }> }).collections;
+    const cols = (listResult.data as { collections: Array<{ name: string }> })
+      .collections;
 
     const result = await runUpdate({
       cwd,

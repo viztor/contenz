@@ -3,6 +3,7 @@
 This page summarizes the programmatic API from `@contenz/core/api`. Use it when building tooling or custom scripts on top of Contenz.
 
 **Entry points**:
+
 - `@contenz/core/api` (All programmatic pipelines: schema helpers, build, lint, content ops)
 - `@contenz/client` (Runtime query builder for consuming output in apps)
 
@@ -11,17 +12,18 @@ This page summarizes the programmatic API from `@contenz/core/api`. Use it when 
 When building frontend applications (e.g., Next.js, Nuxt), use `@contenz/client` to filter, sort, and paginate your generated JSON content. This package is completely decoupled from Node APIs.
 
 | Export | Description |
-|--------|-------------|
+| --- | --- |
 | `query(collection)` | Create a new `QueryBuilder` over an array or object of items. |
 | `.where(field, op, val)` | Filter items. Operators: `==`, `!=`, `<`, `<=`, `>`, `>=`, `in`, `not-in`, `contains`. |
 | `.orderBy(field, dir)` | Sort items by a key (`asc` or `desc`). |
-| `.paginate({ page, limit })`| Returns a `PaginatedResult` with `items`, `total`, `page`, `limit`, and `totalPages`. |
+| `.paginate({ page, limit })` | Returns a `PaginatedResult` with `items`, `total`, `page`, `limit`, and `totalPages`. |
 | `.limit(count)` | Restrict result count. |
 | `.offset(count)` | Skip a number of results. |
 | `.first()` | Returns the first item or undefined. |
 | `.all()` | Returns all matched items. |
 
 **Example:**
+
 ```ts
 import { query } from "@contenz/client";
 import { blog } from "./generated/content/blog.js";
@@ -32,10 +34,55 @@ const recentPosts = query(blog)
   .paginate({ page: 1, limit: 10 });
 ```
 
+## Content resolver (`createContent`)
+
+Read generated i18n collections with **default-locale fallback**. This is the recommended runtime API — not a UI string catalog, but structured content resolution.
+
+| Export | Description |
+| --- | --- |
+| `createContent(ctx)` | Locale-bound resolver over all collections. |
+| `content.collection(name).get(slug)` | One entry; falls back to `defaultLocale` when missing. |
+| `content.collection(name).all()` | All entries for the locale (fallback applied per slug). |
+| `entry._resolvedFrom` | Present when fallback served a different locale (e.g. `"en"`). |
+
+**Fallback order:** requested locale → `i18n.fallback` chain → `defaultLocale` → first available.
+
+**Next.js App Router example:**
+
+```ts
+import { faq, blog } from "@/generated/content";
+import { createContent } from "@contenz/client";
+
+export default async function Page({ params }: PageProps<"/[locale]/faq/[slug]">) {
+  const { locale, slug } = await params;
+  const content = createContent({
+    locale,
+    defaultLocale: "en",
+    fallback: { "zh-Hant": "zh" }, // mirrors contenz.config.ts
+    collections: { faq, blog },
+  });
+
+  const entry = content.collection("faq")?.get(slug);
+  return (
+    <>
+      <h1>{entry?.question}</h1>
+      {entry?._resolvedFrom && <p>Showing {entry._resolvedFrom} (translation pending)</p>}
+    </>
+  );
+}
+```
+
+### Lower-level helpers
+
+| Export | Description |
+| --- | --- |
+| `getLocalizedItem(collection, slug, options)` | One-shot entry resolver with fallback. |
+| `createT(options)` | Field accessor sugar: `t(faq, slug, "question")`. Prefer `createContent` for pages. |
+
 ## Config and discovery
 
 | Export | Description |
-|--------|-------------|
+| --- | --- |
 | `loadProjectConfig(cwd)` | Load root config from `contenz.config.ts` (or `.mjs`/`.js`). Returns `ContenzConfig`. |
 | `loadCollectionConfig(collectionPath)` | Load collection config from `config.ts` in the given path. Returns `CollectionConfig`. |
 | `resolveConfig(projectConfig, collectionConfig?)` | Merge project and optional collection config into a `ResolvedConfig`. |
@@ -53,7 +100,7 @@ const recentPosts = query(blog)
 The `Workspace` module provides a consolidated loading mechanism that eliminates repeated config/discovery/schema loading.
 
 | Export | Description |
-|--------|-------------|
+| --- | --- |
 | `createWorkspace(options)` | Load project config, discover collections, and pre-load each collection's config, schema, and file list. Returns `Workspace`. |
 | `Workspace.getCollection(name)` | Get a `CollectionContext` by collection name. |
 
@@ -64,7 +111,7 @@ The `Workspace` module provides a consolidated loading mechanism that eliminates
 ## Parsing and serialization
 
 | Export | Description |
-|--------|-------------|
+| --- | --- |
 | `parseFileName(fileName, i18n, slugPattern?)` | Parse slug (and locale if i18n) from a filename. |
 | `parseContentFile(filePath, config)` | Parse a content file; returns `ParsedContent` (meta, body, slug, locale, etc.). |
 | `extractBodyFromSource(source, ext)` | Extract body from raw file content (after frontmatter or export block). |
@@ -75,7 +122,7 @@ The `Workspace` module provides a consolidated loading mechanism that eliminates
 ## Format adapters
 
 | Export | Source | Description |
-|--------|--------|-------------|
+| --- | --- | --- |
 | `getAdapterForExtension(ext)` | `@contenz/core/api` | Get the registered format adapter for a file extension. Returns `FormatAdapter \| null`. |
 | `jsonAdapter` | `@contenz/core/api` | Built-in adapter for `.json` files. Registered automatically. |
 | `registerAdapters(adapters)` | `@contenz/core/api` | Register format adapters (called internally by `createWorkspace`). |
@@ -88,7 +135,7 @@ Note: `mdxAdapter` handles both `.md` and `.mdx` files with dual syntax support 
 ## Validation
 
 | Export | Description |
-|--------|-------------|
+| --- | --- |
 | `validateMeta(meta, schema, filePath?)` | Validate metadata against a Zod schema. Returns `ValidationResult` (`valid`, `errors: { field, message }[]`). |
 
 **Types**: `ValidationResult`, `ValidationError`.
@@ -96,7 +143,7 @@ Note: `mdxAdapter` handles both `.md` and `.mdx` files with dual syntax support 
 ## Schema introspection
 
 | Export | Description |
-|--------|-------------|
+| --- | --- |
 | `introspectSchema(schema, descriptions?)` | Extract field metadata from a Zod schema without validation. Returns `IntrospectedSchema`. |
 | `introspectField(schema)` | Recursively introspect a single Zod field. Returns `IntrospectedField`. |
 
@@ -105,7 +152,7 @@ Note: `mdxAdapter` handles both `.md` and `.mdx` files with dual syntax support 
 ## Build, lint, and status
 
 | Export | Description |
-|--------|-------------|
+| --- | --- |
 | `runBuild(options)` | Run the full build. Uses manifest for incremental rebuilds. Returns `BuildResult` (`success`, `report`, etc.). |
 | `runLint(options)` | Run validation and optional coverage. Returns `LintResult` (`success`, `diagnostics`, `report`, etc.). |
 | `runStatus(options)` | Compare input hashes to manifest. Returns `StatusResult` (`status: 'up-to-date' \| 'needs-build'`, `message`, `dirtyCollections`, `freshCollections`). |
@@ -121,7 +168,7 @@ Note: `mdxAdapter` handles both `.md` and `.mdx` files with dual syntax support 
 These APIs mirror the AI-native CLI commands. They accept clean options objects and return structured `ContentOpResult<T>` results—never call `console.log` or `process.exit`.
 
 | Export | Description |
-|--------|-------------|
+| --- | --- |
 | `runList(opts)` | List collections (no `collection`) or items in a collection. |
 | `runView(opts)` | Read a single content item by collection, slug, and optional locale. |
 | `runCreate(opts)` | Create a new content item. Fills schema defaults, validates, writes file. |
@@ -134,7 +181,7 @@ These APIs mirror the AI-native CLI commands. They accept clean options objects 
 ### Options and result types
 
 | Function | Options type | Result data type |
-|----------|-------------|-----------------|
+| --- | --- | --- |
 | `runList` | `ListOptions` (`cwd`, `collection?`) | `{ collections: CollectionInfo[] }` or `{ collection, items: ListItemInfo[] }` |
 | `runView` | `ViewOptions` (`cwd`, `collection`, `slug`, `locale?`) | `ViewResult` (`slug`, `locale`, `file`, `meta`, `body?`) |
 | `runCreate` | `CreateOptions` (`cwd`, `collection`, `slug`, `meta`, `locale?`, `contentType?`) | `CreateResult` (`slug`, `collection`, `file`, `meta`) |
@@ -176,8 +223,18 @@ const collections = await runList({ cwd });
 const schema = await runSchema({ cwd, collection: "faq" });
 const item = await runView({ cwd, collection: "faq", slug: "hello" });
 const results = await runSearch({ cwd, collection: "faq", query: "moq" });
-const created = await runCreate({ cwd, collection: "faq", slug: "new-item", meta: { question: "Q?", category: "products" } });
-const updated = await runUpdate({ cwd, collection: "faq", slug: "hello", set: { question: "Updated?" } });
+const created = await runCreate({
+  cwd,
+  collection: "faq",
+  slug: "new-item",
+  meta: { question: "Q?", category: "products" },
+});
+const updated = await runUpdate({
+  cwd,
+  collection: "faq",
+  slug: "hello",
+  set: { question: "Updated?" },
+});
 ```
 
 For schema authoring (e.g. `defineCollection`, `defineMultiTypeCollection`) use the default `@contenz/core` entry point; see [Configuration – Schema authoring](./CONFIGURATION.md#schema-authoring) and [packages/core/README.md](../packages/core/README.md).

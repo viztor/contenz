@@ -8,7 +8,11 @@ export interface RunSkillResult {
   error?: string;
 }
 
-function formatField(name: string, field: IntrospectedField, indent = 0): string {
+function formatField(
+  name: string,
+  field: IntrospectedField,
+  indent = 0
+): string {
   const prefix = `${"  ".repeat(indent)}- `;
   const req = field.required ? "**(required)**" : "*(optional)*";
   let str = `${prefix}\`${name}\`: \`${field.type}\` ${req}`;
@@ -76,7 +80,9 @@ Below is the introspected content model for this workspace.
 
       md += `\n#### Fields\n\n`;
 
-      const types = collection.config.types ?? [{ name: "default", pattern: /.*/ }];
+      const types = collection.config.types ?? [
+        { name: "default", pattern: /.*/ },
+      ];
 
       for (const type of types) {
         if (type.name !== "default") {
@@ -93,7 +99,9 @@ Below is the introspected content model for this workspace.
         if (Object.keys(introspected.fields).length === 0) {
           md += `*Schema has no introspectable fields.*\n\n`;
         } else {
-          for (const [fieldName, field] of Object.entries(introspected.fields)) {
+          for (const [fieldName, field] of Object.entries(
+            introspected.fields
+          )) {
             md += formatField(fieldName, field);
           }
           md += `\n`;

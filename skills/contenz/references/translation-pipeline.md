@@ -21,7 +21,7 @@ Contenz embeds the locale in the filename: `{slug}.{locale}.{ext}`. Each locale 
 Key config fields (in `contenz.config.ts` under `i18n`):
 
 | Field | Purpose |
-|-------|---------|
+| --- | --- |
 | `defaultLocale` | Source language for translation and staleness detection |
 | `locales` | Explicit locale list; omit to infer from filenames |
 | `fallback` | `Record<locale, fallbackLocale>` for missing translations |
@@ -41,11 +41,26 @@ contenz lint --coverage --format json
 ```
 
 The coverage report shows:
+
 - Per-collection locale coverage percentages
 - Per-slug missing locale list
 - Stale translations (when `detectStale: true`)
 
-Parse the JSON output to build a list of `{ collection, slug, missingLocales }` work items.
+When the project declares supported locales (`i18n: { locales: [...] }`), run lint with `--translations` — the JSON diagnostics are the work queue, no parsing of the markdown report needed. Each `I18N_MISSING_TRANSLATION` diagnostic is one translation task with `collection`, `slug`, `locale` (the missing one), and `file` (the default-locale source):
+
+```bash
+contenz lint --translations --format json | jq '[.diagnostics[]
+  | select(.code == "I18N_MISSING_TRANSLATION")
+  | {collection, slug, locale, file}]'
+```
+
+```json
+[{ "collection": "faq", "slug": "moq", "locale": "ja", "file": "moq.en.json" }]
+```
+
+For each item: `contenz view <collection> <slug> --locale <defaultLocale> --format json` to read the source, translate the fields, then `contenz create <collection> <slug> --locale <locale> --set ...`. Re-run lint to confirm the queue is empty.
+
+If the project does **not** declare locales, fall back to the coverage report (`contenz.coverage.md`) for the inferred per-locale counts.
 
 ## Single-item translation
 
@@ -134,7 +149,11 @@ When translating, check the schema introspection output. Fields with `"type": "e
 
 ```json
 {
-  "category": { "type": "enum", "required": true, "options": ["products", "ordering"] }
+  "category": {
+    "type": "enum",
+    "required": true,
+    "options": ["products", "ordering"]
+  }
 }
 ```
 
@@ -204,8 +223,13 @@ For maximum control, use the `@contenz/core/api` directly in a script:
 
 ```ts
 import {
-  runList, runView, runCreate, runUpdate,
-  runSchema, runLint, runBuild,
+  runList,
+  runView,
+  runCreate,
+  runUpdate,
+  runSchema,
+  runLint,
+  runBuild,
 } from "@contenz/core/api";
 
 const cwd = process.cwd();
@@ -228,7 +252,10 @@ for (const col of listData.collections) {
 
     // 5. Read source content
     const { data: source } = await runView({
-      cwd, collection: col.name, slug: item.slug, locale: sourceLocale,
+      cwd,
+      collection: col.name,
+      slug: item.slug,
+      locale: sourceLocale,
     });
     if (!source) continue;
 
@@ -237,8 +264,11 @@ for (const col of listData.collections) {
 
     // 7. Create the translated item
     await runCreate({
-      cwd, collection: col.name, slug: item.slug,
-      locale: targetLocale, meta: translatedMeta,
+      cwd,
+      collection: col.name,
+      slug: item.slug,
+      locale: targetLocale,
+      meta: translatedMeta,
     });
   }
 }

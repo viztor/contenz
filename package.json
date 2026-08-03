@@ -1,10 +1,7 @@
 {
   "name": "contenz",
   "private": true,
-  "packageManager": "npm@11.16.0",
-  "workspaces": [
-    "packages/*"
-  ],
+  "type": "module",
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev --parallel",
@@ -13,18 +10,43 @@
     "test:watch": "turbo run test:watch --parallel",
     "test:coverage": "turbo run test:coverage",
     "typecheck": "turbo run typecheck",
-    "lint": "turbo run lint",
-    "lint:fix": "turbo run lint:fix",
-    "format": "turbo run format",
-    "check": "turbo run check",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix --fix-suggestions",
+    "format": "oxfmt",
+    "check": "oxlint && oxfmt --check",
     "knip": "turbo run knip",
     "publish:all": "node scripts/publish.mjs",
     "publish:dry": "node scripts/publish.mjs --dry-run",
-    "prepare": "husky"
+    "prepare": "husky",
+    "fix": "oxfmt && oxlint --fix",
+    "format:check": "oxfmt --check",
+    "ci": "pnpm run lint && pnpm run format:check && pnpm run typecheck && pnpm test",
+    "version:patch": "pnpm -r --filter \"./packages/**\" version patch --no-git-checks",
+    "version:minor": "pnpm -r --filter \"./packages/**\" version minor --no-git-checks",
+    "version:major": "pnpm -r --filter \"./packages/**\" version major --no-git-checks"
   },
   "devDependencies": {
     "husky": "^9.1.7",
-    "turbo": "^2.9.16",
-    "typescript": "^6.0.3"
-  }
+    "lint-staged": "^17.3.0",
+    "oxfmt": "^0.62.0",
+    "oxlint": "^1.77.0",
+    "oxlint-tsgolint": "^7.0.2001",
+    "turbo": "^2.10.8",
+    "typescript": "^7.0.2",
+    "ultracite": "7.10.0"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,mjs,cjs}": [
+      "oxfmt --write",
+      "oxlint --fix"
+    ],
+    "*.{json,jsonc,css,scss,md,mdx,yml,yaml}": [
+      "oxfmt --write"
+    ]
+  },
+  "engines": {
+    "node": ">=24",
+    "pnpm": ">=11"
+  },
+  "packageManager": "pnpm@11.18.0"
 }
