@@ -297,8 +297,10 @@ export function getSchemaForType(
   if (!typeName || typeName === "default") {
     return schemaModule.meta;
   }
-  const schemaKey = `${typeName}Meta`;
-  return schemaModule[schemaKey] ?? schemaModule.meta;
+  // Multi-type schemas export `${typeName}Meta`; index via a string map.
+  const schemas = schemaModule as SchemaModule &
+    Record<string, import("zod").ZodSchema | undefined>;
+  return schemas[`${typeName}Meta`] ?? schemaModule.meta;
 }
 
 /**

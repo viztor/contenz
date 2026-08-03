@@ -56,7 +56,9 @@ export async function runSchema(
 
     if (opts.contentType) {
       const key = `${opts.contentType}Meta`;
-      const typed = col.schema[key];
+      const schemas = col.schema as typeof col.schema &
+        Record<string, import("zod").ZodSchema | undefined>;
+      const typed = schemas[key];
       if (!typed) {
         return {
           success: false,

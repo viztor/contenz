@@ -260,14 +260,14 @@ export function introspectField(schema: z.ZodTypeAny): IntrospectedField {
         (v): v is string | number =>
           typeof v === "string" || typeof v === "number"
       );
-      // Homogenous string[] or number[] for IntrospectedField.options
-      const allStrings = enumOptions.every((v) => typeof v === "string");
-      const allNumbers = enumOptions.every((v) => typeof v === "number");
-      const options = allStrings
-        ? (enumOptions)
-        : (allNumbers
-          ? (enumOptions)
-          : (enumOptions.map(String)));
+      let options: string[] | number[];
+      if (enumOptions.every((v) => typeof v === "string")) {
+        options = enumOptions;
+      } else if (enumOptions.every((v) => typeof v === "number")) {
+        options = enumOptions;
+      } else {
+        options = enumOptions.map(String);
+      }
       return {
         ...baseField,
         type: "enum",
