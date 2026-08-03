@@ -73,10 +73,10 @@ for (const pkg of PACKAGES) {
     continue;
   }
 
-  // npm publish: works with setup-node registry-url + NODE_AUTH_TOKEN.
-  // OIDC provenance attaches when the workflow has id-token: write.
+  // Prefer pnpm: uses GitHub OIDC trusted publishing when configured per package.
+  // Falls back to NODE_AUTH_TOKEN from setup-node /.npmrc when present.
   const publishCmd = [
-    "npm publish --access public --provenance",
+    "pnpm publish --access public --no-git-checks",
     otp ? `--otp ${otp}` : "",
   ]
     .filter(Boolean)
