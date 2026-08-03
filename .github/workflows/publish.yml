@@ -24,6 +24,9 @@ jobs:
           node-version: "lts/*"
           cache: "pnpm"
           registry-url: "https://registry.npmjs.org"
+        env:
+          # Required here so setup-node writes a valid auth token into ~/.npmrc
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
