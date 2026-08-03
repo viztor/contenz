@@ -9,7 +9,16 @@
     "markdown",
     "mdx"
   ],
+  "homepage": "https://github.com/viztor/contenz#readme",
+  "bugs": {
+    "url": "https://github.com/viztor/contenz/issues"
+  },
   "license": "MPL-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/viztor/contenz.git",
+    "directory": "packages/cli"
+  },
   "bin": {
     "__contenz_bash_complete": "./bin/bash-complete.mjs",
     "contenz": "./bin/run.mjs"

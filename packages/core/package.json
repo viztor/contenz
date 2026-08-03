@@ -10,7 +10,16 @@
     "validation",
     "zod"
   ],
+  "homepage": "https://github.com/viztor/contenz#readme",
+  "bugs": {
+    "url": "https://github.com/viztor/contenz/issues"
+  },
   "license": "MPL-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/viztor/contenz.git",
+    "directory": "packages/core"
+  },
   "files": [
     "dist"
   ],
