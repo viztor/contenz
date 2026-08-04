@@ -31,6 +31,9 @@ function extAlternation(extensions?: string[]): string {
  * When i18n is enabled: expects {slug}.{locale}.{ext} (e.g., "moq.en.mdx")
  * When i18n is disabled: expects {slug}.{ext} (e.g., "hello-world.mdx")
  */
+// ⚡ Bolt: Cache regex instances to avoid recompilation overhead in frequent parseFileName calls.
+const regexCache = new Map<string, RegExp>();
+
 export function parseFileName(
   fileName: string,
   i18nEnabled: boolean,
@@ -49,13 +52,25 @@ export function parseFileName(
     };
   }
 
-  const alt = extAlternation(extensions);
+  const cacheKey = `${i18nEnabled}:${extensions ? extensions.join(",") : ""}`;
+  let regex = regexCache.get(cacheKey);
+
+  if (!regex) {
+    const alt = extAlternation(extensions);
+    if (i18nEnabled) {
+      // BCP 47 locale: xx, xxx, xx-XX, xx-Xxxx, xx-Xxxx-XX, etc.
+      const localePattern = "[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?";
+      regex = new RegExp(`^(.+)\\.(${localePattern})\\.(${alt})$`);
+    } else {
+      regex = new RegExp(`^(.+)\\.(${alt})$`);
+    }
+    regexCache.set(cacheKey, regex);
+  }
+
+  const match = regex.exec(fileName);
+  if (!match) return null;
 
   if (i18nEnabled) {
-    // BCP 47 locale: xx, xxx, xx-XX, xx-Xxxx, xx-Xxxx-XX, etc.
-    const localePattern = "[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?";
-    const match = new RegExp(`^(.+)\\.(${localePattern})\\.(${alt})$`).exec(fileName);
-    if (!match) return null;
     return {
       slug: match[1],
       locale: match[2],
@@ -63,8 +78,6 @@ export function parseFileName(
     };
   }
 
-  const match = new RegExp(`^(.+)\\.(${alt})$`).exec(fileName);
-  if (!match) return null;
   return {
     slug: match[1],
     ext: match[2],
