@@ -59,19 +59,19 @@ export function parseFileName(
 
     // Quick validation for BCP 47
     if (!/^[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?$/.test(locale)) {
-       return null;
+      return null;
     }
 
     return {
       slug: fileName.substring(0, secondToLastDotIndex),
       locale,
-      ext
+      ext,
     };
   }
 
   return {
     slug: fileName.substring(0, lastDotIndex),
-    ext
+    ext,
   };
 }
 
@@ -151,7 +151,7 @@ export async function parseContentFile(
   const { meta, body } = adapter.extract(source, filePath);
 
   return {
-    meta: meta ?? ({}),
+    meta: meta ?? {},
     filePath,
     slug: parsed.slug,
     locale: parsed.locale,
