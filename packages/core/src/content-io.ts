@@ -114,6 +114,19 @@ export interface WriteContentOptions {
 export async function writeContent(
   options: WriteContentOptions
 ): Promise<ContentLocation> {
+  const normalizedSlug = path.posix.normalize(options.slug);
+  if (
+    normalizedSlug === "." ||
+    normalizedSlug === ".." ||
+    normalizedSlug.startsWith("../") ||
+    path.posix.isAbsolute(normalizedSlug) ||
+    /^[a-zA-Z]:/.test(normalizedSlug)
+  ) {
+    throw new Error(
+      `Invalid slug "${options.slug}". Slugs must be relative paths within the collection.`
+    );
+  }
+
   const ws = await createWorkspace({
     cwd: options.cwd,
     collection: options.collectionName,
