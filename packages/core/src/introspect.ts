@@ -47,7 +47,7 @@ export interface IntrospectedSchema {
  * - `.transform()` creates a pipe (`_def.type === "pipe"`) with `_def.in` / `_def.out`
  */
 // biome-ignore lint/suspicious/noExplicitAny: introspection accesses Zod internals
-function getDef(schema: z.ZodTypeAny): any {
+function getDef(schema: z.ZodType): any {
   // biome-ignore lint/suspicious/noExplicitAny: Zod internals
   return (schema as any)._def;
 }
@@ -56,7 +56,7 @@ function getDef(schema: z.ZodTypeAny): any {
  * Get the description from a Zod schema.
  * Zod 3.25 stores description on schema.description, not _def.description.
  */
-function getDescription(schema: z.ZodTypeAny): string | undefined {
+function getDescription(schema: z.ZodType): string | undefined {
   // biome-ignore lint/suspicious/noExplicitAny: accessing description property
   const direct = (schema as any).description;
   if (typeof direct === "string") return direct;
@@ -69,7 +69,7 @@ function getDescription(schema: z.ZodTypeAny): string | undefined {
  * Zod 3.25: _def.type is a lowercase string ("string", "object", "optional", etc.)
  * Old Zod 3: _def.typeName is a PascalCase string ("ZodString", "ZodObject", etc.)
  */
-function getTypeName(schema: z.ZodTypeAny): string | undefined {
+function getTypeName(schema: z.ZodType): string | undefined {
   const def = getDef(schema);
   if (!def) return undefined;
   // Zod 3.25 uses _def.type as a lowercase string
@@ -81,9 +81,9 @@ function getTypeName(schema: z.ZodTypeAny): string | undefined {
 /**
  * Get the shape of a ZodObject.
  * Zod 3.25: _def.shape is a plain object.
- * Old Zod 3: _def.shape is a function () => Record<string, ZodTypeAny>.
+ * Old Zod 3: _def.shape is a function () => Record<string, ZodType>.
  */
-function getShape(schema: z.ZodTypeAny): Record<string, z.ZodTypeAny> {
+function getShape(schema: z.ZodType): Record<string, z.ZodType> {
   const def = getDef(schema);
   const shape = def.shape;
   return typeof shape === "function" ? shape() : shape;
@@ -96,7 +96,7 @@ function getShape(schema: z.ZodTypeAny): Record<string, z.ZodTypeAny> {
  * For pipes (transforms): uses _def.in for the input schema.
  * For effects: uses _def.schema.
  */
-function getInnerType(schema: z.ZodTypeAny): z.ZodTypeAny | null {
+function getInnerType(schema: z.ZodType): z.ZodType | null {
   const def = getDef(schema);
   // Zod 3.25 pipe (transform): _def.in
   if (def.in) return def.in;
@@ -127,7 +127,7 @@ function isTypeMatch(
  * @param descriptions Optional map of field name to description
  */
 export function introspectSchema(
-  schema: z.ZodTypeAny,
+  schema: z.ZodType,
   descriptions?: Record<string, string>
 ): IntrospectedSchema {
   const fields: Record<string, IntrospectedField> = {};
@@ -135,7 +135,7 @@ export function introspectSchema(
   // Unwrap effects/pipe wrappers at the object level
   let baseSchema = schema;
   let typeName = getTypeName(baseSchema);
-  const seen = new Set<z.ZodTypeAny>();
+  const seen = new Set<z.ZodType>();
   while (
     isTypeMatch(typeName, "ZodEffects", "effects", "pipe", "ZodPipeline") &&
     !seen.has(baseSchema)
@@ -163,7 +163,7 @@ export function introspectSchema(
 /**
  * Recursively introspects a single Zod field.
  */
-export function introspectField(schema: z.ZodTypeAny): IntrospectedField {
+export function introspectField(schema: z.ZodType): IntrospectedField {
   let isRequired = true;
   let defaultValue: unknown;
   let description = getDescription(schema);
@@ -172,7 +172,7 @@ export function introspectField(schema: z.ZodTypeAny): IntrospectedField {
   let typeName = getTypeName(inner);
 
   // Unwrap Optional / Nullable / Default wrappers
-  const seen = new Set<z.ZodTypeAny>();
+  const seen = new Set<z.ZodType>();
   while (!seen.has(inner)) {
     if (
       isTypeMatch(
@@ -325,7 +325,7 @@ export function introspectField(schema: z.ZodTypeAny): IntrospectedField {
     const def = getDef(inner);
     const options = def.options;
     if (Array.isArray(options)) {
-      const allLiterals = options.every((opt: z.ZodTypeAny) => {
+      const allLiterals = options.every((opt: z.ZodType) => {
         const tn = getTypeName(opt);
         return isTypeMatch(tn, "ZodLiteral", "literal");
       });
@@ -333,7 +333,7 @@ export function introspectField(schema: z.ZodTypeAny): IntrospectedField {
         return {
           ...baseField,
           type: "enum",
-          options: options.map((opt: z.ZodTypeAny) => {
+          options: options.map((opt: z.ZodType) => {
             const optDef = getDef(opt);
             return (
               optDef.value ??
