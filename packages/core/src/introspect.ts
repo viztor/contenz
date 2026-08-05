@@ -47,8 +47,10 @@ export interface IntrospectedSchema {
  * - `.transform()` creates a pipe (`_def.type === "pipe"`) with `_def.in` / `_def.out`
  */
 // biome-ignore lint/suspicious/noExplicitAny: introspection accesses Zod internals
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function getDef(schema: z.ZodTypeAny): any {
   // biome-ignore lint/suspicious/noExplicitAny: Zod internals
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
   return (schema as any)._def;
 }
 
@@ -58,6 +60,7 @@ function getDef(schema: z.ZodTypeAny): any {
  */
 function getDescription(schema: z.ZodTypeAny): string | undefined {
   // biome-ignore lint/suspicious/noExplicitAny: accessing description property
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
   const direct = (schema as any).description;
   if (typeof direct === "string") return direct;
   const def = getDef(schema);
