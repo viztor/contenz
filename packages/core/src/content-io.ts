@@ -135,7 +135,14 @@ export async function writeContent(
     fileName = `${options.slug}.${localeToUse}.${ext}`;
   }
 
-  const filePath = path.join(col.collectionPath, fileName);
+  const targetPath = path.resolve(col.collectionPath, fileName);
+  const baseDir = path.resolve(col.collectionPath);
+
+  if (!targetPath.startsWith(baseDir + path.sep) && targetPath !== baseDir) {
+    throw new Error("Path traversal detected");
+  }
+
+  const filePath = targetPath;
   await fs.mkdir(path.dirname(filePath), { recursive: true });
 
   const content = serializeContentFile(
