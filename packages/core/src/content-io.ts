@@ -135,7 +135,16 @@ export async function writeContent(
     fileName = `${options.slug}.${localeToUse}.${ext}`;
   }
 
-  const filePath = path.join(col.collectionPath, fileName);
+  const filePath = path.resolve(col.collectionPath, fileName);
+  const resolvedCollectionPath = path.resolve(col.collectionPath);
+
+  if (
+    !filePath.startsWith(resolvedCollectionPath + path.sep) &&
+    filePath !== resolvedCollectionPath
+  ) {
+    throw new Error(`Invalid slug: resolves outside of collection directory`);
+  }
+
   await fs.mkdir(path.dirname(filePath), { recursive: true });
 
   const content = serializeContentFile(
