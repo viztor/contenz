@@ -10,6 +10,7 @@ import {
   computeConfigHash,
   getCachedInputHash,
   loadManifest,
+  type ManifestCollectionEntry,
 } from "./manifest.js";
 import { createWorkspace } from "./workspace.js";
 
@@ -73,6 +74,13 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
   const dirty: string[] = [];
   const fresh: string[] = [];
 
+  const manifestCollectionsByName = new Map<string, ManifestCollectionEntry>();
+  if (manifest) {
+    for (const c of manifest.collections) {
+      manifestCollectionsByName.set(c.name, c);
+    }
+  }
+
   for (const col of ws.collections) {
     const inputHash = await computeCollectionInputHash(
       col.collectionPath,
@@ -86,7 +94,8 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
       ws.resolvedConfig.outputDir,
       ws.sources,
       col.name,
-      projectConfigHash
+      projectConfigHash,
+      manifestCollectionsByName
     );
     const outputPath = path.join(outputDir, `${col.name}.ts`);
     let outputExists = false;
