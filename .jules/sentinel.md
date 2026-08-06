@@ -1,0 +1,5 @@
+
+## 2025-03-03 - Path Traversal Vulnerability in `writeContent`
+**Vulnerability:** A path traversal vulnerability was discovered in `writeContent` (`packages/core/src/content-io.ts`). The `fileName` string (which originates from user input, e.g. the slug in a `create` request) was concatenated directly with `path.join(col.collectionPath, fileName)` to construct the final file path.
+**Learning:** This permitted an attacker to provide a malicious slug like `../../../../../tmp/pwned` to escape the collection directory boundaries, enabling arbitrary file creation across the system where the Node process had permissions.
+**Prevention:** To fix this, `path.resolve` should be used instead of `path.join`, and a validation check must follow to ensure the resolved final file path firmly resides within the intended directory base (`filePath.startsWith(path.resolve(col.collectionPath) + path.sep)`). PoC exploit scripts and side-effects must also be cleaned up from the working tree before creating the PR to avoid leaking vulnerability details.
