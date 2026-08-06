@@ -172,21 +172,39 @@ export function calculateI18nStats(
   const total = items.length;
   const locales: Record<string, number> = {};
 
-  for (const item of items) {
-    for (const locale of Object.keys(item.locales)) {
+  // ⚡ Bolt: Use traditional loops to avoid redundant array method allocations
+  for (let i = 0; i < total; i++) {
+    const itemLocales = Object.keys(items[i].locales);
+    for (let j = 0; j < itemLocales.length; j++) {
+      const locale = itemLocales[j];
       locales[locale] = (locales[locale] ?? 0) + 1;
     }
   }
 
   const localeKeys = Object.keys(locales);
-  const complete = items.filter((item) =>
-    localeKeys.every((locale) => item.locales[locale])
-  ).length;
-  const coverage = total > 0 ? complete / total : 1;
+  const numLocales = localeKeys.length;
+  let complete = 0;
+  const missingTranslations: string[] = [];
 
-  const missingTranslations = items
-    .filter((item) => !localeKeys.every((locale) => item.locales[locale]))
-    .map((item) => item.slug);
+  // ⚡ Bolt: Combine complete and missingTranslations calculations in a single pass
+  for (let i = 0; i < total; i++) {
+    const item = items[i];
+    let isComplete = true;
+    for (let j = 0; j < numLocales; j++) {
+      if (!item.locales[localeKeys[j]]) {
+        isComplete = false;
+        break;
+      }
+    }
+
+    if (isComplete) {
+      complete++;
+    } else {
+      missingTranslations.push(item.slug);
+    }
+  }
+
+  const coverage = total > 0 ? complete / total : 1;
 
   return {
     total,
