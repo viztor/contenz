@@ -95,6 +95,40 @@ describe("runCreate", () => {
     }
   });
 
+  it("rejects creation with a path traversal slug", async () => {
+    cwd = await prepareFixture("minimal");
+    const listResult = await runList({ cwd });
+    const cols = (listResult.data as { collections: Array<{ name: string }> }).collections;
+    const colName = cols[0].name;
+
+    const result = await runCreate({
+      cwd,
+      collection: colName,
+      slug: "../../../etc/passwd",
+      meta: { title: "Hacked", question: "Hack", answer: "Hack" },
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/Path traversal detected/);
+  });
+
+  it("rejects creation with a path traversal slug even if validation fails", async () => {
+    cwd = await prepareFixture("minimal");
+    const listResult = await runList({ cwd });
+    const cols = (listResult.data as { collections: Array<{ name: string }> }).collections;
+    const colName = cols[0].name;
+
+    const result = await runCreate({
+      cwd,
+      collection: colName,
+      slug: "../../../etc/passwd",
+      meta: {},
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/Path traversal detected/);
+  });
+
   it("creates a new content item and returns result", async () => {
     cwd = await prepareFixture("minimal");
     // Get collection info and schema

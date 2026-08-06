@@ -54,6 +54,10 @@ export async function runCreate(
       }
     }
 
+    if (opts.slug.includes("..") || opts.slug.startsWith("/")) {
+      return { success: false, error: "Invalid slug: Path traversal detected" };
+    }
+
     // Validate against schema
     const validation = validateMeta(
       meta,
