@@ -640,6 +640,9 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
     baseConfig as unknown as Record<string, unknown>
   );
   const manifest = !force && !dryRun ? await loadManifest(cwd) : null;
+  const manifestCollectionsByName = manifest
+    ? new Map(manifest.collections.map((c) => [c.name, c]))
+    : undefined;
 
   /** Collections we can skip (cached hash matches, output exists) */
   const skipped: { name: string; outputName: string; indexMeta: IndexMeta }[] =
@@ -662,7 +665,8 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
         baseConfig.outputDir,
         sources,
         ctx.name,
-        projectConfigHash
+        projectConfigHash,
+        manifestCollectionsByName
       );
       const outputPath = path.join(outputDir, `${ctx.name}.ts`);
       try {
