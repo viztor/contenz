@@ -136,6 +136,14 @@ export async function writeContent(
   }
 
   const filePath = path.join(col.collectionPath, fileName);
+  const resolvedCollectionPath = path.resolve(col.collectionPath);
+  const resolvedFilePath = path.resolve(filePath);
+  if (
+    !resolvedFilePath.startsWith(resolvedCollectionPath + path.sep) &&
+    resolvedFilePath !== resolvedCollectionPath
+  ) {
+    throw new Error(`Invalid slug: path traversal detected`);
+  }
   await fs.mkdir(path.dirname(filePath), { recursive: true });
 
   const content = serializeContentFile(
