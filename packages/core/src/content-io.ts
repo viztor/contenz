@@ -10,6 +10,14 @@ import {
 import type { ParsedContent } from "./types.js";
 import { type CollectionContext, createWorkspace } from "./workspace.js";
 
+function validateSlug(slug: string): void {
+  const normalized = path.posix.normalize(slug.replaceAll("\\", "/"));
+  const isAbsolute = path.posix.isAbsolute(normalized) || /^[a-zA-Z]:\//.test(normalized);
+  if (normalized === ".." || normalized.startsWith("../") || isAbsolute) {
+    throw new Error(`Invalid slug "${slug}": Path validation failed`);
+  }
+}
+
 export interface ContentLocation {
   collectionName: string;
   collectionPath: string;
@@ -114,6 +122,7 @@ export interface WriteContentOptions {
 export async function writeContent(
   options: WriteContentOptions
 ): Promise<ContentLocation> {
+  validateSlug(options.slug);
   const ws = await createWorkspace({
     cwd: options.cwd,
     collection: options.collectionName,
