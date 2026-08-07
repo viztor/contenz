@@ -12,7 +12,8 @@ import { type CollectionContext, createWorkspace } from "./workspace.js";
 
 function validateSlug(slug: string): void {
   const normalized = path.posix.normalize(slug.replaceAll("\\", "/"));
-  const isAbsolute = path.posix.isAbsolute(normalized) || /^[a-zA-Z]:\//.test(normalized);
+  const isAbsolute =
+    path.posix.isAbsolute(normalized) || /^[a-zA-Z]:\//.test(normalized);
   if (normalized === ".." || normalized.startsWith("../") || isAbsolute) {
     throw new Error(`Invalid slug "${slug}": Path validation failed`);
   }
