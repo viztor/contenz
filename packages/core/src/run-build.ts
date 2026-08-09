@@ -120,7 +120,7 @@ async function generateMultiTypeCollectionFile(
     if (typeName === defaultTypeName) continue;
     const pascalName = typeName.charAt(0).toUpperCase() + typeName.slice(1);
     const items = Array.from(itemsMap.values()).sort((a, b) =>
-      a.slug.localeCompare(b.slug)
+      String(a.slug).localeCompare(String(b.slug))
     );
 
     if (i18n) {

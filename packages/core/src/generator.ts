@@ -27,6 +27,7 @@ export type CollectionData = I18nCollectionData | FlatCollectionData;
  * Get the Zod type name from a schema (handles both old and new Zod versions).
  */
 function getZodTypeName(schema: ZodTypeAny): string | undefined {
+  // oxlint-disable-next-line typescript/no-explicit-any
   // biome-ignore lint/suspicious/noExplicitAny: Zod internals — _def is not publicly typed in Zod 3.25
   const def = schema._def as any;
   // New Zod (v4+) uses _def.type as a string
