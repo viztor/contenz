@@ -106,7 +106,7 @@ async function generateMultiTypeCollectionFile(
     const schema = schemaModule[`${typeName}Meta`] || schemaModule[typeName];
     if (schema && typeof schema === "object" && "_def" in schema) {
       output += generateTypeFromZod(
-        schema as import("zod").ZodTypeAny,
+        schema as import("zod").ZodType,
         metaTypeName
       );
       output += "\n\n";
@@ -682,7 +682,7 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
       skipped.push({
         name: ctx.name,
         outputName: `${ctx.name}.ts`,
-        indexMeta: indexMeta,
+        indexMeta,
       });
     } else {
       toBuild.push({ ctx, inputHash });

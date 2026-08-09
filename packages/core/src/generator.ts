@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 
-import type { ZodTypeAny } from "zod";
+import type { ZodType } from "zod";
 
 import type { CollectionStats } from "./types.js";
 
@@ -26,7 +26,7 @@ export type CollectionData = I18nCollectionData | FlatCollectionData;
 /**
  * Get the Zod type name from a schema (handles both old and new Zod versions).
  */
-function getZodTypeName(schema: ZodTypeAny): string | undefined {
+function getZodTypeName(schema: ZodType): string | undefined {
   // biome-ignore lint/suspicious/noExplicitAny: Zod internals — _def is not publicly typed in Zod 3.25
   const def = schema._def as any;
   // New Zod (v4+) uses _def.type as a string
@@ -40,7 +40,7 @@ function getZodTypeName(schema: ZodTypeAny): string | undefined {
 /**
  * Convert a Zod schema to a TypeScript type string.
  */
-function zodToTypeString(schema: ZodTypeAny, indent = 0): string {
+function zodToTypeString(schema: ZodType, indent = 0): string {
   const pad = "  ".repeat(indent);
   // biome-ignore lint/suspicious/noExplicitAny: Zod internals — _def is not publicly typed in Zod 3.25
   const def = schema._def as any;
@@ -107,7 +107,7 @@ function zodToTypeString(schema: ZodTypeAny, indent = 0): string {
 
   // Handle unions (new Zod uses "union", old uses "ZodUnion")
   if (typeName === "union" || typeName === "ZodUnion") {
-    const options = def.options as ZodTypeAny[];
+    const options = def.options as ZodType[];
     return options.map((opt) => zodToTypeString(opt, indent)).join(" | ");
   }
 
@@ -119,7 +119,7 @@ function zodToTypeString(schema: ZodTypeAny, indent = 0): string {
       typeof shapeGetter === "function" ? shapeGetter() : shapeGetter;
     if (!shape || typeof shape !== "object") return "{}";
 
-    const entries = Object.entries(shape as Record<string, ZodTypeAny>);
+    const entries = Object.entries(shape as Record<string, ZodType>);
     if (entries.length === 0) return "{}";
 
     const lines = entries.map(([key, value]) => {
@@ -145,7 +145,7 @@ function zodToTypeString(schema: ZodTypeAny, indent = 0): string {
  * Generate a TypeScript interface from a Zod schema.
  */
 export function generateTypeFromZod(
-  schema: ZodTypeAny,
+  schema: ZodType,
   typeName: string
 ): string {
   const typeBody = zodToTypeString(schema, 0);
@@ -217,7 +217,7 @@ export async function generateI18nCollectionFile(
   items: I18nCollectionData[],
   metaTypeName: string,
   locales: string[],
-  schema?: ZodTypeAny,
+  schema?: ZodType,
   resolvedI18n?: {
     fallbackMap: Record<string, string>;
     includeFallbackMetadata: boolean;
@@ -325,7 +325,7 @@ export async function generateFlatCollectionFile(
   collectionName: string,
   items: FlatCollectionData[],
   metaTypeName: string,
-  schema?: ZodTypeAny
+  schema?: ZodType
 ): Promise<void> {
   const stats = calculateFlatStats(items);
   const entryTypeName = metaTypeName.replace("Meta", "Entry");

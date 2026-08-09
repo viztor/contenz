@@ -123,6 +123,11 @@ export async function writeContent(
     throw new Error(`Collection not found: ${options.collectionName}`);
   }
 
+  const normalizedSlug = path.posix.normalize(options.slug);
+  if (normalizedSlug.startsWith("..") || path.isAbsolute(normalizedSlug)) {
+    throw new Error(`Invalid slug: path validation failed for slug "${options.slug}"`);
+  }
+
   const ext =
     options.ext ?? (col.config.extensions[0]) ?? "mdx";
   let fileName = `${options.slug}.${ext}`;
