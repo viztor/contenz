@@ -20,15 +20,21 @@ const DEFAULT_EXTENSIONS = ["mdx", "md", "json"];
 const regexCache = new Map<string, { i18n: RegExp; basic: RegExp }>();
 const DEFAULT_LOCALE_PATTERN = "[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?";
 
-function getCachedRegexes(extensions?: string[]): { i18n: RegExp; basic: RegExp } {
-  const exts = extensions && extensions.length > 0 ? extensions : DEFAULT_EXTENSIONS;
+function getCachedRegexes(extensions?: string[]): {
+  i18n: RegExp;
+  basic: RegExp;
+} {
+  const exts =
+    extensions && extensions.length > 0 ? extensions : DEFAULT_EXTENSIONS;
   const key = exts.join(",");
   let cached = regexCache.get(key);
   if (!cached) {
-    const alt = exts.map((e) => e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+    const alt = exts
+      .map((e) => e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+      .join("|");
     cached = {
       i18n: new RegExp(`^(.+)\\.(${DEFAULT_LOCALE_PATTERN})\\.(${alt})$`),
-      basic: new RegExp(`^(.+)\\.(${alt})$`)
+      basic: new RegExp(`^(.+)\\.(${alt})$`),
     };
     regexCache.set(key, cached);
   }
@@ -156,7 +162,7 @@ export async function parseContentFile(
   const { meta, body } = adapter.extract(source, filePath);
 
   return {
-    meta: meta ?? ({}),
+    meta: meta ?? {},
     filePath,
     slug: parsed.slug,
     locale: parsed.locale,
