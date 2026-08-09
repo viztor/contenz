@@ -46,8 +46,10 @@ export interface IntrospectedSchema {
  *   as the base type and adds to `_def.checks`
  * - `.transform()` creates a pipe (`_def.type === "pipe"`) with `_def.in` / `_def.out`
  */
+// oxlint-disable-next-line typescript/no-explicit-any
 // biome-ignore lint/suspicious/noExplicitAny: introspection accesses Zod internals
 function getDef(schema: z.ZodTypeAny): any {
+  // oxlint-disable-next-line typescript/no-explicit-any
   // biome-ignore lint/suspicious/noExplicitAny: Zod internals
   return (schema as any)._def;
 }
@@ -57,6 +59,7 @@ function getDef(schema: z.ZodTypeAny): any {
  * Zod 3.25 stores description on schema.description, not _def.description.
  */
 function getDescription(schema: z.ZodTypeAny): string | undefined {
+  // oxlint-disable-next-line typescript/no-explicit-any
   // biome-ignore lint/suspicious/noExplicitAny: accessing description property
   const direct = (schema as any).description;
   if (typeof direct === "string") return direct;

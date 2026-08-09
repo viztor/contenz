@@ -65,6 +65,7 @@ function buildSchema(metaFields: string[] = []) {
   return schema;
 }
 
+// oxlint-disable-next-line typescript/no-explicit-any
 // biome-ignore lint/suspicious/noExplicitAny: Orama types require any
 export type ContenzSearchIndex = Orama<any>;
 
