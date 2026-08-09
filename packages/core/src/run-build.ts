@@ -120,7 +120,7 @@ async function generateMultiTypeCollectionFile(
     if (typeName === defaultTypeName) continue;
     const pascalName = typeName.charAt(0).toUpperCase() + typeName.slice(1);
     const items = Array.from(itemsMap.values()).sort((a, b) =>
-      a.slug.localeCompare(b.slug)
+      String(a.slug).localeCompare(String(b.slug))
     );
 
     if (i18n) {
@@ -682,7 +682,7 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
       skipped.push({
         name: ctx.name,
         outputName: `${ctx.name}.ts`,
-        indexMeta: indexMeta,
+        indexMeta,
       });
     } else {
       toBuild.push({ ctx, inputHash });
@@ -691,7 +691,7 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
 
   const results = await pMap(
     toBuild,
-     async ({ ctx }) =>
+    async ({ ctx }) =>
       processOneCollection(
         ctx,
         outputDir,

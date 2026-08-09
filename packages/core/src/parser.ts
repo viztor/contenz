@@ -16,13 +16,29 @@ export interface ParseFileNameResult {
 /** Default extensions used when no config-level extensions are specified. */
 const DEFAULT_EXTENSIONS = ["mdx", "md", "json"];
 
-/**
- * Build a regex alternation pattern from an array of extensions.
- * e.g. ["md", "mdx", "json"] → "md|mdx|json"
- */
-function extAlternation(extensions?: string[]): string {
-  const exts = extensions?.length ? extensions : DEFAULT_EXTENSIONS;
-  return exts.map((e) => e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+// ⚡ Bolt: Cache regex patterns based on active extensions to avoid re-compilation per file
+const regexCache = new Map<string, { i18n: RegExp; basic: RegExp }>();
+const DEFAULT_LOCALE_PATTERN = "[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?";
+
+function getCachedRegexes(extensions?: string[]): {
+  i18n: RegExp;
+  basic: RegExp;
+} {
+  const exts =
+    extensions && extensions.length > 0 ? extensions : DEFAULT_EXTENSIONS;
+  const key = exts.join(",");
+  let cached = regexCache.get(key);
+  if (!cached) {
+    const alt = exts
+      .map((e) => e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+      .join("|");
+    cached = {
+      i18n: new RegExp(`^(.+)\\.(${DEFAULT_LOCALE_PATTERN})\\.(${alt})$`),
+      basic: new RegExp(`^(.+)\\.(${alt})$`),
+    };
+    regexCache.set(key, cached);
+  }
+  return cached;
 }
 
 /**
@@ -39,7 +55,8 @@ export function parseFileName(
 ): ParseFileNameResult | null {
   // Use custom pattern if provided
   if (customPattern) {
-    const match = fileName.match(customPattern);
+    // ⚡ Bolt: Use .exec instead of .match for minor performance gain
+    const match = customPattern.exec(fileName);
     if (!match) return null;
     // Expect groups: slug, locale (optional), ext
     return {
@@ -49,12 +66,10 @@ export function parseFileName(
     };
   }
 
-  const alt = extAlternation(extensions);
+  const regexes = getCachedRegexes(extensions);
 
   if (i18nEnabled) {
-    // BCP 47 locale: xx, xxx, xx-XX, xx-Xxxx, xx-Xxxx-XX, etc.
-    const localePattern = "[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?";
-    const match = new RegExp(`^(.+)\\.(${localePattern})\\.(${alt})$`).exec(fileName);
+    const match = regexes.i18n.exec(fileName);
     if (!match) return null;
     return {
       slug: match[1],
@@ -63,7 +78,7 @@ export function parseFileName(
     };
   }
 
-  const match = new RegExp(`^(.+)\\.(${alt})$`).exec(fileName);
+  const match = regexes.basic.exec(fileName);
   if (!match) return null;
   return {
     slug: match[1],
@@ -147,7 +162,7 @@ export async function parseContentFile(
   const { meta, body } = adapter.extract(source, filePath);
 
   return {
-    meta: meta ?? ({}),
+    meta: meta ?? {},
     filePath,
     slug: parsed.slug,
     locale: parsed.locale,

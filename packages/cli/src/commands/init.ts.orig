@@ -246,7 +246,7 @@ async function init(this: ContenzContext, flags: InitFlags): Promise<void> {
   }
 
   if (!isRelativeProjectPath(contentDir)) {
-    fail(
+    fail.call(
       this,
       `Invalid --dir value: ${JSON.stringify(flags.dir)}. Use a project-relative path like "content" or "src/content".`
     );
@@ -254,7 +254,7 @@ async function init(this: ContenzContext, flags: InitFlags): Promise<void> {
   }
 
   if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(collection)) {
-    fail(
+    fail.call(
       this,
       `Invalid --collection value: ${JSON.stringify(flags.collection)}. Use letters, numbers, "-" or "_".`
     );
@@ -292,7 +292,7 @@ async function init(this: ContenzContext, flags: InitFlags): Promise<void> {
     }
 
     if (conflicts.length > 0) {
-      fail(
+      fail.call(
         this,
         "Cannot initialize contenz because these paths already exist:"
       );
