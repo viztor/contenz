@@ -12,7 +12,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
-import type { ZodTypeAny } from "zod";
+import type { ZodType } from "zod";
 
 import { generateTypeFromZod, type I18nCollectionData } from "./generator.js";
 
@@ -22,7 +22,7 @@ export interface SplitCollectionMeta {
   name: string;
   metaTypeName: string;
   entryTypeName: string;
-  schema?: ZodTypeAny;
+  schema?: ZodType;
 }
 
 // ── Shared types file (_types.ts) ───────────────────────────────────────────

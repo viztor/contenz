@@ -6,3 +6,7 @@
 **Vulnerability:** Output utility functions (`fail`, `logError`) in `@contenz/cli` were invoked with `.call(this, ...)` despite taking the context as an explicit first argument, leading to unsafe execution and type mismatches that break builds.
 **Learning:** Overriding `this` binding dynamically for exported module functions can break static analysis, type checking, and lead to unintended behavior, as `ContenzContext` must be passed as an explicit parameter.
 **Prevention:** Invoke exported output functions directly (`fail(this, "message")`) passing the context explicitly, rather than using `Function.prototype.call`.
+## 2025-02-20 - ZodTypeAny Deprecation Warnings
+**Vulnerability:** CI checks failed due to TypeScript deprecation warnings regarding the usage of `z.ZodTypeAny` instead of `z.ZodType`.
+**Learning:** `z.ZodTypeAny` was deprecated in favor of `z.ZodType` (without generics) leading to CI failures due to strict checks.
+**Prevention:** Avoid using `ZodTypeAny`, use `ZodType` directly.
