@@ -123,8 +123,7 @@ export async function writeContent(
     throw new Error(`Collection not found: ${options.collectionName}`);
   }
 
-  const ext =
-    options.ext ?? (col.config.extensions[0]) ?? "mdx";
+  const ext = options.ext ?? col.config.extensions[0] ?? "mdx";
   let fileName = `${options.slug}.${ext}`;
   if (col.config.i18n) {
     const localeToUse =
@@ -136,6 +135,13 @@ export async function writeContent(
   }
 
   const filePath = path.join(col.collectionPath, fileName);
+
+  const resolvedCollectionPath = path.resolve(col.collectionPath);
+  const resolvedFilePath = path.resolve(filePath);
+  if (!resolvedFilePath.startsWith(resolvedCollectionPath + path.sep)) {
+    throw new Error("Invalid slug: Path validation failed");
+  }
+
   await fs.mkdir(path.dirname(filePath), { recursive: true });
 
   const content = serializeContentFile(
