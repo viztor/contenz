@@ -1,0 +1,3 @@
+## 2024-05-28 - Missing Path Validation in Content Creation
+
+**Vulnerability:** The writeContent function used the user-provided slug to construct file paths without verifying if the final resolved path resided within the intended collection directory. **Learning:** File paths created using path.join with arbitrary input can escape intended directories if nested directory segments are provided in the input string. **Prevention:** Always validate constructed file paths by resolving them absolutely using `path.resolve()` and ensuring they start with the `path.resolve()` base directory plus a directory separator (`path.sep`).
