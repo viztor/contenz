@@ -26,3 +26,8 @@ coverage/
 # Local planning drafts
 Plan.md
 Roadmap.optimized.md
+
+# Environment variables (keep .env.example tracked)
+.env
+.env.*
+!.env.example

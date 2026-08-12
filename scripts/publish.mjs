@@ -26,7 +26,8 @@ const otpIdx = args.indexOf("--otp");
 const otp = otpIdx !== -1 ? args[otpIdx + 1] : undefined;
 
 function run(cmd, cwd) {
-  console.log(`\n  $ ${cmd}`);
+  const display = Array.isArray(cmd) ? cmd.join(" ") : cmd;
+  console.log(`\n  $ ${display}`);
   if (!dryRun) {
     execSync(cmd, { cwd, stdio: "inherit" });
   }
@@ -75,12 +76,16 @@ for (const pkg of PACKAGES) {
 
   // Prefer pnpm: uses GitHub OIDC trusted publishing when configured per package.
   // Falls back to NODE_AUTH_TOKEN from setup-node /.npmrc when present.
+  // Args array (not a shell string) so the operator-supplied OTP is never
+  // shell-interpolated.
   const publishCmd = [
-    "pnpm publish --access public --no-git-checks",
-    otp ? `--otp ${otp}` : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
+    "pnpm",
+    "publish",
+    "--access",
+    "public",
+    "--no-git-checks",
+    ...(otp ? ["--otp", otp] : []),
+  ];
 
   try {
     run(publishCmd, pkgDir);
