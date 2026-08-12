@@ -136,6 +136,13 @@ export async function writeContent(
   }
 
   const filePath = path.join(col.collectionPath, fileName);
+  const normalizedCollectionPath = path.posix.normalize(col.collectionPath.replaceAll("\\", "/"));
+  const normalizedFilePath = path.posix.normalize(filePath.replaceAll("\\", "/"));
+
+  if (!normalizedFilePath.startsWith(normalizedCollectionPath + "/")) {
+    throw new Error("Invalid slug: path validation failed");
+  }
+
   await fs.mkdir(path.dirname(filePath), { recursive: true });
 
   const content = serializeContentFile(
