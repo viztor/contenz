@@ -47,7 +47,8 @@ export function parseFileName(
   if (lastDot <= 0) return null;
 
   const ext = fileName.slice(lastDot + 1);
-  const exts = extensions && extensions.length > 0 ? extensions : DEFAULT_EXTENSIONS;
+  const exts =
+    extensions && extensions.length > 0 ? extensions : DEFAULT_EXTENSIONS;
   if (!exts.includes(ext)) return null;
 
   if (i18nEnabled) {
@@ -146,7 +147,7 @@ export async function parseContentFile(
   const { meta, body } = adapter.extract(source, filePath);
 
   return {
-    meta: meta ?? ({}),
+    meta: meta ?? {},
     filePath,
     slug: parsed.slug,
     locale: parsed.locale,
