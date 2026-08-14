@@ -123,8 +123,7 @@ export async function writeContent(
     throw new Error(`Collection not found: ${options.collectionName}`);
   }
 
-  const ext =
-    options.ext ?? (col.config.extensions[0]) ?? "mdx";
+  const ext = options.ext ?? col.config.extensions[0] ?? "mdx";
   let fileName = `${options.slug}.${ext}`;
   if (col.config.i18n) {
     const localeToUse =
@@ -136,6 +135,12 @@ export async function writeContent(
   }
 
   const filePath = path.join(col.collectionPath, fileName);
+
+  const rel = path.relative(col.collectionPath, path.posix.normalize(filePath));
+  if (rel.startsWith("..") || path.isAbsolute(rel)) {
+    throw new Error("Invalid path validation failed");
+  }
+
   await fs.mkdir(path.dirname(filePath), { recursive: true });
 
   const content = serializeContentFile(
