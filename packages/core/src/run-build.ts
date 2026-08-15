@@ -682,7 +682,7 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
       skipped.push({
         name: ctx.name,
         outputName: `${ctx.name}.ts`,
-        indexMeta: indexMeta,
+        indexMeta,
       });
     } else {
       toBuild.push({ ctx, inputHash });
@@ -691,7 +691,7 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
 
   const results = await pMap(
     toBuild,
-     async ({ ctx }) =>
+    async ({ ctx }) =>
       processOneCollection(
         ctx,
         outputDir,
