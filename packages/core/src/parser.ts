@@ -58,7 +58,7 @@ export function parseFileName(
   if (i18nEnabled) {
     let regex: RegExp;
     if (extensions && extensions.length > 0) {
-      const extKey = extensions.join(',');
+      const extKey = extensions.join(",");
       const cached = i18nRegexMap.get(extKey);
       if (cached) {
         regex = cached;
@@ -87,7 +87,7 @@ export function parseFileName(
 
   let regex: RegExp;
   if (extensions && extensions.length > 0) {
-    const extKey = extensions.join(',');
+    const extKey = extensions.join(",");
     const cached = nonI18nRegexMap.get(extKey);
     if (cached) {
       regex = cached;
@@ -188,7 +188,7 @@ export async function parseContentFile(
   const { meta, body } = adapter.extract(source, filePath);
 
   return {
-    meta: meta ?? ({}),
+    meta: meta ?? {},
     filePath,
     slug: parsed.slug,
     locale: parsed.locale,

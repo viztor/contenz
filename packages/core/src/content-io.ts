@@ -123,8 +123,7 @@ export async function writeContent(
     throw new Error(`Collection not found: ${options.collectionName}`);
   }
 
-  const ext =
-    options.ext ?? (col.config.extensions[0]) ?? "mdx";
+  const ext = options.ext ?? col.config.extensions[0] ?? "mdx";
   let fileName = `${options.slug}.${ext}`;
   if (col.config.i18n) {
     const localeToUse =
