@@ -16,6 +16,11 @@ export interface ParseFileNameResult {
 /** Default extensions used when no config-level extensions are specified. */
 const DEFAULT_EXTENSIONS = ["mdx", "md", "json"];
 
+let cachedRegexI18n: RegExp | null = null;
+let cachedRegexNonI18n: RegExp | null = null;
+const i18nRegexMap = new Map<string, RegExp>();
+const nonI18nRegexMap = new Map<string, RegExp>();
+
 /**
  * Build a regex alternation pattern from an array of extensions.
  * e.g. ["md", "mdx", "json"] → "md|mdx|json"
@@ -49,12 +54,29 @@ export function parseFileName(
     };
   }
 
-  const alt = extAlternation(extensions);
-
+  // ⚡ Bolt: Cache regex patterns to avoid recompilation on every file
   if (i18nEnabled) {
-    // BCP 47 locale: xx, xxx, xx-XX, xx-Xxxx, xx-Xxxx-XX, etc.
-    const localePattern = "[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?";
-    const match = new RegExp(`^(.+)\\.(${localePattern})\\.(${alt})$`).exec(fileName);
+    let regex: RegExp;
+    if (extensions && extensions.length > 0) {
+      const extKey = extensions.join(",");
+      const cached = i18nRegexMap.get(extKey);
+      if (cached) {
+        regex = cached;
+      } else {
+        const alt = extAlternation(extensions);
+        const localePattern = "[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?";
+        regex = new RegExp(`^(.+)\\.(${localePattern})\\.(${alt})$`);
+        i18nRegexMap.set(extKey, regex);
+      }
+    } else {
+      if (!cachedRegexI18n) {
+        const alt = extAlternation();
+        const localePattern = "[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?";
+        cachedRegexI18n = new RegExp(`^(.+)\\.(${localePattern})\\.(${alt})$`);
+      }
+      regex = cachedRegexI18n;
+    }
+    const match = regex.exec(fileName);
     if (!match) return null;
     return {
       slug: match[1],
@@ -63,7 +85,26 @@ export function parseFileName(
     };
   }
 
-  const match = new RegExp(`^(.+)\\.(${alt})$`).exec(fileName);
+  let regex: RegExp;
+  if (extensions && extensions.length > 0) {
+    const extKey = extensions.join(",");
+    const cached = nonI18nRegexMap.get(extKey);
+    if (cached) {
+      regex = cached;
+    } else {
+      const alt = extAlternation(extensions);
+      regex = new RegExp(`^(.+)\\.(${alt})$`);
+      nonI18nRegexMap.set(extKey, regex);
+    }
+  } else {
+    if (!cachedRegexNonI18n) {
+      const alt = extAlternation();
+      cachedRegexNonI18n = new RegExp(`^(.+)\\.(${alt})$`);
+    }
+    regex = cachedRegexNonI18n;
+  }
+
+  const match = regex.exec(fileName);
   if (!match) return null;
   return {
     slug: match[1],
@@ -147,7 +188,7 @@ export async function parseContentFile(
   const { meta, body } = adapter.extract(source, filePath);
 
   return {
-    meta: meta ?? ({}),
+    meta: meta ?? {},
     filePath,
     slug: parsed.slug,
     locale: parsed.locale,
