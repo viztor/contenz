@@ -136,6 +136,12 @@ export async function writeContent(
   }
 
   const filePath = path.join(col.collectionPath, fileName);
+  const normalizedSlugPath = path.posix.normalize(options.slug);
+  const rel = path.relative(col.collectionPath, filePath);
+  if (rel.startsWith("..") || path.isAbsolute(rel) || normalizedSlugPath.startsWith("../") || path.isAbsolute(normalizedSlugPath)) {
+    throw new Error(`Invalid slug path "${options.slug}". Paths must be safely contained within the collection.`);
+  }
+
   await fs.mkdir(path.dirname(filePath), { recursive: true });
 
   const content = serializeContentFile(
