@@ -77,7 +77,7 @@ export async function runCreate(
       slug: opts.slug,
       locale: opts.locale,
       meta,
-      ext: (col.config.extensions[0] ?? "mdx"),
+      ext: col.config.extensions[0] ?? "mdx",
     });
 
     return {
