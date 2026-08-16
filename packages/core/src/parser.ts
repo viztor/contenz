@@ -25,6 +25,26 @@ function extAlternation(extensions?: string[]): string {
   return exts.map((e) => e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
 }
 
+let cachedPattern: RegExp | undefined;
+let cachedI18nPattern: RegExp | undefined;
+let cachedExts: string | undefined;
+
+function getCachedPatterns(extensions?: string[]): {
+  pattern: RegExp;
+  i18nPattern: RegExp;
+} {
+  // ⚡ Bolt: Cache regex instances to avoid expensive RegExp compilation on every file parse
+  const extsStr = extensions ? extensions.join(",") : "default";
+  if (cachedExts !== extsStr || !cachedPattern || !cachedI18nPattern) {
+    const alt = extAlternation(extensions);
+    cachedExts = extsStr;
+    const localePattern = "[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?";
+    cachedI18nPattern = new RegExp(`^(.+)\\.(${localePattern})\\.(${alt})$`);
+    cachedPattern = new RegExp(`^(.+)\\.(${alt})$`);
+  }
+  return { pattern: cachedPattern, i18nPattern: cachedI18nPattern };
+}
+
 /**
  * Parse filename to extract slug and optional locale.
  *
@@ -49,12 +69,10 @@ export function parseFileName(
     };
   }
 
-  const alt = extAlternation(extensions);
+  const { pattern, i18nPattern } = getCachedPatterns(extensions);
 
   if (i18nEnabled) {
-    // BCP 47 locale: xx, xxx, xx-XX, xx-Xxxx, xx-Xxxx-XX, etc.
-    const localePattern = "[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?";
-    const match = new RegExp(`^(.+)\\.(${localePattern})\\.(${alt})$`).exec(fileName);
+    const match = i18nPattern.exec(fileName);
     if (!match) return null;
     return {
       slug: match[1],
@@ -63,7 +81,7 @@ export function parseFileName(
     };
   }
 
-  const match = new RegExp(`^(.+)\\.(${alt})$`).exec(fileName);
+  const match = pattern.exec(fileName);
   if (!match) return null;
   return {
     slug: match[1],
@@ -147,7 +165,7 @@ export async function parseContentFile(
   const { meta, body } = adapter.extract(source, filePath);
 
   return {
-    meta: meta ?? ({}),
+    meta: meta ?? {},
     filePath,
     slug: parsed.slug,
     locale: parsed.locale,
