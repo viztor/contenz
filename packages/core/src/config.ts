@@ -125,7 +125,7 @@ export async function loadProjectConfig(cwd: string): Promise<ContenzConfig> {
       if (isModuleNotFoundError(err, configPath)) continue;
       // File exists but failed to load — surface the error
       throw new Error(
-        `Failed to load project config "${filename}": ${err instanceof Error ? err.message : err}`,
+        `Failed to load project config "${filename}": ${err instanceof Error ? err.message : String(err)}`,
         { cause: err }
       );
     }
@@ -146,7 +146,7 @@ export async function loadCollectionConfig(
   } catch (err) {
     if (isModuleNotFoundError(err, configPath)) return undefined;
     throw new Error(
-      `Failed to load collection config "${configPath}": ${err instanceof Error ? err.message : err}`,
+      `Failed to load collection config "${configPath}": ${err instanceof Error ? err.message : String(err)}`,
       { cause: err }
     );
   }
@@ -165,7 +165,7 @@ export async function loadSchemaModule(
   } catch (err) {
     if (isModuleNotFoundError(err, schemaPath)) return null;
     throw new Error(
-      `Failed to load schema "${schemaPath}": ${err instanceof Error ? err.message : err}`,
+      `Failed to load schema "${schemaPath}": ${err instanceof Error ? err.message : String(err)}`,
       { cause: err }
     );
   }
