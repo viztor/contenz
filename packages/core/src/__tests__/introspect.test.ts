@@ -156,7 +156,7 @@ describe("Schema Introspection", () => {
         superRefined: z.boolean().superRefine((v, ctx) => {
           if (!v)
             ctx.addIssue({
-              code: z.ZodIssueCode.custom,
+              code: z.ZodIssueCode?.custom || "custom",
               message: "must be true",
             });
         }),
