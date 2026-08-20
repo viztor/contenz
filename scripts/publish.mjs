@@ -41,12 +41,13 @@ function run(cmd, cwd) {
 }
 
 function isVersionOnRegistry(name, version) {
+  const encoded = name.replace("/", "%2f");
+  const url = `https://registry.npmjs.org/${encoded}/${version}`;
   try {
-    const out = execSync(`npm view ${name}@${version} version`, {
-      encoding: "utf-8",
+    execFileSync("curl", ["-fsS", "-H", "Cache-Control: no-cache", url], {
       stdio: ["ignore", "pipe", "pipe"],
-    }).trim();
-    return out === version;
+    });
+    return true;
   } catch {
     return false;
   }
@@ -60,7 +61,7 @@ function sleep(seconds) {
  * Trusted publishing can report success while npm still has the version
  * staged (not in the public packument). Wait until `npm view` sees it.
  */
-function waitForRegistry(name, version, attempts = 18, delaySeconds = 5) {
+function waitForRegistry(name, version, attempts = 36, delaySeconds = 5) {
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     if (isVersionOnRegistry(name, version)) return true;
     console.log(
