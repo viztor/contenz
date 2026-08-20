@@ -23,15 +23,13 @@ jobs:
         with:
           node-version: "lts/*"
           cache: "pnpm"
-          registry-url: "https://registry.npmjs.org"
+          # Do not set registry-url: setup-node would write
+          # //registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN} and an empty
+          # token blocks npm trusted publishing (OIDC).
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Prefer npm trusted publishing (OIDC). An empty NPM_TOKEN in ~/.npmrc
-      # previously blocked the token exchange and 404'd unpublished packages.
-      # Set repository secret NPM_TOKEN only as a fallback for packages that
-      # are not yet configured as trusted publishers.
       - name: Publish packages
         run: pnpm run publish:all
         env:

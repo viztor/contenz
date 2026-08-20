@@ -9,7 +9,7 @@
  *   node scripts/publish.mjs --otp 123456 # pass OTP for 2FA
  */
 
-import { execSync } from "node:child_process";
+import { execFileSync, execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -28,9 +28,13 @@ const otp = otpIdx !== -1 ? args[otpIdx + 1] : undefined;
 function run(cmd, cwd) {
   const display = Array.isArray(cmd) ? cmd.join(" ") : cmd;
   console.log(`\n  $ ${display}`);
-  if (!dryRun) {
-    execSync(cmd, { cwd, stdio: "inherit" });
+  if (dryRun) return;
+  if (Array.isArray(cmd)) {
+    const [file, ...argv] = cmd;
+    execFileSync(file, argv, { cwd, stdio: "inherit" });
+    return;
   }
+  execSync(cmd, { cwd, stdio: "inherit" });
 }
 
 function isVersionOnRegistry(name, version) {
