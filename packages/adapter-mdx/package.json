@@ -46,10 +46,10 @@
   },
   "devDependencies": {
     "@contenz/core": "workspace:*",
-    "@types/node": "^26.1.2",
-    "tsup": "^8.5.1",
-    "typescript": "^7.0.2",
-    "vitest": "^4.1.10"
+    "@types/node": "catalog:",
+    "tsup": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   },
   "peerDependencies": {
     "@contenz/core": "^0.2.0"

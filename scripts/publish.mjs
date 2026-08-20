@@ -3,6 +3,9 @@
 /**
  * Publish all public @contenz packages to npm in dependency order.
  *
+ * Workspace `catalog:` / `workspace:` ranges are replaced by pnpm publish
+ * with the catalog versions from pnpm-workspace.yaml.
+ *
  * Usage:
  *   node scripts/publish.mjs              # publish all
  *   node scripts/publish.mjs --dry-run    # preview what would be published
@@ -49,15 +52,33 @@ function isVersionOnRegistry(name, version) {
   }
 }
 
+function sleep(seconds) {
+  execSync(`sleep ${seconds}`);
+}
+
+/**
+ * Trusted publishing can report success while npm still has the version
+ * staged (not in the public packument). Wait until `npm view` sees it.
+ */
+function waitForRegistry(name, version, attempts = 18, delaySeconds = 5) {
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    if (isVersionOnRegistry(name, version)) return true;
+    console.log(
+      `  … waiting for ${name}@${version} on registry (${attempt}/${attempts})`
+    );
+    if (dryRun) return false;
+    sleep(delaySeconds);
+  }
+  return isVersionOnRegistry(name, version);
+}
+
 console.log(
   `\n🚀 Publishing @contenz packages${dryRun ? " (dry run)" : ""}...\n`
 );
 
-// Build all packages first
 console.log("━━━ Building ━━━");
 run("pnpm run build", root);
 
-// Publish in order
 for (const pkg of PACKAGES) {
   const pkgDir = path.join(root, "packages", pkg);
   const pkgJson = JSON.parse(
@@ -78,10 +99,6 @@ for (const pkg of PACKAGES) {
     continue;
   }
 
-  // Prefer pnpm: uses GitHub OIDC trusted publishing when configured per package.
-  // Falls back to NODE_AUTH_TOKEN from setup-node /.npmrc when present.
-  // Args array (not a shell string) so the operator-supplied OTP is never
-  // shell-interpolated.
   const publishCmd = [
     "pnpm",
     "publish",
@@ -93,19 +110,33 @@ for (const pkg of PACKAGES) {
 
   try {
     run(publishCmd, pkgDir);
-    console.log(`  ✅ ${pkgJson.name}@${pkgJson.version} published`);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    // Race: another run published between check and publish
-    if (isVersionOnRegistry(pkgJson.name, pkgJson.version)) {
-      console.log(
-        `  ⏭  ${pkgJson.name}@${pkgJson.version} appeared on registry, continuing`
-      );
-      continue;
+    const staged = /E409|previously staged version/.test(msg);
+    if (!staged && !isVersionOnRegistry(pkgJson.name, pkgJson.version)) {
+      console.error(`  ❌ Failed to publish ${pkgJson.name}: ${msg}`);
+      process.exit(1);
     }
-    console.error(`  ❌ Failed to publish ${pkgJson.name}: ${msg}`);
+    if (staged) {
+      console.log(
+        `  ⚠  ${pkgJson.name}@${pkgJson.version} is staged on npm; waiting for it to go public`
+      );
+    }
+  }
+
+  if (dryRun) {
+    console.log(`  ✅ ${pkgJson.name}@${pkgJson.version} would publish`);
+    continue;
+  }
+
+  if (!waitForRegistry(pkgJson.name, pkgJson.version)) {
+    console.error(
+      `  ❌ ${pkgJson.name}@${pkgJson.version} did not appear on the public registry (staged/unpublished). Bump the version and retry.`
+    );
     process.exit(1);
   }
+
+  console.log(`  ✅ ${pkgJson.name}@${pkgJson.version} published`);
 }
 
 console.log("\n✅ All packages published successfully!\n");

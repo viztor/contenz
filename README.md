@@ -37,7 +37,7 @@ Requires **Node.js LTS** (≥ 24) and **pnpm 11** (see `engines` / `packageManag
 - `pnpm run lint` - lint all packages
 - `pnpm run typecheck` - typecheck all packages
 - `pnpm run ci` - lint + format check + typecheck + test
-- `pnpm run publish:all` - build and publish all packages to npm
+- `pnpm run publish:all` - build and publish all packages to npm (`catalog:` ranges are rewritten in the tarball)
 - `pnpm run publish:dry` - show what would be published
 
 Package-level:

@@ -12,8 +12,8 @@
     "@contenz/adapter-mdx": "workspace:*",
     "@contenz/cli": "workspace:*",
     "@contenz/core": "workspace:*",
-    "@types/node": "^26.1.2",
-    "typescript": "^7.0.2",
-    "vitest": "^4.1.10"
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

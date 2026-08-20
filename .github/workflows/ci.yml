@@ -46,3 +46,6 @@ jobs:
 
       - name: Core coverage
         run: pnpm run test:coverage --filter=@contenz/core
+
+      - name: Publish dry-run
+        run: pnpm run publish:dry

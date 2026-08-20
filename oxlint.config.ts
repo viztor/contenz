@@ -1,6 +1,5 @@
 import { defineConfig } from "oxlint";
 import core from "ultracite/oxlint/core";
-import react from "ultracite/oxlint/react";
 
 /**
  * Universal Ultracite oxlint quality gates.
@@ -10,7 +9,7 @@ import react from "ultracite/oxlint/react";
  * Do not demote ERROR gates per project without a documented exception.
  */
 export default defineConfig({
-  extends: [core, react],
+  extends: [core],
   options: {
     typeAware: true,
   },
@@ -103,8 +102,6 @@ export default defineConfig({
     "jsdoc/require-returns-description": "off",
     "jsdoc/check-tag-names": "off",
     "node/global-require": "off",
-    "react/react-compiler": "off",
-    "nextjs/no-html-link-for-pages": "off",
     // React component filenames often PascalCase; not a quality signal.
     "unicorn/filename-case": "off",
     // Broken / pedantic DOM prefs vs current TS lib.dom overloads.
@@ -150,8 +147,6 @@ export default defineConfig({
     "typescript/promise-function-async": "warn",
     "no-nested-ternary": "warn",
     "unicorn/no-nested-ternary": "warn",
-    "react/no-danger": "warn",
-    "nextjs/no-img-element": "warn",
     "no-unused-vars": "warn",
     "no-loop-func": "warn",
   },
@@ -200,17 +195,6 @@ export default defineConfig({
       ],
       rules: {
         "typescript/no-non-null-assertion": "off",
-        "typescript/no-unsafe-type-assertion": "warn",
-      },
-    },
-    {
-      // Design-system primitives: intentional patterns, not product bugs.
-      files: [
-        "**/components/ui/**/*.{ts,tsx}",
-        "**/src/components/ui/**/*.{ts,tsx}",
-      ],
-      rules: {
-        "react/only-export-components": "off",
         "typescript/no-unsafe-type-assertion": "warn",
       },
     },

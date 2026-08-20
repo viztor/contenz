@@ -1,6 +1,6 @@
 {
   "name": "@contenz/core",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Content validation and codegen from MDX/Markdown with Zod",
   "keywords": [
     "codegen",
@@ -55,21 +55,21 @@
     "knip": "knip"
   },
   "dependencies": {
-    "@orama/orama": "^3.1.18",
-    "@orama/plugin-data-persistence": "^3.1.18",
-    "fast-glob": "^3.3.3",
-    "p-map": "^7.0.6",
-    "picocolors": "^1.1.1",
-    "tsx": "^4.23.4",
-    "zod": "^4.4.3"
+    "@orama/orama": "catalog:",
+    "@orama/plugin-data-persistence": "catalog:",
+    "fast-glob": "catalog:",
+    "p-map": "catalog:",
+    "picocolors": "catalog:",
+    "tsx": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
-    "@types/node": "^26.1.2",
-    "@vitest/coverage-istanbul": "^4.1.10",
-    "knip": "^6.31.0",
-    "tsup": "^8.5.1",
-    "typescript": "^7.0.2",
-    "vitest": "^4.1.10"
+    "@types/node": "catalog:",
+    "@vitest/coverage-istanbul": "catalog:",
+    "knip": "catalog:",
+    "tsup": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   },
   "engines": {
     "node": ">=24"

@@ -1,7 +1,12 @@
 {
-  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "$schema": "https://unpkg.com/knip@6/schema.json",
   "project": ["src/**/*.ts"],
   "ignoreDependencies": ["tsx"],
+  "ignoreBinaries": ["oxlint", "oxfmt"],
+  "rules": {
+    "catalog": "off",
+    "catalogReferences": "off"
+  },
   "ignoreIssues": {
     "src/config.ts": ["exports"],
     "src/generator.ts": ["exports", "types"],

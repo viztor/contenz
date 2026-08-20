@@ -42,7 +42,7 @@ pnpm run ci
 | `pnpm run format` / `format:check` | oxfmt write / check |
 | `pnpm run knip` | Dead code / unused deps |
 | `pnpm run test:coverage` | Coverage (core floor enforced) |
-| `pnpm run publish:all` / `publish:dry` | Release helpers |
+| `pnpm run publish:all` / `publish:dry` | Release helpers (`catalog:` ranges are rewritten on publish) |
 
 Package-scoped:
 
@@ -75,7 +75,7 @@ Generated fixture output (`generated/`, `.contenz/`, coverage markdown) is gitig
 | `@contenz/adapter-mdx` | MD/MDX format adapter |
 | `@contenz/e2e` | Fixture-based CLI verification (private) |
 
-Internal monorepo deps use `workspace:*`.
+Internal monorepo deps use `workspace:*`. Shared third-party versions live in the `catalog:` map in `pnpm-workspace.yaml` and are referenced as `"catalog:"` from each package.json. `pnpm publish` replaces those with the catalog ranges in the tarball.
 
 ## Planning docs
 
