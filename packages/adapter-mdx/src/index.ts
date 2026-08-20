@@ -2,7 +2,7 @@
  * @contenz/adapter-mdx — Unified MD/MDX format adapter for contenz.
  *
  * Handles both .md and .mdx files. Auto-detects metadata syntax:
- *   - Frontmatter (--- YAML/JSON ---) — works in both .md and .mdx
+ *   - Frontmatter (--- YAML / JSON / JSON-ish YAML ---) — works in both .md and .mdx
  *   - Export const meta ({ export const meta = { ... } }) — MDX-specific
  *
  * Usage in contenz.config.ts:
@@ -11,6 +11,8 @@
  */
 
 import type { FormatAdapter } from "@contenz/core";
+
+import { parseFrontmatter } from "./frontmatter.js";
 
 // ── Brace-Balanced Scanner (for `export const meta = { ... }`) ──────────────
 
@@ -123,53 +125,6 @@ function safeEvalObjectLiteral(objectStr: string): Record<string, unknown> {
 
 // ── Frontmatter parsing ─────────────────────────────────────────────────────
 
-function parseFrontmatterYaml(source: string): Record<string, unknown> {
-  const lines = source.split("\n");
-  const result: Record<string, unknown> = {};
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (trimmed === "" || trimmed.startsWith("#")) continue;
-
-    const colonIdx = trimmed.indexOf(":");
-    if (colonIdx === -1) continue;
-
-    const key = trimmed.slice(0, colonIdx).trim();
-    let value: unknown = trimmed.slice(colonIdx + 1).trim();
-
-    if (value === "true") value = true;
-    else if (value === "false") value = false;
-    else if (value === "null") value = null;
-    else if (
-      typeof value === "string" &&
-      value !== "" &&
-      !Number.isNaN(Number(value))
-    ) {
-      value = Number(value);
-    } else if (
-      typeof value === "string" &&
-      ((value.startsWith('"') && value.endsWith('"')) ||
-        (value.startsWith("'") && value.endsWith("'")))
-    ) {
-      value = value.slice(1, -1);
-    } else if (
-      typeof value === "string" &&
-      value.startsWith("[") &&
-      value.endsWith("]")
-    ) {
-      try {
-        value = JSON.parse(value);
-      } catch {
-        /* leave as string */
-      }
-    }
-
-    result[key] = value;
-  }
-
-  return result;
-}
-
 function extractFrontmatterBlock(source: string): {
   frontmatter: string;
   body: string;
@@ -204,13 +159,7 @@ export const mdxAdapter: FormatAdapter = {
     // Frontmatter detection — works in both .md and .mdx files
     if (source.trimStart().startsWith("---")) {
       const { frontmatter, body } = extractFrontmatterBlock(source);
-      let meta: Record<string, unknown>;
-      try {
-        meta = frontmatter ? JSON.parse(frontmatter) : {};
-      } catch {
-        meta = parseFrontmatterYaml(frontmatter);
-      }
-      return { meta, body };
+      return { meta: parseFrontmatter(frontmatter), body };
     }
 
     // MDX export syntax: export const meta = { ... };

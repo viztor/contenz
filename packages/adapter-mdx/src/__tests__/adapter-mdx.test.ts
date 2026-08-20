@@ -96,6 +96,136 @@ Body.`;
       const result = mdxAdapter.extract(source, "test.md");
       expect(result.meta).toEqual({ title: "Indented" });
     });
+
+    it("parses multiline JSON-ish arrays with trailing commas", () => {
+      const source = `---
+title: "Sewing Operator Jobs: Pay, Skills & Factory Career"
+salaryTeasers:
+  [
+    {
+      "range": "5,300–9,700",
+      "currency": "CNY",
+      "period": "monthly",
+      "label": { "en": "China hubs", "zh": "中国枢纽" },
+    },
+  ]
+keywords:
+  [
+    "sewing operator",
+    "textile jobs",
+    "factory jobs",
+  ]
+relatedCareers: ["quality-inspector", "production-manager"]
+featured: false
+publishedAt: "2026-05-08"
+---
+
+## What This Job Is
+`;
+      const result = mdxAdapter.extract(source, "sewing-operator.en.mdx");
+      expect(result.meta.title).toBe(
+        "Sewing Operator Jobs: Pay, Skills & Factory Career"
+      );
+      expect(result.meta.featured).toBe(false);
+      expect(result.meta.publishedAt).toBe("2026-05-08");
+      expect(result.meta.relatedCareers).toEqual([
+        "quality-inspector",
+        "production-manager",
+      ]);
+      expect(result.meta.keywords).toEqual([
+        "sewing operator",
+        "textile jobs",
+        "factory jobs",
+      ]);
+      expect(result.meta.salaryTeasers).toEqual([
+        {
+          range: "5,300–9,700",
+          currency: "CNY",
+          period: "monthly",
+          label: { en: "China hubs", zh: "中国枢纽" },
+        },
+      ]);
+      expect(result.body).toContain("## What This Job Is");
+    });
+
+    it("parses YAML dash lists and indented maps", () => {
+      const source = `---
+keywords:
+  - sewing operator
+  - textile jobs
+label:
+  en: China hubs
+  zh: 中国枢纽
+people:
+  - name: Ada
+    role: operator
+  - name: Lin
+---
+
+Body.`;
+      const result = mdxAdapter.extract(source, "lists.md");
+      expect(result.meta.keywords).toEqual(["sewing operator", "textile jobs"]);
+      expect(result.meta.label).toEqual({ en: "China hubs", zh: "中国枢纽" });
+      expect(result.meta.people).toEqual([
+        { name: "Ada", role: "operator" },
+        { name: "Lin" },
+      ]);
+    });
+
+    it("parses JSON-ish flow objects with unquoted keys", () => {
+      const source = `---
+label: { en: "China hubs", zh: "中国枢纽" }
+---
+
+Body.`;
+      const result = mdxAdapter.extract(source, "flow.md");
+      expect(result.meta.label).toEqual({ en: "China hubs", zh: "中国枢纽" });
+    });
+
+    it("parses block scalars", () => {
+      const source = `---
+literal: |
+  line one
+  line two
+folded: >
+  hello
+  world
+---
+
+Body.`;
+      const result = mdxAdapter.extract(source, "scalar.md");
+      expect(result.meta.literal).toBe("line one\nline two");
+      expect(result.meta.folded).toBe("hello world");
+    });
+
+    it("keeps dates, URLs, and comma-grouped numbers as strings", () => {
+      const source = `---
+publishedAt: 2026-05-08
+site: https://texhire.com/careers
+range: 5,300
+draft: false # not live
+---
+
+Body.`;
+      const result = mdxAdapter.extract(source, "scalars.md");
+      expect(result.meta.publishedAt).toBe("2026-05-08");
+      expect(result.meta.site).toBe("https://texhire.com/careers");
+      expect(result.meta.range).toBe("5,300");
+      expect(result.meta.draft).toBe(false);
+    });
+
+    it("parses multiline JSON frontmatter documents", () => {
+      const source = `---
+{
+  "title": "JSON front",
+  "count": 42
+}
+---
+
+Body.`;
+      const result = mdxAdapter.extract(source, "json.md");
+      expect(result.meta).toEqual({ title: "JSON front", count: 42 });
+    });
   });
 
   describe("extract — export const meta", () => {

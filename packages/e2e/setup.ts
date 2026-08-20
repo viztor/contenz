@@ -32,6 +32,7 @@ export const FIXTURES_WITH_SCHEMA = [
   "invalid-relation",
   "centralized",
   "large-project",
+  "yaml-frontmatter",
 ] as const;
 
 export type CliResult = {

@@ -247,7 +247,7 @@ export const config: ContenzConfig = {
 
 The MDX adapter handles both `.md` and `.mdx` files with **dual syntax support**:
 
-- **Frontmatter** (`---` YAML/JSON `---`) — works in both `.md` and `.mdx` files
+- **Frontmatter** (`---` YAML / JSON / JSON-ish YAML `---`) — works in both `.md` and `.mdx` files. Multiline arrays and objects, trailing commas, dash lists, and indented maps are supported.
 - **Export syntax** (`export const meta = { ... }`) — MDX-specific
 
 When both are present, frontmatter takes precedence.

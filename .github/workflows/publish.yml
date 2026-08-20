@@ -24,16 +24,15 @@ jobs:
           node-version: "lts/*"
           cache: "pnpm"
           registry-url: "https://registry.npmjs.org"
-        env:
-          # Required here so setup-node writes a valid auth token into ~/.npmrc
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Prefer npm trusted publishing (OIDC). An empty NPM_TOKEN in ~/.npmrc
+      # previously blocked the token exchange and 404'd unpublished packages.
+      # Set repository secret NPM_TOKEN only as a fallback for packages that
+      # are not yet configured as trusted publishers.
       - name: Publish packages
-        run: |
-          npm config set provenance true
-          pnpm run publish:all
+        run: pnpm run publish:all
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: "true"

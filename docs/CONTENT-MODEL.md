@@ -32,6 +32,27 @@ category: general
 Content body goes here.
 ```
 
+The adapter accepts **JSON** frontmatter, line-oriented YAML, and the JSON-ish YAML authors often write (multiline arrays/objects, trailing commas, YAML dash lists, indented maps, and `|` / `>` block scalars). A value that starts on the next line is slurped until the next top-level key:
+
+```md
+---
+title: "Sewing operator"
+keywords: ["sewing operator", "textile jobs"]
+salaryTeasers:
+  [
+    {
+      "range": "5,300–9,700",
+      "currency": "CNY",
+      "period": "monthly",
+      "label": { "en": "China hubs", "zh": "中国枢纽" },
+    },
+  ]
+relatedCareers: ["quality-inspector"]
+---
+```
+
+This is not a full YAML 1.2 implementation. Trailing commas are stripped so JSON-shaped blocks parse; dash lists and nested maps cover the rest of the authoring subset.
+
 ### MDX: dual syntax (`.mdx`)
 
 MDX files support **both** frontmatter and export syntax. The adapter auto-detects which one is in use:

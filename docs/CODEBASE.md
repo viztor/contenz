@@ -161,12 +161,13 @@ Built with **Stricli** (`app.ts` route map + `buildCommand` per command). Entry:
 
 ## @contenz/adapter-mdx
 
-Single file: `src/index.ts` (226 lines). Exports `mdxAdapter: FormatAdapter`.
+- `src/index.ts` — `mdxAdapter: FormatAdapter` (brace-balanced `export const meta`, frontmatter dispatch)
+- `src/frontmatter.ts` — JSON / YAML-ish frontmatter (multiline JSON-ish values, dash lists, nested maps, block scalars)
 
 Handles both `.md` and `.mdx` files:
 
 - **MDX**: `export const meta = { ... }` via brace-balanced scanner
-- **MD**: `---` YAML/JSON frontmatter
+- **MD/MDX**: `---` JSON, YAML, or JSON-ish YAML frontmatter
 - Auto-detects format per-file
 
 ---

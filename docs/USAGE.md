@@ -114,10 +114,13 @@ Your content body goes here.
 ---
 title: Welcome
 category: general
+keywords: ["welcome", "getting started"]
 ---
 
 Your content body goes here.
 ```
+
+Frontmatter may be JSON, YAML scalars, multiline JSON-ish arrays/objects (trailing commas allowed), YAML dash lists, or indented maps. See [Content model](./CONTENT-MODEL.md#metadata-formats).
 
 **JSON** (pure data, no body):
 

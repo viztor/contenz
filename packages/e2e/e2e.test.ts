@@ -37,12 +37,36 @@ beforeAll(() => {
     "invalid-schema",
     "invalid-relation",
     "centralized",
+    "yaml-frontmatter",
   ]);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
 // CLI TESTS
 // ═══════════════════════════════════════════════════════════════════════════
+
+describe("cli: yaml-frontmatter (multiline JSON-ish YAML)", () => {
+  const cwd = fixture("yaml-frontmatter");
+
+  it("lint accepts multiline salary teasers and keywords", () => {
+    const r = runCli(["lint"], cwd);
+    expect(r.stderr + r.stdout).not.toMatch(/invalid_type|expected array/i);
+    expect(r.status).toBe(0);
+  });
+
+  it("build writes structured salary teasers", () => {
+    const r = runCli(["build", "--force"], cwd);
+    expect(r.status).toBe(0);
+    const output = fs.readFileSync(
+      path.join(cwd, "generated", "content", "guides.ts"),
+      "utf-8"
+    );
+    expect(output).toContain("sewing-operator");
+    expect(output).toContain("5,300–9,700");
+    expect(output).toContain("China hubs");
+    expect(output).toContain("sewing operator");
+  });
+});
 
 describe("cli: centralized (inline collections, no schema.ts)", () => {
   const cwd = fixture("centralized");

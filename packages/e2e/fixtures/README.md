@@ -10,6 +10,7 @@ These projects are used by `packages/e2e/e2e.test.ts` to run the CLI end-to-end.
 | **invalid-schema**| Content that fails Zod validation (question too short). Lint must exit 1. |
 | **invalid-relation** | `relatedFaqs` references a slug that does not exist. Lint must exit 1. |
 | **empty**        | No `*/schema.ts`; tests "No schema files found" path. |
+| **yaml-frontmatter** | Centralized collection whose MDX uses multiline JSON-ish YAML (`salaryTeasers`, `keywords`). |
 
 Before running the CLI in a fixture that has schema files, the test runner creates `node_modules/@contenz/core` as a symlink to the core package so that `import "@contenz/core"` in schema files resolves.
 

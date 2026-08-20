@@ -38,7 +38,7 @@ contenz/
 ### @contenz/adapter-mdx
 
 - **Role**: MD/MDX format adapter. Peer-depends on `@contenz/core`.
-- **Exports**: `mdxAdapter` — handles `.md` and `.mdx` files with frontmatter or `export const meta` syntax.
+- **Exports**: `mdxAdapter` — handles `.md` and `.mdx` files with JSON/YAML-ish frontmatter or `export const meta` syntax.
 
 ### packages/e2e
 

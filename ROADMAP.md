@@ -9,7 +9,7 @@ This roadmap is the milestone-level delivery plan. It should stay readable, depe
 - Milestones 1–3 are complete
 - Documentation Gate is complete
 - Milestone 4: Complete
-- Packages published to npm as `@contenz/core`, `@contenz/adapter-mdx`, `@contenz/cli` (v0.1.0)
+- Packages published to npm as `@contenz/core` (v0.2.0), `@contenz/adapter-mdx`, `@contenz/cli` (adapter/cli 0.2.0 ships multiline JSON-ish YAML frontmatter)
 
 ## Milestone 1: Shared Pipeline Core And Diagnostics
 
