@@ -37,8 +37,8 @@
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,mjs,cjs}": [
-      "oxfmt --write",
-      "oxlint --fix"
+      "oxlint --fix",
+      "oxfmt --write"
     ],
     "*.{json,jsonc,css,scss,md,mdx,yml,yaml}": [
       "oxfmt --write"
