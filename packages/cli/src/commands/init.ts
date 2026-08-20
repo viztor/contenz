@@ -20,8 +20,8 @@ function isRelativeProjectPath(value: string): boolean {
     return false;
   }
 
-  const normalized = path.normalize(value);
-  return normalized !== ".." && !normalized.startsWith(`..${path.sep}`);
+  const rel = path.relative(".", value);
+  return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
 }
 
 function toPascalCase(value: string): string {
