@@ -161,6 +161,7 @@ export function detectCircularReferences(
   items: Map<string, { slug: string; relatedSlugs: string[] }>
 ): { circularRefs: string[]; selfRefs: string[] } {
   const circularRefs: string[] = [];
+  const circularRefsSet = new Set<string>();
   const selfRefs: string[] = [];
   const allSlugs = new Set(items.keys());
 
@@ -174,12 +175,15 @@ export function detectCircularReferences(
   // Detect circular references
   const visited = new Set<string>();
   const inStack = new Set<string>();
+  const path: string[] = []; // ⚡ Bolt: Use a shared mutable stack to avoid O(N^2) array allocations
 
-  function detectCycle(slug: string, path: string[]): void {
+  function detectCycle(slug: string): void {
     if (inStack.has(slug)) {
       const cycleStart = path.indexOf(slug);
       const cycle = path.slice(cycleStart).join(" ↔ ");
-      if (!circularRefs.includes(cycle)) {
+      // ⚡ Bolt: Use Set for O(1) deduplication instead of O(N) array includes
+      if (!circularRefsSet.has(cycle)) {
+        circularRefsSet.add(cycle);
         circularRefs.push(cycle);
       }
       return;
@@ -189,21 +193,23 @@ export function detectCircularReferences(
 
     visited.add(slug);
     inStack.add(slug);
+    path.push(slug); // ⚡ Bolt: Push to shared stack
 
     const item = items.get(slug);
     if (item) {
       for (const relatedSlug of item.relatedSlugs) {
         if (allSlugs.has(relatedSlug) && relatedSlug !== slug) {
-          detectCycle(relatedSlug, [...path, slug]);
+          detectCycle(relatedSlug);
         }
       }
     }
 
+    path.pop(); // ⚡ Bolt: Pop from shared stack
     inStack.delete(slug);
   }
 
   for (const slug of items.keys()) {
-    detectCycle(slug, []);
+    detectCycle(slug);
   }
 
   return { circularRefs, selfRefs };

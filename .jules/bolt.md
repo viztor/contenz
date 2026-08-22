@@ -1,0 +1,3 @@
+## 2025-02-27 - Optimized Cycle Detection Memory Allocations
+
+**Learning:** In heavily interlinked content collections, the recursive `detectCircularReferences` function scales poorly because it uses `[...path, slug]` array spreading at every depth level, leading to O(N^2) allocations and GC pressure. Checking `circularRefs.includes(cycle)` is also O(N) per detected cycle. **Action:** When implementing graph traversal (DFS) or path tracking, always use an explicit mutable stack (`path.push()` / `path.pop()`) to avoid O(N) array copying per recursive call, and use a `Set` for O(1) deduplication of collected cycles.
