@@ -16,14 +16,24 @@ export interface ParseFileNameResult {
 /** Default extensions used when no config-level extensions are specified. */
 const DEFAULT_EXTENSIONS = ["mdx", "md", "json"];
 
+const extCache = new Map<string, string>();
+
 /**
  * Build a regex alternation pattern from an array of extensions.
  * e.g. ["md", "mdx", "json"] → "md|mdx|json"
  */
 function extAlternation(extensions?: string[]): string {
   const exts = extensions?.length ? extensions : DEFAULT_EXTENSIONS;
-  return exts.map((e) => e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+  const key = exts.join(",");
+  let alt = extCache.get(key);
+  if (!alt) {
+    alt = exts.map((e) => e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+    extCache.set(key, alt);
+  }
+  return alt;
 }
+
+const regexCache = new Map<string, RegExp>();
 
 /**
  * Parse filename to extract slug and optional locale.
@@ -50,13 +60,23 @@ export function parseFileName(
   }
 
   const alt = extAlternation(extensions);
+  const cacheKey = `${i18nEnabled ? "i18n" : "no-i18n"}:${alt}`;
+
+  let regex = regexCache.get(cacheKey);
+  if (!regex) {
+    if (i18nEnabled) {
+      // BCP 47 locale: xx, xxx, xx-XX, xx-Xxxx, xx-Xxxx-XX, etc.
+      const localePattern = "[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?";
+      regex = new RegExp(`^(.+)\\.(${localePattern})\\.(${alt})$`);
+    } else {
+      regex = new RegExp(`^(.+)\\.(${alt})$`);
+    }
+    regexCache.set(cacheKey, regex);
+  }
+
+  const match = regex.exec(fileName);
 
   if (i18nEnabled) {
-    // BCP 47 locale: xx, xxx, xx-XX, xx-Xxxx, xx-Xxxx-XX, etc.
-    const localePattern = "[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?";
-    const match = new RegExp(`^(.+)\\.(${localePattern})\\.(${alt})$`).exec(
-      fileName
-    );
     if (!match) return null;
     return {
       slug: match[1],
@@ -65,7 +85,6 @@ export function parseFileName(
     };
   }
 
-  const match = new RegExp(`^(.+)\\.(${alt})$`).exec(fileName);
   if (!match) return null;
   return {
     slug: match[1],
