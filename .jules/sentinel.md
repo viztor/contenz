@@ -1,0 +1,3 @@
+## 2026-08-25 - Missing Path Validation in Content Writes
+
+**Issue:** The `writeContent` function in `content-io.ts` constructed file paths using unsanitized input (`slug`), allowing a missing path validation issue where paths like `../../../tmp/pwned` could escape the intended directory and write arbitrary files. **Learning:** Always validate and normalize file paths constructed from user input or external metadata before interacting with the filesystem. **Prevention:** Implement strict path normalization (e.g., `path.posix.normalize`) and validation checks (e.g., `isAbsoluteLikePath`, checking for `.` or `..`) whenever resolving dynamic file paths to ensure they remain within the intended boundaries.

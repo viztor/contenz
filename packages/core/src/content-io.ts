@@ -123,15 +123,28 @@ export async function writeContent(
     throw new Error(`Collection not found: ${options.collectionName}`);
   }
 
+  const normalizedSlug = path.posix.normalize(options.slug.replaceAll("\\", "/"));
+  const isAbsoluteLike =
+    path.posix.isAbsolute(normalizedSlug) || /^[a-zA-Z]:\//.test(normalizedSlug);
+
+  if (
+    normalizedSlug === "." ||
+    normalizedSlug === ".." ||
+    normalizedSlug.startsWith("../") ||
+    isAbsoluteLike
+  ) {
+    throw new Error(`Invalid slug path "${options.slug}". Paths must be valid relative paths.`);
+  }
+
   const ext = options.ext ?? col.config.extensions[0] ?? "mdx";
-  let fileName = `${options.slug}.${ext}`;
+  let fileName = `${normalizedSlug}.${ext}`;
   if (col.config.i18n) {
     const localeToUse =
       options.locale ?? col.config.resolvedI18n?.defaultLocale;
     if (!localeToUse) {
       throw new Error("Locale is required when i18n is enabled");
     }
-    fileName = `${options.slug}.${localeToUse}.${ext}`;
+    fileName = `${normalizedSlug}.${localeToUse}.${ext}`;
   }
 
   const filePath = path.join(col.collectionPath, fileName);
