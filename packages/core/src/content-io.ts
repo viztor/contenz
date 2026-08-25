@@ -123,9 +123,12 @@ export async function writeContent(
     throw new Error(`Collection not found: ${options.collectionName}`);
   }
 
-  const normalizedSlug = path.posix.normalize(options.slug.replaceAll("\\", "/"));
+  const normalizedSlug = path.posix.normalize(
+    options.slug.replaceAll("\\", "/")
+  );
   const isAbsoluteLike =
-    path.posix.isAbsolute(normalizedSlug) || /^[a-zA-Z]:\//.test(normalizedSlug);
+    path.posix.isAbsolute(normalizedSlug) ||
+    /^[a-zA-Z]:\//.test(normalizedSlug);
 
   if (
     normalizedSlug === "." ||
@@ -133,7 +136,9 @@ export async function writeContent(
     normalizedSlug.startsWith("../") ||
     isAbsoluteLike
   ) {
-    throw new Error(`Invalid slug path "${options.slug}". Paths must be valid relative paths.`);
+    throw new Error(
+      `Invalid slug path "${options.slug}". Paths must be valid relative paths.`
+    );
   }
 
   const ext = options.ext ?? col.config.extensions[0] ?? "mdx";
