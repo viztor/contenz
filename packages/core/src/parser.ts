@@ -25,6 +25,29 @@ function extAlternation(extensions?: string[]): string {
   return exts.map((e) => e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
 }
 
+const regexCache = new Map<string, RegExp>();
+
+function getI18nRegex(alt: string): RegExp {
+  const key = `i18n:${alt}`;
+  let regex = regexCache.get(key);
+  if (!regex) {
+    const localePattern = "[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?";
+    regex = new RegExp(`^(.+)\\.(${localePattern})\\.(${alt})$`);
+    regexCache.set(key, regex);
+  }
+  return regex;
+}
+
+function getNonI18nRegex(alt: string): RegExp {
+  const key = `non-i18n:${alt}`;
+  let regex = regexCache.get(key);
+  if (!regex) {
+    regex = new RegExp(`^(.+)\\.(${alt})$`);
+    regexCache.set(key, regex);
+  }
+  return regex;
+}
+
 /**
  * Parse filename to extract slug and optional locale.
  *
@@ -52,11 +75,8 @@ export function parseFileName(
   const alt = extAlternation(extensions);
 
   if (i18nEnabled) {
-    // BCP 47 locale: xx, xxx, xx-XX, xx-Xxxx, xx-Xxxx-XX, etc.
-    const localePattern = "[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?";
-    const match = new RegExp(`^(.+)\\.(${localePattern})\\.(${alt})$`).exec(
-      fileName
-    );
+    const regex = getI18nRegex(alt);
+    const match = regex.exec(fileName);
     if (!match) return null;
     return {
       slug: match[1],
@@ -65,7 +85,8 @@ export function parseFileName(
     };
   }
 
-  const match = new RegExp(`^(.+)\\.(${alt})$`).exec(fileName);
+  const regex = getNonI18nRegex(alt);
+  const match = regex.exec(fileName);
   if (!match) return null;
   return {
     slug: match[1],
