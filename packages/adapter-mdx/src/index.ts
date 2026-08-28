@@ -10,6 +10,8 @@
  *   export const config: ContenzConfig = { adapters: [mdxAdapter] };
  */
 
+import * as vm from "node:vm";
+
 import type { FormatAdapter } from "@contenz/core";
 
 import { parseFrontmatter } from "./frontmatter.js";
@@ -105,17 +107,17 @@ function skipStringLiteral(
 }
 
 /**
- * Evaluate a JS object-literal string from trusted author content
- * (`export const meta = { ... }`). Not for untrusted input.
+ * Evaluate a JS object-literal string from untrusted author content
+ * (`export const meta = { ... }`) using a secure vm sandbox.
  */
 function safeEvalObjectLiteral(objectStr: string): Record<string, unknown> {
   try {
-    // eslint-disable-next-line no-new-func -- intentional sandboxed eval of author meta literals
-    // oxlint-disable-next-line no-new-func, typescript/no-implied-eval -- author meta object literals only
-    const fn = new Function(`"use strict"; return (${objectStr});`);
-    const result = fn();
+    const script = new vm.Script(`"use strict"; (${objectStr});`);
+    const context = vm.createContext(Object.create(null));
+    const result = script.runInContext(context, { timeout: 100 });
+
     if (typeof result === "object" && result !== null) {
-      return result as Record<string, unknown>;
+      return structuredClone(result) as Record<string, unknown>;
     }
     return {};
   } catch {
