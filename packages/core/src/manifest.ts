@@ -75,18 +75,30 @@ export async function computeCollectionInputHash(
   const parts: string[] = [];
 
   const schemaPath = path.join(collectionPath, "schema.ts");
-  parts.push(await readFileSafe(schemaPath));
-
   const configPath = path.join(collectionPath, "config.ts");
-  parts.push(await readFileSafe(configPath));
+
+  const [schemaContent, configContent] = await Promise.all([
+    readFileSafe(schemaPath),
+    readFileSafe(configPath),
+  ]);
+  parts.push(schemaContent);
+  parts.push(configContent);
 
   const sortedFiles = [...contentFilePaths].sort();
-  for (const file of sortedFiles) {
-    const ext = path.extname(file).slice(1);
-    if (!extensions.includes(ext)) continue;
-    const fullPath = path.join(collectionPath, file);
-    const content = await readFileSafe(fullPath);
-    parts.push(`${file}\n${content}`);
+  const fileContents = await Promise.all(
+    sortedFiles.map(async (file) => {
+      const ext = path.extname(file).slice(1);
+      if (!extensions.includes(ext)) return null;
+      const fullPath = path.join(collectionPath, file);
+      const content = await readFileSafe(fullPath);
+      return `${file}\n${content}`;
+    })
+  );
+
+  for (const content of fileContents) {
+    if (content !== null) {
+      parts.push(content);
+    }
   }
 
   return sha256(parts.join("\n"));

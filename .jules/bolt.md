@@ -1,0 +1,3 @@
+## 2025-02-23 - Speeding up filesystem reads with Promise.all
+
+**Learning:** Reading a large number of files sequentially with `fs.readFile` in a loop can be a significant bottleneck, taking around ~200ms for 1000 files in this environment. Wrapping the reads in `Promise.all` allows Node.js to read the files concurrently, drastically reducing the time required (e.g. down to ~10ms). **Action:** When performing independent file read operations, especially in loops processing many files (like computing a manifest hash), always collect the promises and resolve them simultaneously using `Promise.all` rather than awaiting them one by one.
