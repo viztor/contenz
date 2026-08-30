@@ -69,10 +69,7 @@ export function parseLocaleFromURL(
     queryParam = "lang",
   } = options;
 
-  // Normalize locales to lowercase for comparison
-  const localeSet = new Set(locales.map((l) => l.toLowerCase()));
-  const localeMap = new Map(locales.map((l) => [l.toLowerCase(), l]));
-
+  // Use Array.find instead of Set/Map allocations for better performance on small arrays
   let parsedUrl: URL;
   try {
     parsedUrl =
@@ -87,12 +84,16 @@ export function parseLocaleFromURL(
 
   if (strategy === "query") {
     const paramValue = parsedUrl.searchParams.get(queryParam);
-    if (paramValue && localeSet.has(paramValue.toLowerCase())) {
-      return {
-        locale: localeMap.get(paramValue.toLowerCase()) ?? defaultLocale,
-        pathname: parsedUrl.pathname,
-        explicit: true,
-      };
+    if (paramValue) {
+      const lowerParam = paramValue.toLowerCase();
+      const matched = locales.find((l) => l.toLowerCase() === lowerParam);
+      if (matched) {
+        return {
+          locale: matched,
+          pathname: parsedUrl.pathname,
+          explicit: true,
+        };
+      }
     }
     return {
       locale: defaultLocale,
@@ -108,10 +109,12 @@ export function parseLocaleFromURL(
   }
 
   const firstSegment = segments[0].toLowerCase();
-  if (localeSet.has(firstSegment)) {
+  const matched = locales.find((l) => l.toLowerCase() === firstSegment);
+
+  if (matched) {
     const remaining = `/${segments.slice(1).join("/")}`;
     return {
-      locale: localeMap.get(firstSegment) ?? defaultLocale,
+      locale: matched,
       pathname: remaining,
       explicit: true,
     };
