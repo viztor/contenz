@@ -69,10 +69,6 @@ export function parseLocaleFromURL(
     queryParam = "lang",
   } = options;
 
-  // Normalize locales to lowercase for comparison
-  const localeSet = new Set(locales.map((l) => l.toLowerCase()));
-  const localeMap = new Map(locales.map((l) => [l.toLowerCase(), l]));
-
   let parsedUrl: URL;
   try {
     parsedUrl =
@@ -87,12 +83,16 @@ export function parseLocaleFromURL(
 
   if (strategy === "query") {
     const paramValue = parsedUrl.searchParams.get(queryParam);
-    if (paramValue && localeSet.has(paramValue.toLowerCase())) {
-      return {
-        locale: localeMap.get(paramValue.toLowerCase()) ?? defaultLocale,
-        pathname: parsedUrl.pathname,
-        explicit: true,
-      };
+    if (paramValue) {
+      const lowerParam = paramValue.toLowerCase();
+      const matched = locales.find((l) => l.toLowerCase() === lowerParam);
+      if (matched) {
+        return {
+          locale: matched,
+          pathname: parsedUrl.pathname,
+          explicit: true,
+        };
+      }
     }
     return {
       locale: defaultLocale,
@@ -108,10 +108,11 @@ export function parseLocaleFromURL(
   }
 
   const firstSegment = segments[0].toLowerCase();
-  if (localeSet.has(firstSegment)) {
+  const matched = locales.find((l) => l.toLowerCase() === firstSegment);
+  if (matched) {
     const remaining = `/${segments.slice(1).join("/")}`;
     return {
-      locale: localeMap.get(firstSegment) ?? defaultLocale,
+      locale: matched,
       pathname: remaining,
       explicit: true,
     };
@@ -172,26 +173,28 @@ export function negotiateLocale(
     .filter((p) => p.quality > 0)
     .sort((a, b) => b.quality - a.quality);
 
-  // Build lowercase lookup
-  const availableMap = new Map(available.map((l) => [l.toLowerCase(), l]));
-
   for (const pref of preferences) {
     // Exact match
-    if (availableMap.has(pref.locale)) {
-      return availableMap.get(pref.locale) ?? defaultLocale;
+    let matched = available.find((l) => l.toLowerCase() === pref.locale);
+    if (matched) {
+      return matched;
     }
 
     // Prefix match: "zh-TW" → try "zh"
     const prefix = pref.locale.split("-")[0];
-    if (prefix !== pref.locale && availableMap.has(prefix)) {
-      return availableMap.get(prefix) ?? defaultLocale;
+    if (prefix !== pref.locale) {
+      matched = available.find((l) => l.toLowerCase() === prefix);
+      if (matched) {
+        return matched;
+      }
     }
 
     // Reverse prefix: available "zh-Hant" matches request for "zh"
-    for (const [lower, original] of availableMap) {
-      if (lower.startsWith(`${pref.locale}-`)) {
-        return original;
-      }
+    matched = available.find((l) =>
+      l.toLowerCase().startsWith(`${pref.locale}-`)
+    );
+    if (matched) {
+      return matched;
     }
   }
 
