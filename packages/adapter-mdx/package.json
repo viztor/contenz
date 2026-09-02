@@ -1,6 +1,6 @@
 {
   "name": "@contenz/adapter-mdx",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "Unified MD/MDX format adapter for contenz",
   "keywords": [
     "adapter",
@@ -52,7 +52,7 @@
     "vitest": "catalog:"
   },
   "peerDependencies": {
-    "@contenz/core": "^0.2.2"
+    "@contenz/core": "^0.3.0"
   },
   "engines": {
     "node": ">=24"

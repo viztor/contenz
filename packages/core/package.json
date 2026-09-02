@@ -1,6 +1,6 @@
 {
   "name": "@contenz/core",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "Content validation and codegen from MDX/Markdown with Zod",
   "keywords": [
     "codegen",
