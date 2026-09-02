@@ -1,0 +1,3 @@
+## 2024-09-02 - Replacing new Function with node:vm
+
+**Issue:** Usage of new Function in packages/adapter-mdx/src/index.ts for evaluating author meta object literals allows for arbitrary code execution if the input is not strictly controlled. **Learning:** new Function evaluates code in the global scope, presenting a security risk even when author intent is trusted. node:vm.runInNewContext offers a much safer alternative for evaluating JS object literals in an isolated context. **Prevention:** Always use node:vm.runInNewContext(code, Object.create(null)) or similar isolated sandboxes for parsing JS strings to objects, rather than new Function or eval.
