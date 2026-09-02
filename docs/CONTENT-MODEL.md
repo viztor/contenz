@@ -1,3 +1,10 @@
+---
+tags:
+  - docs
+  - contenz
+status: note
+---
+
 # Content model
 
 This document describes how Contenz treats filenames, generated output, relations, and i18n.
@@ -179,7 +186,7 @@ i18n: {
   enabled: true,
   defaultLocale: "en",
   locales: ["en", "zh"],
-  fallback: { "zh-Hant": "zh", "zh": "en" },
+  fallback: { "zh-TW": ["zh", "en"], de: "en" },
   coverageThreshold: 0.8,
   detectStale: true,
   includeFallbackMetadata: false,
@@ -188,10 +195,12 @@ i18n: {
 
 - **defaultLocale**: Used as source for staleness and as fallback when no locale is specified.
 - **locales**: Optional explicit list; if omitted, locales are inferred from filenames. **When declared, `contenz lint` checks every slug against this list** (see below).
-- **fallback**: Record (locale → fallback locale) or array for a single global fallback.
-- **coverageThreshold**: Minimum ratio (0–1) of fully translated slugs before lint/build warn.
+- **fallback**: Ordered fallback chains — `Record<locale, string | string[]>` for per-locale chains, or a top-level `string[]` for a global default chain. The first locale in the chain with content wins (max depth 5; cycles guarded). See [[CONFIGURATION#fallback-chains|Configuration – Fallback chains]].
+- **coverageThreshold**: Minimum ratio (0–1) of fully translated slugs before lint/build warn. Values outside 0–1 are rejected (treated as unset).
 - **detectStale**: Emit diagnostics when a translation file is older than the default-locale source.
-- **includeFallbackMetadata**: Add `_fallback` in generated output when value came from fallback.
+- **includeFallbackMetadata**: Add `_fallback` in generated output when value came from a fallback locale.
+
+The full resolved i18n config (`ResolvedI18nConfig`) is always present on `ResolvedConfig` — check `enabled` before use. It carries both the legacy single-step `fallbackMap` and the full `fallbackChains` / `defaultFallbackChain`.
 
 Lint with `--coverage` writes a coverage report (e.g. `contenz.coverage.md`) showing per-locale and per-slug coverage and staleness when applicable. Declared locales are always included in the report, even when no file exists for them yet.
 
@@ -199,14 +208,14 @@ Lint with `--coverage` writes a coverage report (e.g. `contenz.coverage.md`) sho
 
 When `locales` is explicitly declared, `contenz lint --translations` emits one diagnostic per slug per missing locale:
 
-| Code | Severity | Meaning |
-| --- | --- | --- |
-| `I18N_MISSING_TRANSLATION` | warning (error with `strict: true`) | A slug has no file for a declared locale. Carries `collection`, `slug`, `locale` (the missing one), and `file` (the default-locale source to translate from). |
-| `I18N_COVERAGE_BELOW_THRESHOLD` | warning (error with `strict: true`) | The ratio of fully translated slugs is below `coverageThreshold`. |
+| Code                            | Severity                            | Meaning                                                                                                                                                       |
+| ------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `I18N_MISSING_TRANSLATION`      | warning (error with `strict: true`) | A slug has no file for a declared locale. Carries `collection`, `slug`, `locale` (the missing one), and `file` (the default-locale source to translate from). |
+| `I18N_COVERAGE_BELOW_THRESHOLD` | warning (error with `strict: true`) | The ratio of fully translated slugs is below `coverageThreshold`.                                                                                             |
 
 The check is opt-in (`--translations` on the CLI, `translations: true` in `runLint`) so regular lint runs stay focused on schema and relation errors. Projects using `i18n: true` or omitting `locales` keep the inferred, report-only behavior — no per-slug diagnostics are emitted even with the flag.
 
-The diagnostics are designed to be piped to an AI agent via `--format json`; each one is a self-contained translation task. See [CLI reference – lint](./CLI.md#lint).
+The diagnostics are designed to be piped to an AI agent via `--format json`; each one is a self-contained translation task. See [[CLI#lint|CLI reference – lint]].
 
 ## Multi-type collections
 
@@ -216,4 +225,4 @@ When a collection uses multiple content types (e.g. terms and topics):
 - **Schema**: Export `{name}Meta` for each type (e.g. `termMeta`, `topicMeta`). You can define patterns in the schema so everything lives in one place; see [Configuration – Multi-type collection](../CONFIGURATION.md#multi-type-collection).
 - **Generated output**: Same shape as single-type; each entry’s keys come from the schema for that type.
 
-See [Configuration – Multi-type collection](./CONFIGURATION.md#multi-type-collection).
+See [[CONFIGURATION#multi-type-collection|Configuration – Multi-type collection]].

@@ -1,14 +1,21 @@
+---
+tags:
+  - docs
+  - contenz
+status: note
+---
+
 # Contenz Usage Guide
 
 This guide describes every feature, command, and workflow for Contenz — a schema-first, AI-native content management CLI.
 
 For reference-level details see:
 
-- [CLI reference](./CLI.md) — all commands with options tables
-- [API reference](./API.md) — programmatic API (`@contenz/core/api`)
-- [Configuration](./CONFIGURATION.md) — project and collection config, schemas
-- [Content model](./CONTENT-MODEL.md) — filenames, output shape, relations, i18n
-- [Architecture](./ARCHITECTURE.md) — packages and pipeline
+- [[CLI|CLI reference]] — all commands with options tables
+- [[API|API reference]] — programmatic API (`@contenz/core/api`)
+- [[CONFIGURATION|Configuration]] — project and collection config, schemas
+- [[CONTENT-MODEL|Content model]] — filenames, output shape, relations, i18n
+- [[ARCHITECTURE|Architecture]] — packages and pipeline
 
 ---
 
@@ -120,7 +127,7 @@ keywords: ["welcome", "getting started"]
 Your content body goes here.
 ```
 
-Frontmatter may be JSON, YAML scalars, multiline JSON-ish arrays/objects (trailing commas allowed), YAML dash lists, or indented maps. See [Content model](./CONTENT-MODEL.md#metadata-formats).
+Frontmatter may be JSON, YAML scalars, multiline JSON-ish arrays/objects (trailing commas allowed), YAML dash lists, or indented maps. See [[CONTENT-MODEL#metadata-formats|Content model]].
 
 **JSON** (pure data, no body):
 
@@ -436,7 +443,7 @@ import { defineCollection, defineMultiTypeCollection } from "@contenz/core";
 import type { ContenzConfig, CollectionConfig } from "@contenz/core";
 ```
 
-See [API reference](./API.md) for the complete list of exports and types.
+See [[API|API reference]] for the complete list of exports and types.
 
 ---
 
@@ -444,27 +451,27 @@ See [API reference](./API.md) for the complete list of exports and types.
 
 ### Project config (`contenz.config.ts`)
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `sources` | `string[]` | `["content/*"]` | Source patterns for collection discovery |
-| `outputDir` | `string` | `"generated/content"` | Generated output directory |
-| `i18n` | `boolean \| I18nConfigShape` | `false` | Enable locale detection |
-| `extensions` | `string[]` | `["md", "mdx", "json"]` | Allowed file extensions |
-| `ignore` | `string[]` | `["README.md", "_*"]` | Patterns to ignore |
-| `strict` | `boolean` | `false` | Fail on warnings |
-| `coveragePath` | `string` | `"contenz.coverage.md"` | Coverage report path |
-| `adapters` | `FormatAdapter[]` | `[]` | Format adapters for content parsing. Register `@contenz/adapter-mdx` for MD/MDX support. JSON is built-in. |
-| `collections` | `Record<string, CollectionDeclaration>` | `undefined` | Inline collection declarations with schemas. See [Configuration – Centralized collections](./CONFIGURATION.md#centralized-collections). |
+| Option         | Type                                    | Default                 | Description                                                                                                |
+| -------------- | --------------------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `sources`      | `string[]`                              | `["content/*"]`         | Source patterns for collection discovery                                                                   |
+| `outputDir`    | `string`                                | `"generated/content"`   | Generated output directory                                                                                 |
+| `i18n`         | `boolean \| I18nConfigShape`            | `false`                 | Enable locale detection                                                                                    |
+| `extensions`   | `string[]`                              | `["md", "mdx", "json"]` | Allowed file extensions                                                                                    |
+| `ignore`       | `string[]`                              | `["README.md", "_*"]`   | Patterns to ignore                                                                                         |
+| `strict`       | `boolean`                               | `false`                 | Fail on warnings                                                                                           |
+| `coveragePath` | `string`                                | `"contenz.coverage.md"` | Coverage report path                                                                                       |
+| `adapters`     | `FormatAdapter[]`                       | `[]`                    | Format adapters for content parsing. Register `@contenz/adapter-mdx` for MD/MDX support. JSON is built-in. |
+| `collections`  | `Record<string, CollectionDeclaration>` | `undefined`             | Inline collection declarations with schemas. See [[CONFIGURATION#centralized-collections                   | Configuration – Centralized collections]]. |
 
 ### Collection config (`content/<collection>/config.ts`)
 
-| Option | Type | Description |
-| --- | --- | --- |
-| `types` | `ContentType[]` | Multi-type: `{ name, pattern }` |
-| `slugPattern` | `RegExp` | Custom slug extraction regex |
-| `i18n` | `boolean \| I18nConfigShape` | Override project i18n |
-| `extensions` | `string[]` | Override allowed extensions |
-| `ignore` | `string[]` | Override ignore patterns |
+| Option        | Type                         | Description                     |
+| ------------- | ---------------------------- | ------------------------------- |
+| `types`       | `ContentType[]`              | Multi-type: `{ name, pattern }` |
+| `slugPattern` | `RegExp`                     | Custom slug extraction regex    |
+| `i18n`        | `boolean \| I18nConfigShape` | Override project i18n           |
+| `extensions`  | `string[]`                   | Override allowed extensions     |
+| `ignore`      | `string[]`                   | Override ignore patterns        |
 
 ### i18n configuration
 
@@ -480,7 +487,7 @@ i18n: {
 }
 ```
 
-See [Configuration](./CONFIGURATION.md) for full details.
+See [[CONFIGURATION|Configuration]] for full details.
 
 ---
 
@@ -500,24 +507,24 @@ faq.moq.locales.en.question;
 faq.moq.locales.zh?.question ?? faq.moq.locales.en.question;
 ```
 
-Locale selection and fallbacks live in your application (route params, middleware, etc.). See [Content model](./CONTENT-MODEL.md) for the generated output shape.
+Locale selection and fallbacks live in your application (route params, middleware, etc.). See [[CONTENT-MODEL|Content model]] for the generated output shape.
 
 ---
 
 ## 10. Common commands cheat sheet
 
-| Task | Command |
-| --- | --- |
-| Initialize project | `contenz init` |
-| Validate content | `contenz lint` |
-| Generate TypeScript | `contenz build` |
-| Watch for changes | `contenz watch` |
-| Check build status | `contenz status` |
-| List collections | `contenz list` |
-| View an item | `contenz view <collection> <slug>` |
-| Create an item | `contenz create <collection> <slug> --set key=value` |
-| Update an item | `contenz update <collection> <slug> --set key=value` |
-| Search items | `contenz search <collection> [query] [--field key=value]` |
-| Introspect schema | `contenz schema <collection>` |
-| Agent skill file | `contenz skill` |
-| Bash completion | `contenz install` / `contenz uninstall` |
+| Task                | Command                                                   |
+| ------------------- | --------------------------------------------------------- |
+| Initialize project  | `contenz init`                                            |
+| Validate content    | `contenz lint`                                            |
+| Generate TypeScript | `contenz build`                                           |
+| Watch for changes   | `contenz watch`                                           |
+| Check build status  | `contenz status`                                          |
+| List collections    | `contenz list`                                            |
+| View an item        | `contenz view <collection> <slug>`                        |
+| Create an item      | `contenz create <collection> <slug> --set key=value`      |
+| Update an item      | `contenz update <collection> <slug> --set key=value`      |
+| Search items        | `contenz search <collection> [query] [--field key=value]` |
+| Introspect schema   | `contenz schema <collection>`                             |
+| Agent skill file    | `contenz skill`                                           |
+| Bash completion     | `contenz install` / `contenz uninstall`                   |

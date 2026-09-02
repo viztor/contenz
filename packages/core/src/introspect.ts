@@ -47,21 +47,9 @@ export interface IntrospectedSchema {
  * - `.transform()` creates a pipe (`_def.type === "pipe"`) with `_def.in` / `_def.out`
  */
 // biome-ignore lint/suspicious/noExplicitAny: introspection accesses Zod internals
-function getDef(schema: z.ZodTypeAny): any {
+export function getZodDef(schema: z.ZodTypeAny): any {
   // biome-ignore lint/suspicious/noExplicitAny: Zod internals
   return (schema as any)._def;
-}
-
-/**
- * Get the description from a Zod schema.
- * Zod 3.25 stores description on schema.description, not _def.description.
- */
-function getDescription(schema: z.ZodTypeAny): string | undefined {
-  // biome-ignore lint/suspicious/noExplicitAny: accessing description property
-  const direct = (schema as any).description;
-  if (typeof direct === "string") return direct;
-  const def = getDef(schema);
-  return def?.description;
 }
 
 /**
@@ -69,8 +57,8 @@ function getDescription(schema: z.ZodTypeAny): string | undefined {
  * Zod 3.25: _def.type is a lowercase string ("string", "object", "optional", etc.)
  * Old Zod 3: _def.typeName is a PascalCase string ("ZodString", "ZodObject", etc.)
  */
-function getTypeName(schema: z.ZodTypeAny): string | undefined {
-  const def = getDef(schema);
+export function getZodTypeName(schema: z.ZodTypeAny): string | undefined {
+  const def = getZodDef(schema);
   if (!def) return undefined;
   // Zod 3.25 uses _def.type as a lowercase string
   if (typeof def.type === "string") return def.type;
@@ -83,10 +71,37 @@ function getTypeName(schema: z.ZodTypeAny): string | undefined {
  * Zod 3.25: _def.shape is a plain object.
  * Old Zod 3: _def.shape is a function () => Record<string, ZodTypeAny>.
  */
-function getShape(schema: z.ZodTypeAny): Record<string, z.ZodTypeAny> {
-  const def = getDef(schema);
+export function getZodShape(
+  schema: z.ZodTypeAny
+): Record<string, z.ZodTypeAny> {
+  const def = getZodDef(schema);
   const shape = def.shape;
   return typeof shape === "function" ? shape() : shape;
+}
+
+/**
+ * Check if a schema is an object schema (with a shape), either by type name
+ * or by the presence of `_def.shape`. Used to distinguish ZodObject across
+ * Zod 3 and Zod 4 layouts.
+ */
+export function isZodObject(schema: z.ZodTypeAny): boolean {
+  const typeName = getZodTypeName(schema);
+  return (
+    typeName === "object" ||
+    typeName === "ZodObject" ||
+    "shape" in getZodDef(schema)
+  );
+}
+
+/** Get the description from a Zod schema.
+ * Zod 3.25 stores description on schema.description, not _def.description.
+ */
+function getDescription(schema: z.ZodTypeAny): string | undefined {
+  // biome-ignore lint/suspicious/noExplicitAny: accessing description property
+  const direct = (schema as any).description;
+  if (typeof direct === "string") return direct;
+  const def = getZodDef(schema);
+  return def?.description;
 }
 
 /**
@@ -97,7 +112,7 @@ function getShape(schema: z.ZodTypeAny): Record<string, z.ZodTypeAny> {
  * For effects: uses _def.schema.
  */
 function getInnerType(schema: z.ZodTypeAny): z.ZodTypeAny | null {
-  const def = getDef(schema);
+  const def = getZodDef(schema);
   // Zod 3.25 pipe (transform): _def.in
   if (def.in) return def.in;
   // Standard wrappers: innerType
@@ -134,7 +149,7 @@ export function introspectSchema(
 
   // Unwrap effects/pipe wrappers at the object level
   let baseSchema = schema;
-  let typeName = getTypeName(baseSchema);
+  let typeName = getZodTypeName(baseSchema);
   const seen = new Set<z.ZodTypeAny>();
   while (
     isTypeMatch(typeName, "ZodEffects", "effects", "pipe", "ZodPipeline") &&
@@ -144,11 +159,11 @@ export function introspectSchema(
     const next = getInnerType(baseSchema);
     if (!next || next === baseSchema) break;
     baseSchema = next;
-    typeName = getTypeName(baseSchema);
+    typeName = getZodTypeName(baseSchema);
   }
 
   if (isTypeMatch(typeName, "ZodObject", "object")) {
-    const shape = getShape(baseSchema);
+    const shape = getZodShape(baseSchema);
     for (const [key, fieldSchema] of Object.entries(shape)) {
       fields[key] = introspectField(fieldSchema);
       if (descriptions?.[key]) {
@@ -169,7 +184,7 @@ export function introspectField(schema: z.ZodTypeAny): IntrospectedField {
   let description = getDescription(schema);
 
   let inner = schema;
-  let typeName = getTypeName(inner);
+  let typeName = getZodTypeName(inner);
 
   // Unwrap Optional / Nullable / Default wrappers
   const seen = new Set<z.ZodTypeAny>();
@@ -189,12 +204,12 @@ export function introspectField(schema: z.ZodTypeAny): IntrospectedField {
       const next = getInnerType(inner);
       if (!next || next === inner) break;
       inner = next;
-      typeName = getTypeName(inner);
+      typeName = getZodTypeName(inner);
       continue;
     }
     if (isTypeMatch(typeName, "ZodDefault", "default")) {
       seen.add(inner);
-      const def = getDef(inner);
+      const def = getZodDef(inner);
       const defVal = def.defaultValue;
       defaultValue = typeof defVal === "function" ? defVal() : defVal;
       isRequired = false;
@@ -202,7 +217,7 @@ export function introspectField(schema: z.ZodTypeAny): IntrospectedField {
       const next = getInnerType(inner);
       if (!next || next === inner) break;
       inner = next;
-      typeName = getTypeName(inner);
+      typeName = getZodTypeName(inner);
       continue;
     }
     break;
@@ -217,7 +232,7 @@ export function introspectField(schema: z.ZodTypeAny): IntrospectedField {
       const next = getInnerType(inner);
       if (!next || next === inner) break;
       inner = next;
-      typeName = getTypeName(inner);
+      typeName = getZodTypeName(inner);
       continue;
     }
     break;
@@ -247,7 +262,7 @@ export function introspectField(schema: z.ZodTypeAny): IntrospectedField {
     return { ...baseField, type: "date" };
   }
   if (isTypeMatch(typeName, "ZodEnum", "enum")) {
-    const def = getDef(inner);
+    const def = getZodDef(inner);
     // Zod 3.25: _def.entries (object { key: value }) — use values for both enum/nativeEnum
     // Old Zod 3: _def.values (array of strings)
     const entries = def.entries;
@@ -277,7 +292,7 @@ export function introspectField(schema: z.ZodTypeAny): IntrospectedField {
     return { ...baseField, type: "enum" };
   }
   if (isTypeMatch(typeName, "ZodNativeEnum", "nativeEnum")) {
-    const def = getDef(inner);
+    const def = getZodDef(inner);
     const values = def.values || def.entries;
     if (values && typeof values === "object") {
       const enumValues = Object.values(values).filter(
@@ -292,7 +307,7 @@ export function introspectField(schema: z.ZodTypeAny): IntrospectedField {
     return { ...baseField, type: "enum" };
   }
   if (isTypeMatch(typeName, "ZodArray", "array")) {
-    const def = getDef(inner);
+    const def = getZodDef(inner);
     // Zod 3.25: _def.element; Old Zod 3: _def.type (the element schema)
     const elementType = def.element || def.type;
     if (elementType) {
@@ -306,14 +321,14 @@ export function introspectField(schema: z.ZodTypeAny): IntrospectedField {
   }
   if (isTypeMatch(typeName, "ZodObject", "object")) {
     const shape: Record<string, IntrospectedField> = {};
-    const objectShape = getShape(inner);
+    const objectShape = getZodShape(inner);
     for (const [key, val] of Object.entries(objectShape)) {
       shape[key] = introspectField(val);
     }
     return { ...baseField, type: "object", shape };
   }
   if (isTypeMatch(typeName, "ZodLiteral", "literal")) {
-    const def = getDef(inner);
+    const def = getZodDef(inner);
     const value = def.value ?? (def.values ? [...def.values][0] : undefined);
     return {
       ...baseField,
@@ -322,11 +337,11 @@ export function introspectField(schema: z.ZodTypeAny): IntrospectedField {
     };
   }
   if (isTypeMatch(typeName, "ZodUnion", "union")) {
-    const def = getDef(inner);
+    const def = getZodDef(inner);
     const options = def.options;
     if (Array.isArray(options)) {
       const allLiterals = options.every((opt: z.ZodTypeAny) => {
-        const tn = getTypeName(opt);
+        const tn = getZodTypeName(opt);
         return isTypeMatch(tn, "ZodLiteral", "literal");
       });
       if (allLiterals) {
@@ -334,7 +349,7 @@ export function introspectField(schema: z.ZodTypeAny): IntrospectedField {
           ...baseField,
           type: "enum",
           options: options.map((opt: z.ZodTypeAny) => {
-            const optDef = getDef(opt);
+            const optDef = getZodDef(opt);
             return (
               optDef.value ??
               (optDef.values ? [...optDef.values][0] : undefined)

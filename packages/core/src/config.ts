@@ -2,83 +2,17 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { buildAdapterList } from "./format-adapter.js";
+import { normalizeI18nConfig } from "./i18n.js";
+import { getZodShape, isZodObject } from "./introspect.js";
 import { resolveSourcePatterns } from "./sources.js";
 import type {
   CollectionConfig,
   ConfigModule,
   ContenzConfig,
-  I18nConfigShape,
   Relations,
   ResolvedConfig,
-  ResolvedI18nConfig,
   SchemaModule,
 } from "./types.js";
-
-/** Normalize i18n config: boolean or partial shape -> enabled flag and full resolved i18n when enabled */
-function normalizeI18n(raw: boolean | I18nConfigShape | undefined): {
-  enabled: boolean;
-  resolvedI18n: ResolvedI18nConfig;
-} {
-  const enabled =
-    typeof raw === "boolean" ? raw : (raw as I18nConfigShape)?.enabled;
-  if (!enabled) {
-    return {
-      enabled: false,
-      resolvedI18n: {
-        enabled: false,
-        defaultLocale: null,
-        locales: [],
-        fallbackMap: {},
-        coverageThreshold: null,
-        detectStale: false,
-        includeFallbackMetadata: false,
-        outputStrategy: "merged",
-      },
-    };
-  }
-  const shape = (
-    typeof raw === "object" && raw !== null ? raw : {}
-  ) as I18nConfigShape;
-  const defaultLocale =
-    typeof shape.defaultLocale === "string" ? shape.defaultLocale : null;
-  const locales = Array.isArray(shape.locales)
-    ? shape.locales.filter((l): l is string => typeof l === "string")
-    : [];
-  let fallbackMap: Record<string, string> = {};
-  if (shape.fallback) {
-    if (Array.isArray(shape.fallback)) {
-      const defaultFallback = shape.fallback[0];
-      if (typeof defaultFallback === "string") {
-        fallbackMap = { __default: defaultFallback };
-      }
-    } else if (typeof shape.fallback === "object") {
-      fallbackMap = { ...shape.fallback };
-    }
-  }
-  const coverageThreshold =
-    typeof shape.coverageThreshold === "number" &&
-    shape.coverageThreshold >= 0 &&
-    shape.coverageThreshold <= 1
-      ? shape.coverageThreshold
-      : null;
-  const detectStale = shape.detectStale === true;
-  const includeFallbackMetadata = shape.includeFallbackMetadata === true;
-  const outputStrategy = shape.outputStrategy === "split" ? "split" : "merged";
-
-  return {
-    enabled: true,
-    resolvedI18n: {
-      enabled: true,
-      defaultLocale,
-      locales,
-      fallbackMap,
-      coverageThreshold,
-      detectStale,
-      includeFallbackMetadata,
-      outputStrategy,
-    },
-  };
-}
 
 const BUILT_IN_DEFAULTS: Required<
   Omit<
@@ -197,14 +131,14 @@ export function resolveConfig(
 ): ResolvedConfig {
   const outputDir = project.outputDir ?? BUILT_IN_DEFAULTS.outputDir;
   const rawI18n = collection?.i18n ?? project.i18n ?? BUILT_IN_DEFAULTS.i18n;
-  const { enabled: i18nEnabled, resolvedI18n } = normalizeI18n(rawI18n);
+  const resolvedI18n = normalizeI18nConfig(rawI18n);
 
   return {
     sources: resolveSourcePatterns(project),
     outputDir,
     coveragePath: project.coveragePath ?? BUILT_IN_DEFAULTS.coveragePath,
     strict: project.strict ?? BUILT_IN_DEFAULTS.strict,
-    i18n: i18nEnabled,
+    i18n: resolvedI18n.enabled,
     resolvedI18n,
     adapters: buildAdapterList(project.adapters),
     extensions:
@@ -252,23 +186,16 @@ export function extractRelations(
   const relations: Relations = {};
   const schema = schemaModule.meta;
 
-  if (schema && "_def" in schema) {
-    // biome-ignore lint/suspicious/noExplicitAny: Zod internals — _def.shape is a function in old Zod, plain object in Zod 3.25
-    const def = (schema as any)._def;
-    const shape =
-      typeof def?.shape === "function"
-        ? def.shape()
-        : (def?.shape as Record<string, unknown>);
-    if (shape && typeof shape === "object") {
-      for (const fieldName of Object.keys(shape)) {
-        // Match pattern: related{Collection} → collection
-        const match = /^related([A-Z][a-zA-Z]*)$/.exec(fieldName);
-        if (match) {
-          const targetCollection = match[1].toLowerCase();
-          // Only add if target collection exists
-          if (availableCollections.includes(targetCollection)) {
-            relations[fieldName] = targetCollection;
-          }
+  if (schema && isZodObject(schema)) {
+    const shape = getZodShape(schema);
+    for (const fieldName of Object.keys(shape)) {
+      // Match pattern: related{Collection} → collection
+      const match = /^related([A-Z][a-zA-Z]*)$/.exec(fieldName);
+      if (match) {
+        const targetCollection = match[1].toLowerCase();
+        // Only add if target collection exists
+        if (availableCollections.includes(targetCollection)) {
+          relations[fieldName] = targetCollection;
         }
       }
     }

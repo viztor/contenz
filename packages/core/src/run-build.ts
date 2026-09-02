@@ -10,9 +10,15 @@ import pMap from "p-map";
 
 import { getContentType, getSchemaForType, resolveConfig } from "./config.js";
 import {
+  configInvalid,
+  contentFileSkipped,
+  contentParseFailed,
   type Diagnostic,
   type DiagnosticFormat,
+  discoveryError,
   formatDiagnosticsReport,
+  i18nDiagnostic,
+  metaValidationFailed,
   schemaExportMissing,
   schemaLoadFailed,
 } from "./diagnostics.js";
@@ -33,6 +39,7 @@ import {
   generateTypeFromZod,
   type I18nCollectionData,
 } from "./generator.js";
+import { isZodObject } from "./introspect.js";
 import {
   computeCollectionInputHash,
   computeConfigHash,
@@ -104,7 +111,7 @@ async function generateMultiTypeCollectionFile(
     const pascalName = typeName.charAt(0).toUpperCase() + typeName.slice(1);
     const metaTypeName = `${pascalName}Meta`;
     const schema = schemaModule[`${typeName}Meta`] || schemaModule[typeName];
-    if (schema && typeof schema === "object" && "_def" in schema) {
+    if (schema && isZodObject(schema as import("zod").ZodSchema)) {
       output += generateTypeFromZod(
         schema as import("zod").ZodTypeAny,
         metaTypeName
@@ -244,16 +251,12 @@ async function processOneCollection(
       effectiveConfig.slugPattern
     );
     if (!parsed) {
-      diagnostics.push({
-        code: "CONTENT_FILE_SKIPPED",
-        severity: "warning",
-        category: "content",
-        message:
-          "Skipped file because it does not match the expected naming pattern.",
-        source: "build",
-        collection: collectionName,
-        file,
-      });
+      diagnostics.push(
+        contentFileSkipped(
+          { source: "build", collection: collectionName },
+          file
+        )
+      );
       continue;
     }
     try {
@@ -271,15 +274,12 @@ async function processOneCollection(
             result.meta[key] = await computeFn(result);
           } catch (err) {
             parseErrors++;
-            diagnostics.push({
-              code: "COMPUTED_FIELD_FAILED",
-              severity: "error",
-              category: "content",
-              message: `Failed to compute field "${key}": ${err instanceof Error ? err.message : String(err)}`,
-              source: "build",
-              collection: collectionName,
-              file,
-            });
+            diagnostics.push(
+              contentParseFailed(
+                { source: "build", collection: collectionName, file },
+                `Failed to compute field "${key}": ${err instanceof Error ? err.message : String(err)}`
+              )
+            );
           }
         }
       }
@@ -294,16 +294,13 @@ async function processOneCollection(
       if (!validation.valid) {
         parseErrors++;
         for (const err of validation.errors) {
-          diagnostics.push({
-            code: "META_VALIDATION_FAILED",
-            severity: "error",
-            category: "validation",
-            message: err.message,
-            source: "build",
-            collection: collectionName,
-            file,
-            field: err.field,
-          });
+          diagnostics.push(
+            metaValidationFailed(
+              { source: "build", collection: collectionName, file },
+              err.message,
+              err.field
+            )
+          );
         }
         continue;
       }
@@ -350,15 +347,12 @@ async function processOneCollection(
       );
     } catch (error) {
       parseErrors++;
-      diagnostics.push({
-        code: "CONTENT_PARSE_FAILED",
-        severity: "error",
-        category: "content",
-        message: error instanceof Error ? error.message : String(error),
-        source: "build",
-        collection: collectionName,
-        file,
-      });
+      diagnostics.push(
+        contentParseFailed(
+          { source: "build", collection: collectionName, file },
+          error instanceof Error ? error.message : String(error)
+        )
+      );
     }
   }
 
@@ -402,9 +396,7 @@ async function processOneCollection(
     a.slug.localeCompare(b.slug)
   );
   const metaTypeName =
-    ((schemaModule as Record<string, unknown>).metaTypeName as
-      | string
-      | undefined) ??
+    schemaModule.metaTypeName ??
     `${collectionName.charAt(0).toUpperCase() + collectionName.slice(1)}Meta`;
 
   if (effectiveConfig.i18n) {
@@ -416,14 +408,14 @@ async function processOneCollection(
       ri?.coverageThreshold != null &&
       stats.coverage < ri.coverageThreshold
     ) {
-      diagnostics.push({
-        code: "I18N_COVERAGE_BELOW_THRESHOLD",
-        severity: effectiveConfig.strict ? "error" : "warning",
-        category: "i18n",
-        message: `Translation coverage ${Math.round(stats.coverage * 100)}% is below threshold ${Math.round(ri.coverageThreshold * 100)}%.`,
-        source: "build",
-        collection: collectionName,
-      });
+      diagnostics.push(
+        i18nDiagnostic(
+          "I18N_COVERAGE_BELOW_THRESHOLD",
+          effectiveConfig.strict ? "error" : "warning",
+          { source: "build", collection: collectionName },
+          `Translation coverage ${Math.round(stats.coverage * 100)}% is below threshold ${Math.round(ri.coverageThreshold * 100)}%.`
+        )
+      );
     }
 
     if (ri?.detectStale && ri.defaultLocale) {
@@ -444,15 +436,18 @@ async function processOneCollection(
           try {
             const localeMtime = (await fs.stat(localePath)).mtimeMs;
             if (localeMtime < sourceMtime) {
-              diagnostics.push({
-                code: "I18N_STALE_TRANSLATION",
-                severity: effectiveConfig.strict ? "error" : "warning",
-                category: "i18n",
-                message: `Translation ${entry.file} is older than source ${sourceEntry.file}.`,
-                source: "build",
-                collection: collectionName,
-                file: entry.file,
-              });
+              diagnostics.push(
+                i18nDiagnostic(
+                  "I18N_STALE_TRANSLATION",
+                  effectiveConfig.strict ? "error" : "warning",
+                  {
+                    source: "build",
+                    collection: collectionName,
+                    file: entry.file,
+                  },
+                  `Translation ${entry.file} is older than source ${sourceEntry.file}.`
+                )
+              );
             }
           } catch {
             // ignore
@@ -465,14 +460,14 @@ async function processOneCollection(
     if (ri?.locales.length) {
       for (const detectedLocale of detectedLocales) {
         if (!ri.locales.includes(detectedLocale)) {
-          diagnostics.push({
-            code: "I18N_UNDECLARED_LOCALE",
-            severity: "warning",
-            category: "i18n",
-            message: `Detected locale "${detectedLocale}" is not in the declared locales list [${ri.locales.join(", ")}].`,
-            source: "build",
-            collection: collectionName,
-          });
+          diagnostics.push(
+            i18nDiagnostic(
+              "I18N_UNDECLARED_LOCALE",
+              "warning",
+              { source: "build", collection: collectionName },
+              `Detected locale "${detectedLocale}" is not in the declared locales list [${ri.locales.join(", ")}].`
+            )
+          );
         }
       }
     }
@@ -488,7 +483,7 @@ async function processOneCollection(
         metaTypeName,
         locales,
         defaultSchema,
-        ri?.includeFallbackMetadata ? ri : undefined
+        ri
       );
     }
 
@@ -552,13 +547,12 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
       dir: options.dir,
     });
   } catch (error) {
-    diagnostics.push({
-      code: "CONFIG_INVALID",
-      severity: "error",
-      category: "config",
-      message: error instanceof Error ? error.message : String(error),
-      source: "build",
-    });
+    diagnostics.push(
+      configInvalid(
+        "build",
+        error instanceof Error ? error.message : String(error)
+      )
+    );
     return {
       success: false,
       errors: 1,
@@ -583,13 +577,7 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
 
   if (workspace.discoveryErrors.length > 0) {
     for (const error of workspace.discoveryErrors) {
-      diagnostics.push({
-        code: "DISCOVERY_DUPLICATE_COLLECTION",
-        severity: "error",
-        category: "discovery",
-        message: error,
-        source: "build",
-      });
+      diagnostics.push(discoveryError("build", error));
     }
     return {
       success: false,
@@ -735,7 +723,7 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
   ];
 
   // Determine if any collection uses split output strategy
-  const useSplitOutput = baseConfig.resolvedI18n?.outputStrategy === "split";
+  const useSplitOutput = baseConfig.resolvedI18n.outputStrategy === "split";
 
   if (!dryRun && useSplitOutput) {
     // Collect all split-eligible collections
@@ -767,9 +755,11 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
     }
 
     const sortedLocales = [...allDetectedLocales].sort();
-    const fallbackMap = baseConfig.resolvedI18n?.fallbackMap ?? {};
-    const includeFallbackMeta =
-      baseConfig.resolvedI18n?.includeFallbackMetadata === true;
+    const i18nConfig = {
+      fallbackChains: baseConfig.resolvedI18n.fallbackChains,
+      defaultFallbackChain: baseConfig.resolvedI18n.defaultFallbackChain,
+    };
+    const includeFallbackMeta = baseConfig.resolvedI18n.includeFallbackMetadata;
 
     // Generate shared types
     await generateSharedTypesFile(
@@ -787,7 +777,7 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
           col.meta.name,
           col.items,
           col.meta.entryTypeName,
-          fallbackMap,
+          i18nConfig,
           includeFallbackMeta
         );
         generated.push(`${locale}/${col.meta.name}.ts`);
@@ -805,7 +795,7 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
       outputDir,
       splitCollections.map((c) => c.meta),
       sortedLocales,
-      fallbackMap
+      i18nConfig
     );
     generated.push("_locale.ts");
 

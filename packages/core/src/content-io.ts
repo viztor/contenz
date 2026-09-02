@@ -34,7 +34,7 @@ function findContentFile(
     if (col.config.i18n) {
       if (
         (locale && parsed.locale === locale) ||
-        (!locale && parsed.locale === col.config.resolvedI18n?.defaultLocale)
+        (!locale && parsed.locale === col.config.resolvedI18n.defaultLocale)
       ) {
         return {
           collectionName: col.name,
@@ -126,8 +126,7 @@ export async function writeContent(
   const ext = options.ext ?? col.config.extensions[0] ?? "mdx";
   let fileName = `${options.slug}.${ext}`;
   if (col.config.i18n) {
-    const localeToUse =
-      options.locale ?? col.config.resolvedI18n?.defaultLocale;
+    const localeToUse = options.locale ?? col.config.resolvedI18n.defaultLocale;
     if (!localeToUse) {
       throw new Error("Locale is required when i18n is enabled");
     }

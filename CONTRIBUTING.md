@@ -33,15 +33,15 @@ pnpm run ci
 
 ## Workspace commands
 
-| Command | Purpose |
-| --- | --- |
-| `pnpm run build` | Build all packages with Turbo |
-| `pnpm test` | Run package tests (core, cli, adapter-mdx, e2e) |
-| `pnpm run typecheck` | Typecheck packages that declare `typecheck` |
-| `pnpm run lint` | Root oxlint (type-aware) |
-| `pnpm run format` / `format:check` | oxfmt write / check |
-| `pnpm run knip` | Dead code / unused deps |
-| `pnpm run test:coverage` | Coverage (core floor enforced) |
+| Command                                | Purpose                                                      |
+| -------------------------------------- | ------------------------------------------------------------ |
+| `pnpm run build`                       | Build all packages with Turbo                                |
+| `pnpm test`                            | Run package tests (core, cli, adapter-mdx, e2e)              |
+| `pnpm run typecheck`                   | Typecheck packages that declare `typecheck`                  |
+| `pnpm run lint`                        | Root oxlint (type-aware)                                     |
+| `pnpm run format` / `format:check`     | oxfmt write / check                                          |
+| `pnpm run knip`                        | Dead code / unused deps                                      |
+| `pnpm run test:coverage`               | Coverage (core floor enforced)                               |
 | `pnpm run publish:all` / `publish:dry` | Release helpers (`catalog:` ranges are rewritten on publish) |
 
 Package-scoped:
@@ -68,12 +68,12 @@ Generated fixture output (`generated/`, `.contenz/`, coverage markdown) is gitig
 
 ## Packages
 
-| Package | Role |
-| --- | --- |
-| `@contenz/core` | Schema helpers, pipeline, programmatic API; coverage floor in Vitest |
-| `@contenz/cli` | `contenz` binary and command wiring |
-| `@contenz/adapter-mdx` | MD/MDX format adapter |
-| `@contenz/e2e` | Fixture-based CLI verification (private) |
+| Package                | Role                                                                 |
+| ---------------------- | -------------------------------------------------------------------- |
+| `@contenz/core`        | Schema helpers, pipeline, programmatic API; coverage floor in Vitest |
+| `@contenz/cli`         | `contenz` binary and command wiring                                  |
+| `@contenz/adapter-mdx` | MD/MDX format adapter                                                |
+| `@contenz/e2e`         | Fixture-based CLI verification (private)                             |
 
 Internal monorepo deps use `workspace:*`. Shared third-party versions live in the `catalog:` map in `pnpm-workspace.yaml` and are referenced as `"catalog:"` from each package.json. `pnpm publish` replaces those with the catalog ranges in the tarball.
 

@@ -1,3 +1,10 @@
+---
+tags:
+  - docs
+  - contenz
+status: note
+---
+
 # Contenz Codebase Reference
 
 > **Purpose**: Developer reference for maintainers and AI agents working on the contenz monorepo. Contains architecture overview, module map, known issues, and actionable cleanup items.
@@ -52,10 +59,10 @@ Internal monorepo deps use `workspace:*`. Engines: **Node.js LTS ≥ 24**.
 
 The core package has **two export entry points**:
 
-| Entry | Path | Purpose |
-| --- | --- | --- |
-| `@contenz/core` | `src/index.ts` | User-facing API: `defineCollection`, types, workspace, content I/O |
-| `@contenz/core/api` | `src/api.ts` | Full programmatic API: all pipelines, introspection, search, etc. |
+| Entry               | Path           | Purpose                                                            |
+| ------------------- | -------------- | ------------------------------------------------------------------ |
+| `@contenz/core`     | `src/index.ts` | User-facing API: `defineCollection`, types, workspace, content I/O |
+| `@contenz/core/api` | `src/api.ts`   | Full programmatic API: all pipelines, introspection, search, etc.  |
 
 ### Source Files
 
@@ -134,21 +141,21 @@ All pipelines use `createWorkspace()` as the single config-loading path.
 
 Built with **Stricli** (`app.ts` route map + `buildCommand` per command). Entry: `cli.ts` → `run(app, argv, context)`.
 
-| Command | Source | Core Function |
-| --- | --- | --- |
-| `init` | `commands/init.ts` | Scaffolds project (standalone) |
-| `build` | `commands/build.ts` | `runBuild()` |
-| `lint` | `commands/lint.ts` | `runLint()` |
-| `status` | `commands/status.ts` | `runStatus()` |
-| `watch` | `commands/watch.ts` | `runBuild()` in loop |
-| `view` | `commands/view.ts` | `runView()` |
-| `list` | `commands/list.ts` | `runList()` |
-| `create` | `commands/create.ts` | `runCreate()` |
-| `update` | `commands/update.ts` | `runUpdate()` |
-| `search` | `commands/search.ts` | `runSearch()` |
-| `schema` | `commands/schema.ts` | `runSchema()` |
-| `skill` | `commands/skill.ts` | `runSkill()` |
-| `install` / `uninstall` | (auto-complete) | bash completion hooks (hidden) |
+| Command                 | Source               | Core Function                  |
+| ----------------------- | -------------------- | ------------------------------ |
+| `init`                  | `commands/init.ts`   | Scaffolds project (standalone) |
+| `build`                 | `commands/build.ts`  | `runBuild()`                   |
+| `lint`                  | `commands/lint.ts`   | `runLint()`                    |
+| `status`                | `commands/status.ts` | `runStatus()`                  |
+| `watch`                 | `commands/watch.ts`  | `runBuild()` in loop           |
+| `view`                  | `commands/view.ts`   | `runView()`                    |
+| `list`                  | `commands/list.ts`   | `runList()`                    |
+| `create`                | `commands/create.ts` | `runCreate()`                  |
+| `update`                | `commands/update.ts` | `runUpdate()`                  |
+| `search`                | `commands/search.ts` | `runSearch()`                  |
+| `schema`                | `commands/schema.ts` | `runSchema()`                  |
+| `skill`                 | `commands/skill.ts`  | `runSkill()`                   |
+| `install` / `uninstall` | (auto-complete)      | bash completion hooks (hidden) |
 
 ### CLI Shared Utilities
 

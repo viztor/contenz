@@ -1,23 +1,30 @@
+---
+tags:
+  - docs
+  - contenz
+status: note
+---
+
 # CLI reference
 
 The `contenz` CLI is provided by `@contenz/cli`, built with [Stricli](https://bloomberg.github.io/stricli/) for type-safe flags, help, version, and shell completion. All commands accept `--cwd` to run against a different project root.
 
 ## Commands overview
 
-| Command | Description |
-| --- | --- |
-| `contenz init` | Scaffold Contenz into the current (or `--cwd`) project |
-| `contenz lint` | Validate all content and optionally write a coverage report |
-| `contenz build` | Generate typed content files (incremental when possible) |
-| `contenz watch` | Watch content and config, run build on change |
+| Command          | Description                                                              |
+| ---------------- | ------------------------------------------------------------------------ |
+| `contenz init`   | Scaffold Contenz into the current (or `--cwd`) project                   |
+| `contenz lint`   | Validate all content and optionally write a coverage report              |
+| `contenz build`  | Generate typed content files (incremental when possible)                 |
+| `contenz watch`  | Watch content and config, run build on change                            |
 | `contenz status` | Report whether build is up to date or which collections would be rebuilt |
-| `contenz view` | View a single content item by collection and slug |
-| `contenz list` | List collections or items within a collection |
-| `contenz create` | Create a new content item |
-| `contenz update` | Update fields on an existing content item |
-| `contenz search` | Search content items by slug or field values |
-| `contenz schema` | Introspect the schema of a collection |
-| `contenz skill` | Generate an AI agent SKILL.md for the project content model |
+| `contenz view`   | View a single content item by collection and slug                        |
+| `contenz list`   | List collections or items within a collection                            |
+| `contenz create` | Create a new content item                                                |
+| `contenz update` | Update fields on an existing content item                                |
+| `contenz search` | Search content items by slug or field values                             |
+| `contenz schema` | Introspect the schema of a collection                                    |
+| `contenz skill`  | Generate an AI agent SKILL.md for the project content model              |
 
 ## Global behavior
 
@@ -54,13 +61,13 @@ contenz init --i18n
 contenz init --collection blog --dir src/content
 ```
 
-| Option | Default | Description |
-| --- | --- | --- |
-| `--cwd` | `.` | Project root where `contenz.config.ts` and content will live. |
-| `--dir` | `content` | Collection container directory to create. |
-| `--collection` | `pages` | Starter collection name. |
-| `--i18n` | `false` | Scaffold an i18n-ready config and sample locale-based content. |
-| `--force` | `false` | Overwrite scaffold files if they already exist. |
+| Option         | Default   | Description                                                    |
+| -------------- | --------- | -------------------------------------------------------------- |
+| `--cwd`        | `.`       | Project root where `contenz.config.ts` and content will live.  |
+| `--dir`        | `content` | Collection container directory to create.                      |
+| `--collection` | `pages`   | Starter collection name.                                       |
+| `--i18n`       | `false`   | Scaffold an i18n-ready config and sample locale-based content. |
+| `--force`      | `false`   | Overwrite scaffold files if they already exist.                |
 
 After running `init`, install `@contenz/core` and `zod` in the target project if not already present, then run `contenz lint` or `contenz build`.
 
@@ -78,14 +85,14 @@ contenz lint --format json
 contenz lint --cwd ./content-repo
 ```
 
-| Option | Default | Description |
-| --- | --- | --- |
-| `--cwd` | `.` | Project root. |
-| `--collection` | _(all)_ | Limit validation to one collection name. |
-| `--coverage` | `false` | Write the coverage report to the path in config (`coveragePath`). |
-| `--translations` | `false` | Check translation completeness against the declared `i18n.locales` list and emit missing-translation diagnostics. |
-| `--format` | `pretty` | Output format: `pretty`, `json`, or `github`. |
-| `--dry-run` | `false` | Run validation without writing the coverage file. |
+| Option           | Default  | Description                                                                                                       |
+| ---------------- | -------- | ----------------------------------------------------------------------------------------------------------------- |
+| `--cwd`          | `.`      | Project root.                                                                                                     |
+| `--collection`   | _(all)_  | Limit validation to one collection name.                                                                          |
+| `--coverage`     | `false`  | Write the coverage report to the path in config (`coveragePath`).                                                 |
+| `--translations` | `false`  | Check translation completeness against the declared `i18n.locales` list and emit missing-translation diagnostics. |
+| `--format`       | `pretty` | Output format: `pretty`, `json`, or `github`.                                                                     |
+| `--dry-run`      | `false`  | Run validation without writing the coverage file.                                                                 |
 
 - **pretty**: Human-readable terminal output.
 - **json**: Machine-readable diagnostics for automation.
@@ -138,7 +145,7 @@ contenz build --cwd ./content-repo
 | `--dry-run` | `false`  | Report what would be built without writing files. |
 | `--format`  | `pretty` | Output format: `pretty`, `json`, or `github`.     |
 
-Output is written to the `outputDir` from config (default `generated/content/`). Each collection gets a TypeScript file (e.g. `faq.ts`). See [Content model – Generated output](./CONTENT-MODEL.md#generated-output-shape).
+Output is written to the `outputDir` from config (default `generated/content/`). Each collection gets a TypeScript file (e.g. `faq.ts`). See [[CONTENT-MODEL#generated-output-shape|Content model – Generated output]].
 
 ---
 
@@ -227,11 +234,11 @@ contenz list faq
 contenz list faq --format json
 ```
 
-| Option | Default | Description |
-| --- | --- | --- |
+| Option         | Default      | Description                                                 |
+| -------------- | ------------ | ----------------------------------------------------------- |
 | `<collection>` | _(optional)_ | Collection name (positional). Omit to list all collections. |
-| `--cwd` | `.` | Project root. |
-| `--format` | `json` | Output format: `json` or `pretty`. |
+| `--cwd`        | `.`          | Project root.                                               |
+| `--format`     | `json`       | Output format: `json` or `pretty`.                          |
 
 **JSON output — list collections**:
 
@@ -278,15 +285,15 @@ contenz create faq moq --locale zh --set question="最低起订量是多少？" 
 contenz create terms glossary-item --type term --set term="API"
 ```
 
-| Option | Default | Description |
-| --- | --- | --- |
-| `<collection>` | _(required)_ | Collection name (positional). |
-| `<slug>` | _(required)_ | Content slug (positional). |
-| `--set` | — | Set field values (`key=value`). Repeatable. Values are parsed as JSON when possible, otherwise as strings. |
-| `--locale` | _(default locale)_ | Locale for the content item (required when i18n is enabled). |
-| `--type` | — | Content type (for multi-type collections). |
-| `--cwd` | `.` | Project root. |
-| `--format` | `json` | Output format: `json` or `pretty`. |
+| Option         | Default            | Description                                                                                                |
+| -------------- | ------------------ | ---------------------------------------------------------------------------------------------------------- |
+| `<collection>` | _(required)_       | Collection name (positional).                                                                              |
+| `<slug>`       | _(required)_       | Content slug (positional).                                                                                 |
+| `--set`        | —                  | Set field values (`key=value`). Repeatable. Values are parsed as JSON when possible, otherwise as strings. |
+| `--locale`     | _(default locale)_ | Locale for the content item (required when i18n is enabled).                                               |
+| `--type`       | —                  | Content type (for multi-type collections).                                                                 |
+| `--cwd`        | `.`                | Project root.                                                                                              |
+| `--format`     | `json`             | Output format: `json` or `pretty`.                                                                         |
 
 Schema defaults are automatically applied. If required fields are missing or validation fails, the command exits with `1` and includes diagnostics.
 
@@ -317,15 +324,15 @@ contenz update faq hello --unset deprecated
 contenz update faq hello --set question="New" --unset oldField
 ```
 
-| Option | Default | Description |
-| --- | --- | --- |
-| `<collection>` | _(required)_ | Collection name (positional). |
-| `<slug>` | _(required)_ | Content slug (positional). |
-| `--set` | — | Set field values (`key=value`). Repeatable. |
-| `--unset` | — | Remove optional fields by name. Repeatable. |
-| `--locale` | _(default locale)_ | Locale to update. |
-| `--cwd` | `.` | Project root. |
-| `--format` | `json` | Output format: `json` or `pretty`. |
+| Option         | Default            | Description                                 |
+| -------------- | ------------------ | ------------------------------------------- |
+| `<collection>` | _(required)_       | Collection name (positional).               |
+| `<slug>`       | _(required)_       | Content slug (positional).                  |
+| `--set`        | —                  | Set field values (`key=value`). Repeatable. |
+| `--unset`      | —                  | Remove optional fields by name. Repeatable. |
+| `--locale`     | _(default locale)_ | Locale to update.                           |
+| `--cwd`        | `.`                | Project root.                               |
+| `--format`     | `json`             | Output format: `json` or `pretty`.          |
 
 The merged metadata is validated against the schema before writing. At least one `--set` or `--unset` is required.
 
@@ -341,15 +348,15 @@ contenz search faq --field category=products
 contenz search faq moq --locale en --limit 10
 ```
 
-| Option | Default | Description |
-| --- | --- | --- |
-| `<collection>` | _(required)_ | Collection name (positional). |
-| `<query>` | _(optional)_ | Substring to match against slugs (positional). |
-| `--field` | — | Filter by field value (`key=value`). Repeatable. |
-| `--locale` | — | Filter by locale (for i18n collections). |
-| `--limit` | `50` | Maximum number of results. |
-| `--cwd` | `.` | Project root. |
-| `--format` | `json` | Output format: `json` or `pretty`. |
+| Option         | Default      | Description                                      |
+| -------------- | ------------ | ------------------------------------------------ |
+| `<collection>` | _(required)_ | Collection name (positional).                    |
+| `<query>`      | _(optional)_ | Substring to match against slugs (positional).   |
+| `--field`      | —            | Filter by field value (`key=value`). Repeatable. |
+| `--locale`     | —            | Filter by locale (for i18n collections).         |
+| `--limit`      | `50`         | Maximum number of results.                       |
+| `--cwd`        | `.`          | Project root.                                    |
+| `--format`     | `json`       | Output format: `json` or `pretty`.               |
 
 **JSON output**:
 
@@ -429,10 +436,10 @@ contenz skill --cwd ./content-repo
 contenz skill --format json
 ```
 
-| Option | Default | Description |
-| --- | --- | --- |
-| `--cwd` | `.` | Project root. |
-| `--format` | `md` | Output format: `md` (prints SKILL.md content to stdout) or `json` (enveloped `RunSkillResult`). |
+| Option     | Default | Description                                                                                     |
+| ---------- | ------- | ----------------------------------------------------------------------------------------------- |
+| `--cwd`    | `.`     | Project root.                                                                                   |
+| `--format` | `md`    | Output format: `md` (prints SKILL.md content to stdout) or `json` (enveloped `RunSkillResult`). |
 
 With `--format md` (default), the generated markdown is written to stdout on success. Redirect it to a file for use in agent tooling:
 

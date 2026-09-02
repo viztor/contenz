@@ -198,6 +198,93 @@ export function formatDiagnosticsReport(input: DiagnosticReportInput): string {
 
 // ── Diagnostic factories (DRY helpers for pipelines) ───────────────────────
 
+interface DiagnosticBase {
+  source: string;
+  collection?: string;
+  file?: string;
+  field?: string;
+  slug?: string;
+  locale?: string;
+}
+
+export function configInvalid(source: string, message: string): Diagnostic {
+  return {
+    code: "CONFIG_INVALID",
+    severity: "error",
+    category: "config",
+    message,
+    source,
+  };
+}
+
+export function discoveryError(source: string, message: string): Diagnostic {
+  return {
+    code: "DISCOVERY_DUPLICATE_COLLECTION",
+    severity: "error",
+    category: "discovery",
+    message,
+    source,
+  };
+}
+
+export function contentParseFailed(
+  base: DiagnosticBase,
+  message: string
+): Diagnostic {
+  return {
+    code: "CONTENT_PARSE_FAILED",
+    severity: "error",
+    category: "content",
+    message,
+    ...base,
+  };
+}
+
+export function contentFileSkipped(
+  base: DiagnosticBase,
+  file: string
+): Diagnostic {
+  return {
+    code: "CONTENT_FILE_SKIPPED",
+    severity: "warning",
+    category: "content",
+    message:
+      "Skipped file because it does not match the expected naming pattern.",
+    file,
+    ...base,
+  };
+}
+
+export function metaValidationFailed(
+  base: DiagnosticBase,
+  message: string,
+  field?: string
+): Diagnostic {
+  return {
+    code: "META_VALIDATION_FAILED",
+    severity: "error",
+    category: "validation",
+    message,
+    field,
+    ...base,
+  };
+}
+
+export function i18nDiagnostic(
+  code: string,
+  severity: DiagnosticSeverity,
+  base: DiagnosticBase,
+  message: string
+): Diagnostic {
+  return {
+    code,
+    severity,
+    category: "i18n",
+    message,
+    ...base,
+  };
+}
+
 export function schemaLoadFailed(
   source: string,
   collection: string

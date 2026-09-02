@@ -66,11 +66,13 @@ export interface I18nConfigShape {
   /** Explicit list of locales; if omitted, locales are inferred from filenames */
   locales?: string[];
   /**
-   * Locale fallback: locale -> fallback locale(s).
-   * - Record: { "zh-Hant": "zh", "zh": "en" }
-   * - Array: ["en"] means all locales fall back to "en"
+   * Locale fallback chains: locale → ordered fallback locales.
+   * - Array value: ["zh", "en"] — try zh, then en
+   * - String value: "en" — shorthand for a single-step chain
+   * - Top-level array: ["en"] — every locale falls back to en
+   * Chains are walked in order until a translation is found (max depth 5).
    */
-  fallback?: Record<string, string> | string[];
+  fallback?: Record<string, string | string[]> | string[];
   /** Minimum coverage ratio (0–1) before warning/error; e.g. 0.8 = 80% */
   coverageThreshold?: number;
   /** Emit diagnostics when a translation file is older than the defaultLocale source */
@@ -184,14 +186,19 @@ export interface CollectionConfig {
 
 /**
  * Resolved i18n options used at build/lint time.
+ * Always present on `ResolvedConfig` — check `enabled` before using.
  */
 export interface ResolvedI18nConfig {
   enabled: boolean;
   defaultLocale: string | null;
   /** Ordered locale list (default first when present) */
   locales: string[];
-  /** Map: locale -> fallback locale (single step) */
+  /** Legacy single-step map: locale -> first fallback locale; `"__default"` for the global fallback */
   fallbackMap: Record<string, string>;
+  /** Full fallback chains: locale -> ordered fallback locales */
+  fallbackChains: Record<string, string[]>;
+  /** Global fallback chain applied to locales without a specific chain */
+  defaultFallbackChain: string[];
   coverageThreshold: number | null;
   detectStale: boolean;
   includeFallbackMetadata: boolean;
@@ -209,8 +216,8 @@ export interface ResolvedConfig {
   strict: boolean;
   /** When true, i18n is enabled (backward-compatible). Use resolvedI18n for full options. */
   i18n: boolean;
-  /** Resolved i18n options (only meaningful when i18n is true) */
-  resolvedI18n?: ResolvedI18nConfig;
+  /** Resolved i18n options; always present — check `enabled` */
+  resolvedI18n: ResolvedI18nConfig;
   adapters: FormatAdapter[];
   extensions: string[];
   ignore: string[];
@@ -236,6 +243,11 @@ export interface SchemaModule {
   >;
   /** Content types with filename patterns; when present, overrides config.types when config does not set types */
   types?: ContentType[];
+  /**
+   * Override the generated meta interface name (default: PascalCase collection name + "Meta").
+   * Set via `defineCollection({ schema, metaTypeName: "Post" })`.
+   */
+  metaTypeName?: string;
 }
 
 /**

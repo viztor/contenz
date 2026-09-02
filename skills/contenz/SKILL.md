@@ -9,15 +9,15 @@ Contenz is a schema-first, AI-native content management CLI. Content lives in th
 
 This skill teaches you how to operate on a Contenz project. For exhaustive option tables and edge cases, read the built-in docs directly — they are the source of truth:
 
-| Doc | Path | What it covers |
-| --- | --- | --- |
-| CLI reference | `docs/CLI.md` | Every command, every flag, output shapes |
-| Usage guide | `docs/USAGE.md` | End-to-end workflows with examples |
-| Configuration | `docs/CONFIGURATION.md` | Project config, collection config, schemas, adapters |
-| Content model | `docs/CONTENT-MODEL.md` | Filenames, i18n, output shape, relations |
-| API reference | `docs/API.md` | Programmatic `@contenz/core/api` exports |
-| Architecture | `docs/ARCHITECTURE.md` | Package layout, data flow, invariants |
-| Translation pipeline | `skills/contenz/references/translation-pipeline.md` | Batch translation, CI, staleness, programmatic API |
+| Doc                  | Path                                                | What it covers                                       |
+| -------------------- | --------------------------------------------------- | ---------------------------------------------------- |
+| CLI reference        | `docs/CLI.md`                                       | Every command, every flag, output shapes             |
+| Usage guide          | `docs/USAGE.md`                                     | End-to-end workflows with examples                   |
+| Configuration        | `docs/CONFIGURATION.md`                             | Project config, collection config, schemas, adapters |
+| Content model        | `docs/CONTENT-MODEL.md`                             | Filenames, i18n, output shape, relations             |
+| API reference        | `docs/API.md`                                       | Programmatic `@contenz/core/api` exports             |
+| Architecture         | `docs/ARCHITECTURE.md`                              | Package layout, data flow, invariants                |
+| Translation pipeline | `skills/contenz/references/translation-pipeline.md` | Batch translation, CI, staleness, programmatic API   |
 
 > Read the relevant doc file with `view_file` before doing anything non-trivial. These docs are short and well-structured — a 30-second read beats guessing.
 

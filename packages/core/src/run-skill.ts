@@ -67,7 +67,7 @@ Below is the introspected content model for this workspace.
       md += `- **Directory**: \`${collection.collectionPath}\`\n`;
 
       if (collection.config.i18n) {
-        md += `- **i18n**: Enabled (Default Locale: \`${collection.config.resolvedI18n?.defaultLocale}\`)\n`;
+        md += `- **i18n**: Enabled (Default Locale: \`${collection.config.resolvedI18n.defaultLocale}\`)\n`;
       } else {
         md += `- **i18n**: Disabled\n`;
       }

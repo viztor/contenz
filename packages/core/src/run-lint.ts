@@ -14,9 +14,15 @@ import {
   getSchemaForType,
 } from "./config.js";
 import {
+  configInvalid,
+  contentFileSkipped,
+  contentParseFailed,
   type Diagnostic,
   type DiagnosticFormat,
+  discoveryError,
   formatDiagnosticsReport,
+  i18nDiagnostic,
+  metaValidationFailed,
   schemaExportMissing,
   schemaLoadFailed,
 } from "./diagnostics.js";
@@ -166,16 +172,9 @@ async function firstPassOneCollection(
       effectiveConfig.slugPattern
     );
     if (!parsed) {
-      diagnostics.push({
-        code: "CONTENT_FILE_SKIPPED",
-        severity: "warning",
-        category: "content",
-        message:
-          "Skipped file because it does not match the expected naming pattern.",
-        source: "lint",
-        collection: collectionName,
-        file,
-      });
+      diagnostics.push(
+        contentFileSkipped({ source: "lint", collection: collectionName }, file)
+      );
       continue;
     }
     slugs.add(parsed.slug);
@@ -237,19 +236,17 @@ async function firstPassOneCollection(
 
   for (const result of validationResults) {
     for (const error of result.errors) {
-      diagnostics.push({
-        code:
-          error.field === "parse"
-            ? "CONTENT_PARSE_FAILED"
-            : "META_VALIDATION_FAILED",
-        severity: "error",
-        category: error.field === "parse" ? "content" : "validation",
-        message: error.message,
+      const base = {
         source: "lint",
         collection: collectionName,
         file: error.file,
         field: error.field,
-      });
+      };
+      diagnostics.push(
+        error.field === "parse"
+          ? contentParseFailed(base, error.message)
+          : metaValidationFailed(base, error.message, error.field)
+      );
     }
     for (const warning of result.warnings) {
       diagnostics.push({
@@ -273,11 +270,11 @@ async function firstPassOneCollection(
   // Opt-in via `translations: true` (CLI: --translations) so default lint
   // output stays clean. Requires predefined supported locales in config
   // (i18n: { locales: [...] }); inferred-locale projects are never checked.
-  const declaredLocales = config.resolvedI18n?.enabled
+  const declaredLocales = config.resolvedI18n.enabled
     ? config.resolvedI18n.locales
     : [];
   if (checkTranslations && effectiveConfig.i18n && declaredLocales.length > 0) {
-    const defaultLocale = config.resolvedI18n?.defaultLocale ?? null;
+    const defaultLocale = config.resolvedI18n.defaultLocale ?? null;
     const severity = effectiveConfig.strict
       ? ("error" as const)
       : ("warning" as const);
@@ -293,33 +290,36 @@ async function firstPassOneCollection(
         (defaultLocale ? present.get(defaultLocale) : undefined) ??
         present.values().next().value;
       for (const locale of missing) {
-        diagnostics.push({
-          code: "I18N_MISSING_TRANSLATION",
-          severity,
-          category: "i18n",
-          message: `"${slug}" is missing locale "${locale}"${sourceFile ? ` (translate from ${sourceFile})` : ""}.`,
-          source: "lint",
-          collection: collectionName,
-          file: sourceFile,
-          slug,
-          locale,
-        });
+        diagnostics.push(
+          i18nDiagnostic(
+            "I18N_MISSING_TRANSLATION",
+            severity,
+            {
+              source: "lint",
+              collection: collectionName,
+              file: sourceFile,
+              slug,
+              locale,
+            },
+            `"${slug}" is missing locale "${locale}"${sourceFile ? ` (translate from ${sourceFile})` : ""}.`
+          )
+        );
         if (effectiveConfig.strict) errorCount += 1;
       }
     }
 
-    const threshold = config.resolvedI18n?.coverageThreshold ?? null;
+    const threshold = config.resolvedI18n.coverageThreshold;
     if (threshold !== null && slugLocales.size > 0) {
       const coverage = completeSlugs / slugLocales.size;
       if (coverage < threshold) {
-        diagnostics.push({
-          code: "I18N_COVERAGE_BELOW_THRESHOLD",
-          severity,
-          category: "i18n",
-          message: `Translation coverage ${Math.round(coverage * 100)}% is below threshold ${Math.round(threshold * 100)}%.`,
-          source: "lint",
-          collection: collectionName,
-        });
+        diagnostics.push(
+          i18nDiagnostic(
+            "I18N_COVERAGE_BELOW_THRESHOLD",
+            severity,
+            { source: "lint", collection: collectionName },
+            `Translation coverage ${Math.round(coverage * 100)}% is below threshold ${Math.round(threshold * 100)}%.`
+          )
+        );
         if (effectiveConfig.strict) errorCount += 1;
       }
     }
@@ -549,13 +549,12 @@ export async function runLint(options: LintOptions): Promise<LintResult> {
       collection: options.collection,
     });
   } catch (error) {
-    diagnostics.push({
-      code: "CONFIG_INVALID",
-      severity: "error",
-      category: "config",
-      message: error instanceof Error ? error.message : String(error),
-      source: "lint",
-    });
+    diagnostics.push(
+      configInvalid(
+        "lint",
+        error instanceof Error ? error.message : String(error)
+      )
+    );
     return {
       success: false,
       errors: 1,
@@ -573,13 +572,7 @@ export async function runLint(options: LintOptions): Promise<LintResult> {
 
   if (workspace.discoveryErrors.length > 0) {
     for (const error of workspace.discoveryErrors) {
-      diagnostics.push({
-        code: "DISCOVERY_DUPLICATE_COLLECTION",
-        severity: "error",
-        category: "discovery",
-        message: error,
-        source: "lint",
-      });
+      diagnostics.push(discoveryError("lint", error));
     }
     return {
       success: false,

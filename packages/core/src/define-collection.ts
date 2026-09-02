@@ -2,6 +2,12 @@ import type { ZodSchema } from "zod";
 
 import type { ContentType, Relations, SchemaModule } from "./types.js";
 
+/** Computed field functions keyed by output field name. */
+export type ComputedFields = Record<
+  string,
+  (item: import("./types.js").ParsedContent) => unknown | Promise<unknown>
+>;
+
 /**
  * Options for a single-type collection (one schema for all files).
  */
@@ -9,16 +15,18 @@ export interface DefineCollectionSingleOptions {
   /** Zod schema for frontmatter / meta validation */
   schema: ZodSchema;
   /**
+   * Override the generated meta interface name.
+   * Default: PascalCase collection directory name + "Meta" (e.g. `faq` → `FaqMeta`).
+   */
+  metaTypeName?: string;
+  /**
    * Cross-collection relations: field name → target collection name.
    * Field names are user-defined — any name that matches a field in your schema works.
    * @example `{ glossaryLinks: "glossary", authorRef: "team" }`
    */
   relations?: Relations;
   /** Computed fields derived from raw content or metadata */
-  computed?: Record<
-    string,
-    (item: import("./types.js").ParsedContent) => unknown | Promise<unknown>
-  >;
+  computed?: ComputedFields;
 }
 
 /** Schema plus optional filename pattern for multi-type; first matching pattern wins. */
@@ -39,64 +47,69 @@ export interface DefineCollectionMultiOptions {
    * or { schema, pattern } to define the filename pattern here and export types.
    */
   schemas: Record<string, ZodSchema | SchemaWithPattern>;
-  /** Cross-collection relations: field name → target collection name */
+  /**
+   * Cross-collection relations: field name → target collection name.
+   */
   relations?: Relations;
   /** Computed fields derived from raw content or metadata */
-  computed?: Record<
-    string,
-    (item: import("./types.js").ParsedContent) => unknown | Promise<unknown>
-  >;
+  computed?: ComputedFields;
 }
 
-/**
- * Define a multi-type content collection with named schemas and optional relations.
- * Returns a SchemaModule-compatible object: for each key "term" in schemas, exports termMeta; also meta and relations.
- * @example
- * export const { termMeta, topicMeta, meta, relations } = defineCollection({ schemas: { term: ..., topic: ... }, relations: {...} });
- */
+/** Map each multi-type key to its `{name}Meta` export name for typed destructuring. */
+export type MultiTypeExports<S extends Record<string, unknown>> = {
+  [K in keyof S & string as `${K}Meta`]: ZodSchema;
+};
+
 export function defineCollection(
   options: DefineCollectionMultiOptions
 ): SchemaModule & Record<string, ZodSchema | Relations | undefined>;
 
-/**
- * Define a single-type content collection with one schema and optional relations.
- * Returns a SchemaModule-compatible object: meta and relations.
- * @example
- * export const { meta, relations } = defineCollection({ schema: z.object({...}), relations: { relatedFaqs: "faq" } });
- */
 export function defineCollection(
   options: DefineCollectionSingleOptions
-): SchemaModule & { meta: ZodSchema; relations?: Relations };
+): SchemaModule & {
+  meta: ZodSchema;
+  relations?: Relations;
+  computed?: ComputedFields;
+  metaTypeName?: string;
+};
 
 export function defineCollection(
   options: DefineCollectionSingleOptions | DefineCollectionMultiOptions
-): SchemaModule &
-  (
-    | { meta: ZodSchema; relations?: Relations }
-    | Record<string, ZodSchema | Relations | undefined>
-  ) {
+):
+  | (SchemaModule & {
+      meta: ZodSchema;
+      relations?: Relations;
+      computed?: ComputedFields;
+      metaTypeName?: string;
+    })
+  | (SchemaModule & Record<string, ZodSchema | Relations | undefined>) {
   if ("schema" in options) {
-    const { schema, relations } = options;
+    const { schema, relations, metaTypeName } = options;
     const out: SchemaModule & Record<string, unknown> = {
       meta: schema,
     };
+    if (metaTypeName) out.metaTypeName = metaTypeName;
     if (relations && Object.keys(relations).length > 0) {
       out.relations = relations;
     }
     if (options.computed && Object.keys(options.computed).length > 0) {
       out.computed = options.computed;
     }
-    return out as unknown as SchemaModule & {
+    return out as SchemaModule & {
       meta: ZodSchema;
       relations?: Relations;
-      computed?: Record<
-        string,
-        (item: import("./types.js").ParsedContent) => unknown | Promise<unknown>
-      >;
+      computed?: ComputedFields;
+      metaTypeName?: string;
     };
   }
 
   const { schemas, relations } = options;
+  if (Object.keys(schemas).length === 0) {
+    throw new Error(
+      "defineCollection(): `schemas` must declare at least one content type."
+    );
+  }
+
   const result: SchemaModule & Record<string, unknown> = {};
   const types: ContentType[] = [];
   let first: ZodSchema | undefined;
@@ -114,10 +127,17 @@ export function defineCollection(
     const exportKey = `${name}Meta`;
     result[exportKey] = schema;
     if (first === undefined) first = schema;
-    if (pattern) types.push({ name, pattern });
+    if (pattern) {
+      const clash = types.find((t) => t.pattern.source === pattern.source);
+      if (clash) {
+        throw new Error(
+          `defineCollection(): duplicate filename pattern /${pattern.source}/ for types "${clash.name}" and "${name}". First match wins, so "${name}" would never match.`
+        );
+      }
+      types.push({ name, pattern });
+    }
   }
-
-  if (first) result.meta = first;
+  if (first !== undefined) result.meta = first;
   if (relations && Object.keys(relations).length > 0) {
     result.relations = relations;
   }
@@ -126,7 +146,7 @@ export function defineCollection(
   }
   if (types.length > 0) result.types = types;
 
-  return result as unknown as SchemaModule &
+  return result as SchemaModule &
     Record<string, ZodSchema | Relations | undefined>;
 }
 

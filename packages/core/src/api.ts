@@ -33,6 +33,13 @@ export {
   jsonAdapter,
 } from "./format-adapter.js";
 export {
+  getFallbackChain,
+  isI18nEnabled,
+  normalizeI18nConfig,
+  type ResolvedLocaleEntry,
+  resolveI18nEntry,
+} from "./i18n.js";
+export {
   negotiateLocale,
   type ParsedLocaleURL,
   type ParseLocaleFromURLOptions,
@@ -114,7 +121,11 @@ export {
   globContentFiles,
   resolveSourcePatterns,
 } from "./sources.js";
-export type { ContenzConfig, SchemaModule } from "./types.js";
+export type {
+  ContenzConfig,
+  ResolvedI18nConfig,
+  SchemaModule,
+} from "./types.js";
 export type { ValidationError, ValidationResult } from "./validator.js";
 export { validateMeta } from "./validator.js";
 export {

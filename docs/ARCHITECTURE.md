@@ -1,3 +1,11 @@
+---
+tags:
+  - docs
+  - contenz
+  - spec
+status: note
+---
+
 # Architecture
 
 This document describes the Contenz monorepo layout, packages, and how the content pipeline works.
@@ -81,4 +89,4 @@ contenz/
 - **Symmetric I/O**: The same content can be read, created, and updated through the CLI or programmatic API.
 - **AI-friendly JSON contract**: All AI-native commands return `{ success, data, error?, diagnostics? }`.
 
-For configuration details see [Configuration](./CONFIGURATION.md). For the content model and generated output see [Content model](./CONTENT-MODEL.md).
+For configuration details see [[CONFIGURATION|Configuration]]. For the content model and generated output see [[CONTENT-MODEL|Content model]].

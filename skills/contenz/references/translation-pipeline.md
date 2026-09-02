@@ -20,13 +20,13 @@ Contenz embeds the locale in the filename: `{slug}.{locale}.{ext}`. Each locale 
 
 Key config fields (in `contenz.config.ts` under `i18n`):
 
-| Field | Purpose |
-| --- | --- |
-| `defaultLocale` | Source language for translation and staleness detection |
-| `locales` | Explicit locale list; omit to infer from filenames |
-| `fallback` | `Record<locale, fallbackLocale>` for missing translations |
-| `coverageThreshold` | 0–1 ratio; warns when coverage is below this |
-| `detectStale` | Emit diagnostics when translation is older than the source |
+| Field               | Purpose                                                    |
+| ------------------- | ---------------------------------------------------------- |
+| `defaultLocale`     | Source language for translation and staleness detection    |
+| `locales`           | Explicit locale list; omit to infer from filenames         |
+| `fallback`          | `Record<locale, fallbackLocale>` for missing translations  |
+| `coverageThreshold` | 0–1 ratio; warns when coverage is below this               |
+| `detectStale`       | Emit diagnostics when translation is older than the source |
 
 ## Audit: coverage and staleness
 

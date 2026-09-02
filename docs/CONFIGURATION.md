@@ -1,3 +1,10 @@
+---
+tags:
+  - docs
+  - contenz
+status: note
+---
+
 # Configuration
 
 Contenz is configured at two levels: **project** (root) and **collection** (per collection). This document covers both and how to author schemas.
@@ -27,19 +34,82 @@ Contenz supports two collection discovery modes that can be used **independently
 
 ### Options
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `sources` | `string[]` | `["content/*"]` | Discovery patterns. `content/*` = direct child folders. `docs` = treat `docs/` as one collection. |
-| `collections` | `Record<string, CollectionDeclaration>` | `undefined` | Inline collection declarations — see [Centralized collections](#centralized-collections) below. |
-| `outputDir` | `string` | `"generated/content"` | Directory for generated TypeScript files. |
-| `coveragePath` | `string` | `"contenz.coverage.md"` | Path for the lint coverage report. |
-| `strict` | `boolean` | `false` | If true, fail build/lint on warnings (e.g. missing translations). |
-| `i18n` | `boolean \| I18nConfigShape` | `false` | Enable locale detection from filenames. See [Content model – i18n](./CONTENT-MODEL.md#internationalization). |
-| `extensions` | `string[]` | `["md", "mdx", "json"]` | Allowed content file extensions. |
-| `ignore` | `string[]` | `["README.md", "_*"]` | Glob patterns to ignore under each collection. |
-| `adapters` | `FormatAdapter[]` | `[]` | Format adapters for content file parsing. Register adapters for `.md`/`.mdx` (via `@contenz/adapter-mdx`). JSON is built-in. |
-| `hooks` | `object` | `undefined` | Extension hooks for tapping into the build lifecycle (`beforeBuild`, `transformItem`, `afterBuild`). |
-| `contentDir` | `string` | _(deprecated)_ | Use `sources: ["<contentDir>/*"]` instead. |
+| Option         | Type                                    | Default                 | Description                                                                                                                  |
+| -------------- | --------------------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `sources`      | `string[]`                              | `["content/*"]`         | Discovery patterns. `content/*` = direct child folders. `docs` = treat `docs/` as one collection.                            |
+| `collections`  | `Record<string, CollectionDeclaration>` | `undefined`             | Inline collection declarations — see [Centralized collections](#centralized-collections) below.                              |
+| `outputDir`    | `string`                                | `"generated/content"`   | Directory for generated TypeScript files.                                                                                    |
+| `coveragePath` | `string`                                | `"contenz.coverage.md"` | Path for the lint coverage report.                                                                                           |
+| `strict`       | `boolean`                               | `false`                 | If true, fail build/lint on warnings (e.g. missing translations).                                                            |
+| `i18n`         | `boolean \| I18nConfigShape`            | `false`                 | Enable locale detection from filenames. See [[CONTENT-MODEL#internationalization                                             | Content model – i18n]]. |
+| `extensions`   | `string[]`                              | `["md", "mdx", "json"]` | Allowed content file extensions.                                                                                             |
+| `ignore`       | `string[]`                              | `["README.md", "_*"]`   | Glob patterns to ignore under each collection.                                                                               |
+| `adapters`     | `FormatAdapter[]`                       | `[]`                    | Format adapters for content file parsing. Register adapters for `.md`/`.mdx` (via `@contenz/adapter-mdx`). JSON is built-in. |
+| `hooks`        | `object`                                | `undefined`             | Extension hooks for tapping into the build lifecycle (`beforeBuild`, `transformItem`, `afterBuild`).                         |
+| `contentDir`   | `string`                                | _(deprecated)_          | Use `sources: ["<contentDir>/*"]` instead.                                                                                   |
+
+### i18n config shape
+
+`i18n` accepts a boolean or a rich object:
+
+```ts
+import type { ContenzConfig } from "@contenz/core";
+
+export const config: ContenzConfig = {
+  i18n: {
+    enabled: true,
+    defaultLocale: "en",
+    locales: ["en", "zh-CN", "zh-TW"],
+    // Locale fallback chains — see [Fallback chains](#fallback-chains)
+    fallback: {
+      "zh-TW": ["zh-CN", "en"],
+      "zh-CN": "en",
+    },
+    coverageThreshold: 0.8,
+    detectStale: true,
+    includeFallbackMetadata: false,
+    outputStrategy: "merged", // or "split"
+  },
+};
+```
+
+| Field                     | Type                                             | Default      | Description                                                                                                                                                  |
+| ------------------------- | ------------------------------------------------ | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `enabled`                 | `boolean`                                        | `false`      | Master switch. `i18n: true` is shorthand for `{ enabled: true }`.                                                                                            |
+| `defaultLocale`           | `string`                                         | `null`       | Source locale for staleness checks and the default for content ops.                                                                                          |
+| `locales`                 | `string[]`                                       | _(inferred)_ | Declared locale list. When present, `lint --translations` checks every slug against it and undeclared detected locales are reported. Duplicates are removed. |
+| `fallback`                | `Record<string, string \| string[]> \| string[]` | `{}`         | Fallback chains — see below.                                                                                                                                 |
+| `coverageThreshold`       | `number` (0–1)                                   | `null`       | Warn (or error with `strict`) when full-translation coverage falls below this ratio. Values outside 0–1 are rejected.                                        |
+| `detectStale`             | `boolean`                                        | `false`      | Emit `I18N_STALE_TRANSLATION` when a translation file's mtime is older than the default-locale source.                                                       |
+| `includeFallbackMetadata` | `boolean`                                        | `false`      | Emit `_fallback: "<locale>"` on generated entries served by a fallback locale.                                                                               |
+| `outputStrategy`          | `"merged" \| "split"`                            | `"merged"`   | `merged` = one file per collection with a `locales` map. `split` = per-locale files + `locale()` async resolver.                                             |
+
+#### Fallback chains
+
+`fallback` maps a locale to an **ordered** chain of fallback locales. The first locale in the chain that has content wins (max depth 5; cycles are guarded):
+
+```ts
+i18n: {
+  enabled: true,
+  fallback: {
+    "zh-TW": ["zh-CN", "en"], // zh-TW → zh-CN → en
+    de: "en",                 // string shorthand for a single-step chain
+  },
+}
+```
+
+A top-level **array** sets a global default chain for every locale without a specific one:
+
+```ts
+i18n: { enabled: true, fallback: ["en"] } // every locale falls back to en
+```
+
+Resolution rules (implemented once in `@contenz/core` and shared by merged output, split output, and the generated `_locale.ts` resolver):
+
+- Direct hit → use it; no `_fallback` metadata.
+- Missing → walk the chain in order; the first locale with content is used.
+- Locales with a specific chain **do not** inherit the global default chain.
+- `_fallback` provenance is always computed; it is only **emitted** when `includeFallbackMetadata: true`.
 
 ### Centralized collections
 
@@ -72,12 +142,12 @@ export const config: ContenzConfig = {
 
 Each entry in `collections` is a `CollectionDeclaration`:
 
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `path` | `string` | ✅ | Directory containing content files (relative to project root). |
-| `schema` | `ZodSchema` | ❌ | Inline Zod schema. If omitted, falls back to `schema.ts` in the directory. |
-| `relations` | `Relations` | ❌ | Relation mapping for this collection. |
-| `config` | `CollectionConfig` | ❌ | Collection-level config overrides (`types`, `extensions`, `i18n`, etc.). |
+| Field       | Type               | Required | Description                                                                |
+| ----------- | ------------------ | -------- | -------------------------------------------------------------------------- |
+| `path`      | `string`           | ✅       | Directory containing content files (relative to project root).             |
+| `schema`    | `ZodSchema`        | ❌       | Inline Zod schema. If omitted, falls back to `schema.ts` in the directory. |
+| `relations` | `Relations`        | ❌       | Relation mapping for this collection.                                      |
+| `config`    | `CollectionConfig` | ❌       | Collection-level config overrides (`types`, `extensions`, `i18n`, etc.).   |
 
 **Precedence rules:**
 
@@ -107,13 +177,13 @@ export const config: CollectionConfig = {
 
 ### Options
 
-| Option | Type | Description |
-| --- | --- | --- |
-| `types` | `ContentType[]` | Multi-type collection: `{ name, pattern }`. First matching pattern wins. **Optional** when the schema exports `types` (see [Schema authoring – Multi-type](#multi-type-collection)). |
-| `slugPattern` | `RegExp` | Custom regex to extract slug (and optionally locale) from filename. |
-| `i18n` | `boolean \| I18nConfigShape` | Override i18n for this collection. |
-| `extensions` | `string[]` | Override allowed extensions. |
-| `ignore` | `string[]` | Override ignore patterns. |
+| Option        | Type                         | Description                                                                                                                                                                          |
+| ------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `types`       | `ContentType[]`              | Multi-type collection: `{ name, pattern }`. First matching pattern wins. **Optional** when the schema exports `types` (see [Schema authoring – Multi-type](#multi-type-collection)). |
+| `slugPattern` | `RegExp`                     | Custom regex to extract slug (and optionally locale) from filename.                                                                                                                  |
+| `i18n`        | `boolean \| I18nConfigShape` | Override i18n for this collection.                                                                                                                                                   |
+| `extensions`  | `string[]`                   | Override allowed extensions.                                                                                                                                                         |
+| `ignore`      | `string[]`                   | Override ignore patterns.                                                                                                                                                            |
 
 ## Schema authoring
 
@@ -132,6 +202,8 @@ const schema = z.object({
 
 export const { meta, relations, computed } = defineCollection({
   schema,
+  // Optional: override the generated interface name (default: FaqMeta for a "faq" collection)
+  metaTypeName: "FaqEntry",
   computed: {
     readingTime: (item) => Math.ceil((item.body || "").split(" ").length / 200),
     permalink: (item) => `/faq/${item.slug}`,
@@ -142,6 +214,7 @@ export const { meta, relations, computed } = defineCollection({
 - `meta` is the Zod schema used for validation and generation.
 - `relations` defines which fields reference other collections. Field names are user-defined — use any name that matches your schema.
 - `computed` allows you to derive properties at build time (e.g. `readingTime`) dynamically before schema validation occurs.
+- `metaTypeName` overrides the generated meta interface name; by default it is derived from the collection directory name (`faq` → `FaqMeta`).
 
 ### Multi-type collection
 
@@ -174,6 +247,11 @@ export const { termMeta, topicMeta, meta, relations, types } =
 ```
 
 Filenames are matched against `pattern` in order (object key order); first match wins. The schema module’s exported `types` are used when the collection config does not set `types`.
+
+**Authoring errors** — `defineMultiTypeCollection` throws at load time when:
+
+- `schemas` is empty (no content types declared), or
+- two types declare the same pattern source — the second type could never match since first match wins.
 
 **Option B – Patterns in collection config**  
 Use plain schemas and set `config.types` in `content/<collection>/config.ts`:
@@ -213,7 +291,7 @@ export const { meta, relations } = defineCollection({
 
 > **Deprecated:** Auto-detection of `related{Collection}` field names (e.g. `relatedTerms` → `terms`) is deprecated. Use explicit `relations` instead.
 
-See [Content model – Relations](./CONTENT-MODEL.md#relation-validation) for validation rules.
+See [[CONTENT-MODEL#relation-validation|Content model – Relations]] for validation rules.
 
 ## Source discovery rules
 
@@ -252,4 +330,4 @@ The MDX adapter handles both `.md` and `.mdx` files with **dual syntax support**
 
 When both are present, frontmatter takes precedence.
 
-For filename patterns and generated output shape see [Content model](./CONTENT-MODEL.md).
+For filename patterns and generated output shape see [[CONTENT-MODEL|Content model]].
