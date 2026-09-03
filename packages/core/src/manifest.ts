@@ -66,11 +66,18 @@ async function readFileSafe(filePath: string): Promise<string> {
 /**
  * Compute a stable hash for a collection's inputs: schema, config, and all content files.
  * Uses SHA-256 over file contents only (no mtime). Safe for CI and cache restores.
+ *
+ * `extraInputs` must carry any inputs that live outside the collection
+ * directory but affect its generated output — notably the raw project config
+ * file (inline collection schemas/relations/i18n are declared there, and a
+ * zod schema's shape is invisible to `computeConfigHash`, so edits to it
+ * would otherwise not invalidate the cached build).
  */
 export async function computeCollectionInputHash(
   collectionPath: string,
   contentFilePaths: string[],
-  extensions: string[]
+  extensions: string[],
+  extraInputs: readonly string[] = []
 ): Promise<string> {
   const parts: string[] = [];
 
@@ -87,6 +94,10 @@ export async function computeCollectionInputHash(
     const fullPath = path.join(collectionPath, file);
     const content = await readFileSafe(fullPath);
     parts.push(`${file}\n${content}`);
+  }
+
+  for (const extra of extraInputs) {
+    parts.push(extra);
   }
 
   return sha256(parts.join("\n"));

@@ -8,7 +8,12 @@ import path from "node:path";
 
 import pMap from "p-map";
 
-import { getContentType, getSchemaForType, resolveConfig } from "./config.js";
+import {
+  getContentType,
+  getSchemaForType,
+  readProjectConfigFileRaw,
+  resolveConfig,
+} from "./config.js";
 import {
   configInvalid,
   contentFileSkipped,
@@ -189,6 +194,7 @@ async function processOneCollection(
   ctx: CollectionContext,
   outputDir: string,
   dryRun: boolean,
+  extraHashInputs: readonly string[],
   hooks?: import("./types.js").ContenzConfig["hooks"]
 ): Promise<
   | {
@@ -366,7 +372,8 @@ async function processOneCollection(
   const inputHash = await computeCollectionInputHash(
     collectionPath,
     contentFiles,
-    effectiveConfig.extensions
+    effectiveConfig.extensions,
+    extraHashInputs
   );
 
   if (types.length > 0) {
@@ -627,6 +634,10 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
   const projectConfigHash = computeConfigHash(
     baseConfig as unknown as Record<string, unknown>
   );
+  // Raw project config bytes: inline collection schemas are zod objects whose
+  // shape is invisible to computeConfigHash, so hash the file itself too.
+  const projectConfigRaw = await readProjectConfigFileRaw(cwd);
+  const configHashInputs = projectConfigRaw != null ? [projectConfigRaw] : [];
   const manifest = !force && !dryRun ? await loadManifest(cwd) : null;
 
   /** Collections we can skip (cached hash matches, output exists) */
@@ -639,7 +650,8 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
     const inputHash = await computeCollectionInputHash(
       ctx.collectionPath,
       ctx.contentFiles,
-      ctx.config.extensions
+      ctx.config.extensions,
+      configHashInputs
     );
 
     let skip = false;
@@ -684,6 +696,7 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
         ctx,
         outputDir,
         dryRun,
+        configHashInputs,
         workspace.projectConfig.hooks
       ),
     {

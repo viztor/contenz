@@ -49,6 +49,39 @@ describe("computeCollectionInputHash", () => {
     expect(hash1).toMatch(/^[a-f0-9]{64}$/);
   });
 
+  it("extraInputs change the hash (project config invalidation)", async () => {
+    const dir = await createTempDir();
+    await fs.writeFile(
+      path.join(dir, "schema.ts"),
+      "export const meta = {};",
+      "utf-8"
+    );
+    await fs.writeFile(path.join(dir, "hello.mdx"), "content", "utf-8");
+
+    const base = await computeCollectionInputHash(dir, ["hello.mdx"], ["mdx"]);
+    const withConfigV1 = await computeCollectionInputHash(
+      dir,
+      ["hello.mdx"],
+      ["mdx"],
+      ["export const config = { schemaV1 }"]
+    );
+    const withConfigV2 = await computeCollectionInputHash(
+      dir,
+      ["hello.mdx"],
+      ["mdx"],
+      ["export const config = { schemaV2 }"]
+    );
+    const withoutExtras = await computeCollectionInputHash(
+      dir,
+      ["hello.mdx"],
+      ["mdx"]
+    );
+
+    expect(base).toBe(withoutExtras);
+    expect(base).not.toBe(withConfigV1);
+    expect(withConfigV1).not.toBe(withConfigV2);
+  });
+
   it("different content produces different hash", async () => {
     const dir = await createTempDir();
     await fs.writeFile(

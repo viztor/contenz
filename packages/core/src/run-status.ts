@@ -5,6 +5,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
+import { readProjectConfigFileRaw } from "./config.js";
 import {
   computeCollectionInputHash,
   computeConfigHash,
@@ -70,6 +71,10 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
   const projectConfigHash = computeConfigHash(
     ws.resolvedConfig as unknown as Record<string, unknown>
   );
+  // Mirror run-build: inline collection schemas are invisible to
+  // computeConfigHash, so hash the raw config file too.
+  const projectConfigRaw = await readProjectConfigFileRaw(cwd);
+  const configHashInputs = projectConfigRaw != null ? [projectConfigRaw] : [];
   const dirty: string[] = [];
   const fresh: string[] = [];
 
@@ -77,7 +82,8 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
     const inputHash = await computeCollectionInputHash(
       col.collectionPath,
       col.contentFiles,
-      col.config.extensions
+      col.config.extensions,
+      configHashInputs
     );
 
     const cachedHash = getCachedInputHash(

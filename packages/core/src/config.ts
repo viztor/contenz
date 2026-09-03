@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -65,6 +66,28 @@ export async function loadProjectConfig(cwd: string): Promise<ContenzConfig> {
     }
   }
   return {};
+}
+
+/**
+ * Raw text of the project config file (same resolution order as
+ * `loadProjectConfig`), or null when no config file exists.
+ *
+ * Used for cache invalidation: inline collection schemas are zod objects whose
+ * shape is invisible to JSON serialization, so the only reliable signal that
+ * an inline declaration changed is the file's bytes themselves.
+ */
+export async function readProjectConfigFileRaw(
+  cwd: string
+): Promise<string | null> {
+  for (const filename of CONFIG_FILENAMES) {
+    const configPath = path.join(cwd, filename);
+    try {
+      return await readFile(configPath, "utf-8");
+    } catch {
+      // Not found — try next candidate
+    }
+  }
+  return null;
 }
 
 /**
