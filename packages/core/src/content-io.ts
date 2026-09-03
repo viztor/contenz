@@ -28,6 +28,15 @@ function findContentFile(
   locale?: string
 ): ContentLocation | null {
   for (const file of col.contentFiles) {
+    const normalized = path.posix.normalize(file.replaceAll("\\", "/"));
+    if (
+      normalized === "." ||
+      normalized === ".." ||
+      normalized.startsWith("../") ||
+      path.isAbsolute(normalized)
+    ) {
+      continue; // Skip invalid paths
+    }
     const parsed = parseFileName(file, col.config.i18n, col.config.slugPattern);
     if (!parsed || parsed.slug !== slug) continue;
 
@@ -131,6 +140,16 @@ export async function writeContent(
       throw new Error("Locale is required when i18n is enabled");
     }
     fileName = `${options.slug}.${localeToUse}.${ext}`;
+  }
+
+  const normalized = path.posix.normalize(fileName.replaceAll("\\", "/"));
+  if (
+    normalized === "." ||
+    normalized === ".." ||
+    normalized.startsWith("../") ||
+    path.isAbsolute(normalized)
+  ) {
+    throw new Error(`Invalid slug: path validation failed`);
   }
 
   const filePath = path.join(col.collectionPath, fileName);
