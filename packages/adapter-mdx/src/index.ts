@@ -10,6 +10,8 @@
  *   export const config: ContenzConfig = { adapters: [mdxAdapter] };
  */
 
+import * as vm from "node:vm";
+
 import type { FormatAdapter } from "@contenz/core";
 
 import { parseFrontmatter } from "./frontmatter.js";
@@ -110,10 +112,7 @@ function skipStringLiteral(
  */
 function safeEvalObjectLiteral(objectStr: string): Record<string, unknown> {
   try {
-    // eslint-disable-next-line no-new-func -- intentional sandboxed eval of author meta literals
-    // oxlint-disable-next-line no-new-func, typescript/no-implied-eval -- author meta object literals only
-    const fn = new Function(`"use strict"; return (${objectStr});`);
-    const result = fn();
+    const result = vm.runInNewContext(`(${objectStr})`, Object.create(null));
     if (typeof result === "object" && result !== null) {
       return result as Record<string, unknown>;
     }
