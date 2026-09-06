@@ -36,6 +36,10 @@ import {
   type SplitCollectionMeta,
 } from "./generator-split.js";
 import {
+  buildFlatDataObject,
+  buildI18nDataObject,
+  buildMultiTypeDataObject,
+  buildRawI18nDataObject,
   calculateI18nStats,
   type FlatCollectionData,
   generateFlatCollectionFile,
@@ -69,6 +73,78 @@ import { validateMeta } from "./validator.js";
 import { type CollectionContext, createWorkspace } from "./workspace.js";
 
 const BUILD_CONCURRENCY = 4;
+
+/** Public content manifest written to the output dir (v1: file + hash only). */
+export interface ContentManifest {
+  version: 1;
+  builtAt: string;
+  collections: Record<
+    string,
+    { file: string; hash: string; slugs: string[]; locales?: string[] }
+  >;
+}
+
+/**
+ * Read slugs/locales back from a previously emitted collection JSON file.
+ * Used for incrementally-skipped collections (no re-parse needed).
+ * Returns empty slugs when the file is missing or unparsable (pre-upgrade
+ * outputs); the next full build repairs it.
+ */
+async function readEmittedJsonIndex(
+  outputDir: string,
+  jsonName: string,
+  multiType: boolean
+): Promise<{ slugs: string[]; locales?: string[] }> {
+  try {
+    const raw = await fs.readFile(path.join(outputDir, jsonName), "utf-8");
+    const data = JSON.parse(raw) as Record<string, unknown>;
+    const groups: Record<string, unknown>[] = multiType
+      ? Object.values(data).filter(
+          (v): v is Record<string, unknown> => !!v && typeof v === "object"
+        )
+      : [data];
+    const slugs = [
+      ...new Set(groups.flatMap((group) => Object.keys(group))),
+    ].sort((a, b) => a.localeCompare(b));
+    const localeSet = new Set<string>();
+    for (const group of groups) {
+      for (const value of Object.values(group)) {
+        if (!value || typeof value !== "object") continue;
+        const locales = (value as { locales?: unknown }).locales;
+        if (locales && typeof locales === "object") {
+          for (const locale of Object.keys(locales)) {
+            localeSet.add(locale);
+          }
+        }
+      }
+    }
+    return {
+      slugs,
+      locales: localeSet.size > 0 ? [...localeSet].sort() : undefined,
+    };
+  } catch {
+    return { slugs: [] };
+  }
+}
+
+/**
+ * Write the JSON mirror of a collection's generated data.
+ * The data object is built by the shared generator builders, so `.ts` and
+ * `.json` outputs always carry identical data. Returns the file name.
+ */
+async function writeCollectionJson(
+  outputDir: string,
+  collectionName: string,
+  data: unknown
+): Promise<string> {
+  const fileName = `${collectionName}.json`;
+  await fs.writeFile(
+    path.join(outputDir, fileName),
+    `${JSON.stringify(data, null, 2)}\n`,
+    "utf-8"
+  );
+  return fileName;
+}
 
 export interface BuildResult {
   success: boolean;
@@ -149,21 +225,7 @@ ${locales.map((l) => `    ${l}?: ${pascalName}Entry;`).join("\n")}
 }
 
 export const ${typeName}s: Record<string, ${pascalName}Item> = `;
-      const dataObj: Record<string, unknown> = {};
-      for (const item of items as I18nCollectionData[]) {
-        const itemData: Record<string, unknown> = {
-          slug: item.slug,
-          locales: {},
-        };
-        for (const [locale, entry] of Object.entries(item.locales)) {
-          (itemData.locales as Record<string, unknown>)[locale] = {
-            slug: item.slug,
-            file: entry.file,
-            ...entry.meta,
-          };
-        }
-        dataObj[item.slug] = itemData;
-      }
+      const dataObj = buildRawI18nDataObject(items as I18nCollectionData[]);
       output += JSON.stringify(dataObj, null, 2);
       output += ";\n\n";
       output += `export const ${typeName}sSlugs = Object.keys(${typeName}s) as (keyof typeof ${typeName}s)[];\n\n`;
@@ -176,10 +238,7 @@ export const ${typeName}s: Record<string, ${pascalName}Item> = `;
 }
 
 export const ${typeName}s: Record<string, ${pascalName}Entry> = `;
-      const dataObj: Record<string, unknown> = {};
-      for (const item of items as FlatCollectionData[]) {
-        dataObj[item.slug] = { slug: item.slug, file: item.file, ...item.meta };
-      }
+      const dataObj = buildFlatDataObject(items as FlatCollectionData[]);
       output += JSON.stringify(dataObj, null, 2);
       output += ";\n\n";
       output += `export const ${typeName}sSlugs = Object.keys(${typeName}s) as (keyof typeof ${typeName}s)[];\n\n`;
@@ -201,6 +260,12 @@ async function processOneCollection(
       ok: true;
       indexMeta: IndexMeta;
       outputName: string;
+      /** JSON mirror file name (always `<collection>.json`) */
+      jsonName: string;
+      /** Emitted slugs (mirrors output, excludes unrouted default group) */
+      slugs: string[];
+      /** Detected locales (i18n collections only) */
+      locales?: string[];
       diagnostics: Diagnostic[];
       inputHash: string;
       contentFiles: string[];
@@ -224,21 +289,32 @@ async function processOneCollection(
     contentFiles,
   } = ctx;
 
-  if (!schemaModule) {
+  if (!schemaModule && ctx.kind !== "single") {
     diagnostics.push(schemaLoadFailed("build", collectionName));
     return { ok: false, diagnostics };
   }
 
-  const rawSchema = schemaModule.meta;
-  if (!rawSchema) {
+  const rawSchema = schemaModule?.meta;
+  if (!rawSchema && ctx.kind !== "single") {
     diagnostics.push(schemaExportMissing("build", collectionName));
     return { ok: false, diagnostics };
+  }
+  // Singles without an inline schema build unvalidated (info, not error).
+  if (ctx.kind === "single" && !rawSchema) {
+    diagnostics.push({
+      code: "SINGLE_UNVALIDATED",
+      severity: "info",
+      category: "schema",
+      message: `Single "${collectionName}" has no schema; meta is unchecked.`,
+      source: "build",
+      collection: collectionName,
+    });
   }
   const defaultSchema = rawSchema;
 
   const effectiveConfig = {
     ...config,
-    types: config.types?.length ? config.types : schemaModule.types,
+    types: config.types?.length ? config.types : schemaModule?.types,
   };
 
   const typeGroups = new Map<
@@ -274,7 +350,7 @@ async function processOneCollection(
       }
 
       // Compute fields
-      if (schemaModule.computed) {
+      if (schemaModule?.computed) {
         for (const [key, computeFn] of Object.entries(schemaModule.computed)) {
           try {
             result.meta[key] = await computeFn(result);
@@ -293,22 +369,24 @@ async function processOneCollection(
       const contentType =
         getContentType(file, effectiveConfig) ?? defaultTypeName;
       const schema =
-        contentType !== defaultTypeName
+        contentType !== defaultTypeName && schemaModule
           ? (getSchemaForType(schemaModule, contentType) ?? defaultSchema)
           : defaultSchema;
-      const validation = validateMeta(result.meta, schema, file);
-      if (!validation.valid) {
-        parseErrors++;
-        for (const err of validation.errors) {
-          diagnostics.push(
-            metaValidationFailed(
-              { source: "build", collection: collectionName, file },
-              err.message,
-              err.field
-            )
-          );
+      if (schema) {
+        const validation = validateMeta(result.meta, schema, file);
+        if (!validation.valid) {
+          parseErrors++;
+          for (const err of validation.errors) {
+            diagnostics.push(
+              metaValidationFailed(
+                { source: "build", collection: collectionName, file },
+                err.message,
+                err.field
+              )
+            );
+          }
+          continue;
         }
-        continue;
       }
       if (!typeGroups.has(contentType)) typeGroups.set(contentType, new Map());
       const itemsMap = typeGroups.get(contentType);
@@ -386,11 +464,22 @@ async function processOneCollection(
         locales,
         schemaModule as Record<string, unknown>
       );
+      await writeCollectionJson(
+        outputDir,
+        collectionName,
+        buildMultiTypeDataObject(typeGroups, effectiveConfig.i18n)
+      );
     }
     return {
       ok: true,
       indexMeta: { name: collectionName, types, hasI18n: effectiveConfig.i18n },
       outputName: `${collectionName}.ts`,
+      jsonName: `${collectionName}.json`,
+      slugs: [...typeGroups.entries()]
+        .filter(([typeName]) => typeName !== defaultTypeName)
+        .flatMap(([, itemsMap]) => [...itemsMap.keys()])
+        .sort((a, b) => a.localeCompare(b)),
+      locales,
       diagnostics,
       inputHash,
       contentFiles,
@@ -403,7 +492,7 @@ async function processOneCollection(
     a.slug.localeCompare(b.slug)
   );
   const metaTypeName =
-    schemaModule.metaTypeName ??
+    schemaModule?.metaTypeName ??
     `${collectionName.charAt(0).toUpperCase() + collectionName.slice(1)}Meta`;
 
   if (effectiveConfig.i18n) {
@@ -492,6 +581,11 @@ async function processOneCollection(
         defaultSchema,
         ri
       );
+      await writeCollectionJson(
+        outputDir,
+        collectionName,
+        buildI18nDataObject(i18nItems, locales, ri)
+      );
     }
 
     return {
@@ -502,6 +596,9 @@ async function processOneCollection(
         metaTypeName,
       },
       outputName: isSplit ? "" : `${collectionName}.ts`,
+      jsonName: `${collectionName}.json`,
+      slugs: i18nItems.map((item) => item.slug),
+      locales,
       diagnostics,
       inputHash,
       contentFiles,
@@ -519,6 +616,11 @@ async function processOneCollection(
         metaTypeName,
         defaultSchema
       );
+      await writeCollectionJson(
+        outputDir,
+        collectionName,
+        buildFlatDataObject(items as FlatCollectionData[])
+      );
     }
   }
 
@@ -530,6 +632,8 @@ async function processOneCollection(
       metaTypeName,
     },
     outputName: `${collectionName}.ts`,
+    jsonName: `${collectionName}.json`,
+    slugs: (items as FlatCollectionData[]).map((item) => item.slug),
     diagnostics,
     inputHash,
     contentFiles,
@@ -575,7 +679,12 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
     };
   }
 
-  const { resolvedConfig: baseConfig, sources, collections } = workspace;
+  const {
+    resolvedConfig: baseConfig,
+    sources,
+    collections,
+    singles,
+  } = workspace;
   const outputDir = path.resolve(cwd, baseConfig.outputDir);
 
   if (!options.dryRun) {
@@ -605,12 +714,15 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
     await workspace.projectConfig.hooks.beforeBuild(workspace);
   }
 
-  if (collections.length === 0) {
+  // Singles build through the same pipeline (one-slug collections).
+  const allContexts = [...collections, ...singles];
+
+  if (allContexts.length === 0) {
     diagnostics.push({
       code: "DISCOVERY_NO_COLLECTIONS",
       severity: "warning",
       category: "discovery",
-      message: "No schema.ts files found in the configured sources.",
+      message: "No collections or singles found in the configured sources.",
       source: "build",
     });
     return {
@@ -641,12 +753,19 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
   const manifest = !force && !dryRun ? await loadManifest(cwd) : null;
 
   /** Collections we can skip (cached hash matches, output exists) */
-  const skipped: { name: string; outputName: string; indexMeta: IndexMeta }[] =
-    [];
+  const skipped: {
+    name: string;
+    outputName: string;
+    jsonName: string;
+    indexMeta: IndexMeta;
+    inputHash: string;
+    slugs: string[];
+    locales?: string[];
+  }[] = [];
   /** Collections we need to build */
   const toBuild: { ctx: CollectionContext; inputHash: string }[] = [];
 
-  for (const ctx of collections) {
+  for (const ctx of allContexts) {
     const inputHash = await computeCollectionInputHash(
       ctx.collectionPath,
       ctx.contentFiles,
@@ -655,6 +774,8 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
     );
 
     let skip = false;
+    let skippedSlugs: string[] | undefined;
+    let skippedLocales: string[] | undefined;
     if (!force && !dryRun && manifest) {
       const cachedHash = getCachedInputHash(
         manifest,
@@ -665,9 +786,22 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
         projectConfigHash
       );
       const outputPath = path.join(outputDir, `${ctx.name}.ts`);
+      const jsonPath = path.join(outputDir, `${ctx.name}.json`);
       try {
         await fs.access(outputPath);
-        if (cachedHash === inputHash) skip = true;
+        await fs.access(jsonPath);
+        if (cachedHash === inputHash) {
+          skip = true;
+          // Reuse the previously emitted JSON for manifest slugs/locales.
+          const entry = manifest?.collections.find((c) => c.name === ctx.name);
+          const emitted = await readEmittedJsonIndex(
+            outputDir,
+            `${ctx.name}.json`,
+            (entry?.indexMeta?.types?.length ?? 0) > 0
+          );
+          skippedSlugs = emitted.slugs;
+          skippedLocales = emitted.locales;
+        }
       } catch {
         // output missing, rebuild
       }
@@ -682,7 +816,11 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
       skipped.push({
         name: ctx.name,
         outputName: `${ctx.name}.ts`,
+        jsonName: `${ctx.name}.json`,
         indexMeta,
+        inputHash,
+        slugs: skippedSlugs ?? [],
+        locales: skippedLocales,
       });
     } else {
       toBuild.push({ ctx, inputHash });
@@ -715,6 +853,9 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
       ok: true;
       indexMeta: IndexMeta;
       outputName: string;
+      jsonName: string;
+      slugs: string[];
+      locales?: string[];
       diagnostics: Diagnostic[];
       inputHash: string;
       contentFiles: string[];
@@ -733,6 +874,9 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
   const generated: string[] = [
     ...skipped.map((s) => s.outputName),
     ...succeeded.map((r) => r.outputName),
+    // JSON mirrors (split collections report outputName "" and get theirs below)
+    ...skipped.map((s) => s.jsonName),
+    ...succeeded.filter((r) => r.outputName !== "").map((r) => r.jsonName),
   ];
 
   // Determine if any collection uses split output strategy
@@ -773,6 +917,16 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
       defaultFallbackChain: baseConfig.resolvedI18n.defaultFallbackChain,
     };
     const includeFallbackMeta = baseConfig.resolvedI18n.includeFallbackMetadata;
+
+    // Merged-shape JSON mirrors for split collections (TS output is per-locale).
+    for (const col of splitCollections) {
+      await writeCollectionJson(
+        outputDir,
+        col.meta.name,
+        buildI18nDataObject(col.items, sortedLocales, baseConfig.resolvedI18n)
+      );
+      generated.push(`${col.meta.name}.json`);
+    }
 
     // Generate shared types
     await generateSharedTypesFile(
@@ -844,7 +998,7 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
     const updates: ManifestCollectionEntry[] = succeeded.map((r) => ({
       name: r.indexMeta.name,
       inputHash: r.inputHash,
-      outputFiles: [r.outputName],
+      outputFiles: [r.outputName, r.jsonName],
       indexMeta: r.indexMeta,
     }));
     const merged = mergeManifest(
@@ -890,6 +1044,42 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
   }
 
   const failedCount = results.length - succeeded.length;
+
+  // Public content manifest: file + hash per collection (powers fetch-based
+  // readers and immutable caching). Only on clean builds; skipped collections
+  // keep their previously emitted JSON.
+  if (failedCount === 0 && (skipped.length > 0 || succeeded.length > 0)) {
+    const manifestCollections: ContentManifest["collections"] = {};
+    for (const s of skipped) {
+      manifestCollections[s.name] = {
+        file: s.jsonName,
+        hash: s.inputHash,
+        slugs: s.slugs,
+        ...(s.locales?.length ? { locales: s.locales } : {}),
+      };
+    }
+    for (const r of succeeded) {
+      manifestCollections[r.indexMeta.name] = {
+        file: r.jsonName,
+        hash: r.inputHash,
+        slugs: r.slugs,
+        ...(r.locales?.length ? { locales: r.locales } : {}),
+      };
+    }
+    const contentManifest: ContentManifest = {
+      version: 1,
+      builtAt: new Date().toISOString(),
+      collections: manifestCollections,
+    };
+    if (!dryRun) {
+      await fs.writeFile(
+        path.join(outputDir, "manifest.json"),
+        `${JSON.stringify(contentManifest, null, 2)}\n`,
+        "utf-8"
+      );
+    }
+    generated.push("manifest.json");
+  }
 
   const buildResult: BuildResult =
     failedCount > 0

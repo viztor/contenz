@@ -2,7 +2,7 @@ import path from "node:path";
 
 import { introspectSchema } from "../introspect.js";
 import { parseFileName } from "../parser.js";
-import { createWorkspace } from "../workspace.js";
+import { createWorkspace, type CollectionContext } from "../workspace.js";
 import type { ContentOpResult } from "./shared.js";
 
 export interface ListOptions {
@@ -29,7 +29,7 @@ export async function runList(
   opts: ListOptions
 ): Promise<
   ContentOpResult<
-    | { collections: CollectionInfo[] }
+    | { collections: CollectionInfo[]; singles: CollectionInfo[] }
     | { collection: string; items: ListItemInfo[] }
   >
 > {
@@ -40,7 +40,7 @@ export async function runList(
     });
 
     if (!opts.collection) {
-      const collections: CollectionInfo[] = ws.collections.map((col) => {
+      const toInfo = (col: CollectionContext): CollectionInfo => {
         const info: CollectionInfo = {
           name: col.name,
           path: path.relative(opts.cwd, col.collectionPath),
@@ -54,17 +54,24 @@ export async function runList(
         }
 
         return info;
-      });
+      };
 
-      return { success: true, data: { collections } };
+      return {
+        success: true,
+        data: {
+          collections: ws.collections.map(toInfo),
+          singles: ws.singles.map(toInfo),
+        },
+      };
     }
 
-    // List items in a specific collection
-    const col = ws.getCollection(opts.collection);
+    // List items in a specific collection or single
+    const col =
+      ws.getCollection(opts.collection) ?? ws.getSingle(opts.collection);
     if (!col) {
       return {
         success: false,
-        error: `Collection not found: ${opts.collection}`,
+        error: `Collection or single not found: ${opts.collection}`,
       };
     }
 

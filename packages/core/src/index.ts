@@ -11,19 +11,20 @@ export {
   type DefineCollectionSingleOptions,
   defineCollection,
   defineMultiTypeCollection,
+  type DefineSingleOptions,
+  defineSingle,
   type MultiTypeExports,
   type SchemaWithPattern,
 } from "./define-collection.js";
 export type { FormatAdapter } from "./format-adapter.js";
 export { type ResolvedLocaleEntry, resolveI18nEntry } from "./i18n.js";
+export { mergeContenzConfig } from "./merge-config.js";
 export { presets } from "./presets.js";
 export type {
   CollectionConfig,
   CollectionDeclaration,
   CollectionItem,
   CollectionStats,
-  ConfigModule,
-  ContentType,
   ContenzConfig,
   I18nConfigShape,
   ParsedContent,
@@ -31,4 +32,5 @@ export type {
   ResolvedConfig,
   ResolvedI18nConfig,
   SchemaModule,
+  SingleDeclaration,
 } from "./types.js";

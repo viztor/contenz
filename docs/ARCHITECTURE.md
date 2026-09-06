@@ -56,14 +56,14 @@ contenz/
 
 ## Data flow
 
-1. **Config**  
-   `contenz.config.ts` (and optional `content/<collection>/config.ts`) is loaded and resolved by `@contenz/core`. Defines sources, i18n, output dir, extensions, ignore patterns, format adapters, and optional inline `collections` declarations.
+1. **Config**
+   `contenz.config.ts` — the only config file — is loaded and resolved by `@contenz/core`. Defines sources, i18n, output dir, extensions, ignore patterns, format adapters, and inline `collections`/`singles` declarations (shared fragments compose via explicit imports + `mergeContenzConfig`).
 
 2. **Discovery**  
    `discoverCollections(cwd, sources)` walks the filesystem and returns collection roots and their paths. Collection identity comes from folder names under the source pattern (e.g. `content/*` → `content/faq` → collection `faq`).
 
-3. **Schema**  
-   Each collection can have a `schema.ts` (and optional `config.ts`). The schema module exports `meta` (or `termMeta`/`topicMeta` for multi-type), and optionally `relations`. Config can override types, slug pattern, i18n, extensions, ignore.
+3. **Schema**
+   Each collection can have a `schema.ts`. The schema module exports `meta` (or `termMeta`/`topicMeta` for multi-type), and optionally `relations`. Per-collection overrides (types, slug pattern, i18n, extensions, ignore) live inline as `collections.<name>.config` in the central config.
 
 4. **Lint**  
    `runLint({ cwd, ... })` parses all content files, validates metadata against the schema, runs relation checks, and (optionally) writes a coverage report. Emits diagnostics in pretty, JSON, or GitHub format.

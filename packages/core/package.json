@@ -36,13 +36,18 @@
       "types": "./dist/api.d.ts",
       "import": "./dist/api.js",
       "default": "./dist/api.js"
+    },
+    "./reader": {
+      "types": "./dist/reader.d.ts",
+      "import": "./dist/reader.js",
+      "default": "./dist/reader.js"
     }
   },
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "build": "tsup && tsc --emitDeclarationOnly --declarationMap",
+    "build": "tsup && tsc --emitDeclarationOnly --declarationMap && node scripts/check-edge.mjs",
     "dev": "tsup --watch",
     "test": "vitest run",
     "test:watch": "vitest",

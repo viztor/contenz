@@ -5,10 +5,10 @@
  * Each pipeline calls `createWorkspace(cwd, sources?)` once and passes the result around.
  */
 
+import fs from "node:fs/promises";
 import path from "node:path";
 
 import {
-  loadCollectionConfig,
   loadProjectConfig,
   loadSchemaModule,
   resolveConfig,
@@ -34,10 +34,12 @@ import type {
  * Contains everything a pipeline needs to process content files.
  */
 export interface CollectionContext {
-  /** Collection name (directory basename) */
+  /** Collection name (directory basename) or single name (config key) */
   name: string;
-  /** Absolute path to the collection directory */
+  /** Absolute path to the collection directory (or the single's directory) */
   collectionPath: string;
+  /** Discriminator: multi-file collections vs key-addressed singles */
+  kind: "collection" | "single";
   /** Merged config (project + collection-level overrides) */
   config: ResolvedConfig;
   /** Collection-level raw config (if present) */
@@ -61,13 +63,17 @@ export interface Workspace {
   resolvedConfig: ResolvedConfig;
   /** Resolved source patterns */
   sources: string[];
-  /** All discovered and loaded collections */
+  /** All discovered and loaded collections (kind "collection") */
   collections: CollectionContext[];
+  /** All declared and loaded singles (kind "single") */
+  singles: CollectionContext[];
   /** Errors encountered during collection discovery */
   discoveryErrors: string[];
 
   /** Get a collection context by name */
   getCollection(name: string): CollectionContext | undefined;
+  /** Get a single context by name */
+  getSingle(name: string): CollectionContext | undefined;
 }
 
 export interface CreateWorkspaceOptions {
@@ -106,18 +112,29 @@ export async function createWorkspace(
   const discovery = await discoverCollections(cwd, sources);
   let discoveredCollections = discovery.collections;
 
-  // Filter to single collection if requested
+  // Filter to single collection if requested (matches collections or singles)
   if (options.collection) {
     discoveredCollections = discoveredCollections.filter(
       (c) => c.name === options.collection
     );
   }
 
-  // Load each discovered collection's config, schema, and content file list
+  // Load each discovered collection's schema and content file list.
+  // There is exactly one config file per project: per-collection config.ts
+  // files are no longer loaded. A leftover one is a loud migration error.
+  const staleConfigErrors: string[] = [];
   const discoveredContexts: CollectionContext[] = await Promise.all(
     discoveredCollections.map(async (dc: DiscoveredCollection) => {
-      const collectionConfig = await loadCollectionConfig(dc.collectionPath);
-      const config = resolveConfig(projectConfig, collectionConfig);
+      try {
+        await fs.access(path.join(dc.collectionPath, "config.ts"));
+        staleConfigErrors.push(
+          `Collection "${dc.name}": ${path.relative(cwd, dc.collectionPath)}/config.ts is no longer loaded. ` +
+            `Move overrides into contenz.config.ts (collections.${dc.name}.config), importing and merging shared fragments explicitly if needed.`
+        );
+      } catch {
+        // Absent — the only supported state.
+      }
+      const config = resolveConfig(projectConfig);
 
       const schema = await loadSchemaModule(dc.collectionPath);
 
@@ -132,8 +149,9 @@ export async function createWorkspace(
       return {
         name: dc.name,
         collectionPath: dc.collectionPath,
+        kind: "collection",
         config,
-        collectionConfig,
+        collectionConfig: undefined,
         schema,
         contentFiles,
       };
@@ -146,8 +164,9 @@ export async function createWorkspace(
     Object.entries(inlineEntries).map(
       async ([name, decl]: [string, CollectionDeclaration]) => {
         const collectionPath = path.resolve(cwd, decl.path);
-        const collectionConfig =
-          decl.config ?? (await loadCollectionConfig(collectionPath));
+        // Overrides come only from the central config (explicit imports by
+        // the user when shared). No per-directory config.ts loading.
+        const collectionConfig = decl.config;
         const config = resolveConfig(projectConfig, collectionConfig);
 
         // Build schema module from inline schema or fall back to file
@@ -173,6 +192,7 @@ export async function createWorkspace(
         return {
           name,
           collectionPath,
+          kind: "collection",
           config,
           collectionConfig,
           schema,
@@ -194,15 +214,88 @@ export async function createWorkspace(
     a.name.localeCompare(b.name)
   );
 
+  // Singles (from config.singles): explicit file paths, no discovery.
+  // The single's name acts as its slug; locale variants live alongside the
+  // canonical file (`site.yml` + `site.zh.yml`).
+  const singleErrors: string[] = [];
+  const singleEntries = projectConfig.singles ?? {};
+  const singleContexts: CollectionContext[] = await Promise.all(
+    Object.entries(singleEntries)
+      .filter(([name]) => !options.collection || options.collection === name)
+      .map(async ([name, decl]): Promise<CollectionContext> => {
+        if (decl.config?.types?.length || decl.config?.slugPattern) {
+          throw new Error(
+            `Single "${name}" must not define types or slugPattern (singles are key-addressed, not filename-routed).`
+          );
+        }
+        const filePath = path.resolve(cwd, decl.path);
+        const dir = path.dirname(filePath);
+        const canonical = path.basename(filePath);
+        const collectionConfig = decl.config;
+        const config = resolveConfig(projectConfig, collectionConfig);
+
+        let schema: SchemaModule | null = null;
+        if (decl.schema) {
+          schema = {
+            meta: decl.schema,
+            relations: decl.relations,
+            computed: decl.computed,
+          };
+        }
+
+        const dirFiles = await globContentFiles(
+          dir,
+          config.extensions,
+          config.ignore
+        );
+        const contentFiles = dirFiles.filter((f) => {
+          const parsed = parseFileName(
+            f,
+            config.i18n,
+            undefined,
+            config.extensions
+          );
+          return parsed !== null && parsed.slug === name;
+        });
+
+        if (!contentFiles.includes(canonical)) {
+          singleErrors.push(
+            `Single "${name}": file "${decl.path}" not found or does not match the single name.`
+          );
+        }
+
+        detectSlugCollisions(name, contentFiles, config);
+
+        return {
+          name,
+          collectionPath: dir,
+          kind: "single",
+          config,
+          collectionConfig,
+          schema,
+          contentFiles,
+        };
+      })
+  );
+  const singles = singleContexts.sort((a, b) => a.name.localeCompare(b.name));
+
   return {
     cwd,
     projectConfig,
     resolvedConfig,
     sources,
     collections,
-    discoveryErrors: discovery.errors,
+    singles,
+    discoveryErrors: [
+      ...discovery.errors,
+      ...staleConfigErrors,
+      ...singleErrors,
+    ],
     getCollection(name: string): CollectionContext | undefined {
       return collections.find((c) => c.name === name);
+    },
+    getSingle(name: string): CollectionContext | undefined {
+      return singles.find((c) => c.name === name);
     },
   };
 }

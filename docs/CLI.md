@@ -193,15 +193,16 @@ View a single content item by collection and slug. Returns the full metadata and
 contenz view faq hello
 contenz view faq moq --locale zh
 contenz view faq hello --format pretty
+contenz view site              # singles: slug omitted, defaults to the name
 ```
 
-| Option         | Default            | Description                            |
-| -------------- | ------------------ | -------------------------------------- |
-| `<collection>` | _(required)_       | Collection name (positional).          |
-| `<slug>`       | _(required)_       | Content slug (positional).             |
-| `--locale`     | _(default locale)_ | Locale to read (for i18n collections). |
-| `--cwd`        | `.`                | Project root.                          |
-| `--format`     | `json`             | Output format: `json` or `pretty`.     |
+| Option         | Default            | Description                                       |
+| -------------- | ------------------ | ------------------------------------------------- |
+| `<collection>` | _(required)_       | Collection or single name (positional).           |
+| `<slug>`       | _(required)_       | Content slug (positional). Omit only for singles. |
+| `--locale`     | _(default locale)_ | Locale to read (for i18n collections).            |
+| `--cwd`        | `.`                | Project root.                                     |
+| `--format`     | `json`             | Output format: `json` or `pretty`.                |
 
 **JSON output shape** (`--format json`):
 
@@ -225,12 +226,13 @@ contenz view faq hello --format pretty
 List all collections in a project, or list all content items within a specific collection.
 
 ```bash
-# List all collections
+# List all collections (and singles)
 contenz list
 contenz list --format pretty
 
-# List items in a collection
+# List items in a collection (or locale variants of a single)
 contenz list faq
+contenz list site
 contenz list faq --format json
 ```
 
@@ -254,7 +256,8 @@ contenz list faq --format json
         "i18n": true,
         "fields": ["question", "category"]
       }
-    ]
+    ],
+    "singles": [{ "name": "site", "path": "data", "items": 2, "i18n": true }]
   }
 }
 ```
@@ -277,7 +280,7 @@ contenz list faq --format json
 
 ## create
 
-Create a new content item in a collection. Validates metadata against the schema before writing.
+Create a new content item in a collection. Validates metadata against the schema before writing. Rejected for singles (key-fixed — edit the file with `update` instead).
 
 ```bash
 contenz create faq hello --set question="What is contenz?" --set category=products
@@ -322,17 +325,18 @@ contenz update faq hello --set question="Updated question?"
 contenz update faq moq --locale zh --set category=ordering
 contenz update faq hello --unset deprecated
 contenz update faq hello --set question="New" --unset oldField
+contenz update site --set title="Renamed"   # singles: slug omitted
 ```
 
-| Option         | Default            | Description                                 |
-| -------------- | ------------------ | ------------------------------------------- |
-| `<collection>` | _(required)_       | Collection name (positional).               |
-| `<slug>`       | _(required)_       | Content slug (positional).                  |
-| `--set`        | —                  | Set field values (`key=value`). Repeatable. |
-| `--unset`      | —                  | Remove optional fields by name. Repeatable. |
-| `--locale`     | _(default locale)_ | Locale to update.                           |
-| `--cwd`        | `.`                | Project root.                               |
-| `--format`     | `json`             | Output format: `json` or `pretty`.          |
+| Option         | Default            | Description                                  |
+| -------------- | ------------------ | -------------------------------------------- |
+| `<collection>` | _(required)_       | Collection or single name (positional).      |
+| `<slug>`       | _(required)_       | Content slug (positional). Omit for singles. |
+| `--set`        | —                  | Set field values (`key=value`). Repeatable.  |
+| `--unset`      | —                  | Remove optional fields by name. Repeatable.  |
+| `--locale`     | _(default locale)_ | Locale to update.                            |
+| `--cwd`        | `.`                | Project root.                                |
+| `--format`     | `json`             | Output format: `json` or `pretty`.           |
 
 The merged metadata is validated against the schema before writing. At least one `--set` or `--unset` is required.
 

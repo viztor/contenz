@@ -31,7 +31,12 @@ describe("runBuild", () => {
     expect(result.success).toBe(true);
     expect(result.errors).toBe(0);
     expect(result.diagnostics).toEqual([]);
-    expect(result.generated).toEqual(["faq.ts", "index.ts"]);
+    expect(result.generated).toEqual([
+      "faq.ts",
+      "faq.json",
+      "index.ts",
+      "manifest.json",
+    ]);
     expect(result.report).toContain("Build diagnostics");
     expect(result.report).toContain(
       "0 error(s), 0 warning(s), 0 info message(s)"
@@ -51,6 +56,48 @@ describe("runBuild", () => {
       'question": "What is the minimum order quantity?"'
     );
     expect(collectionOutput).toContain("export const faqStats = {");
+
+    // JSON mirror carries identical data (shared builder functions)
+    const collectionJson = JSON.parse(
+      await fs.readFile(
+        path.join(cwd, "generated", "content", "faq.json"),
+        "utf-8"
+      )
+    ) as Record<string, { slug: string; file: string; question: string }>;
+    const slugs = Object.keys(collectionJson);
+    expect(slugs.length).toBeGreaterThan(0);
+    for (const slug of slugs) {
+      expect(collectionJson[slug]).toMatchObject({
+        slug,
+        file: expect.any(String),
+        question: expect.any(String),
+      });
+    }
+    const firstSlug = slugs[0];
+    expect(collectionJson[firstSlug]).toMatchObject({
+      slug: firstSlug,
+      question: expect.any(String),
+    });
+    expect(collectionOutput).toContain(
+      `"question": "${collectionJson[firstSlug].question}"`
+    );
+
+    const manifest = JSON.parse(
+      await fs.readFile(
+        path.join(cwd, "generated", "content", "manifest.json"),
+        "utf-8"
+      )
+    ) as {
+      version: number;
+      builtAt: string;
+      collections: Record<string, { file: string; hash: string }>;
+    };
+    expect(manifest.version).toBe(1);
+    expect(typeof manifest.builtAt).toBe("string");
+    expect(manifest.collections.faq).toMatchObject({
+      file: "faq.json",
+      hash: expect.any(String),
+    });
     expect(indexOutput).toContain(
       'export { faq, faqSlugs, faqStats } from "./faq.js";'
     );
@@ -97,7 +144,12 @@ describe("runBuild", () => {
     const result = await runBuild({ cwd });
 
     expect(result.success).toBe(true);
-    expect(result.generated).toEqual(["terms.ts", "index.ts"]);
+    expect(result.generated).toEqual([
+      "terms.ts",
+      "terms.json",
+      "index.ts",
+      "manifest.json",
+    ]);
 
     const collectionOutput = await fs.readFile(
       path.join(cwd, "generated", "content", "terms.ts"),
@@ -171,7 +223,14 @@ describe("runBuild", () => {
 
     expect(result.success).toBe(true);
     expect(result.diagnostics).toEqual([]);
-    expect(result.generated).toEqual(["docs.ts", "faq.ts", "index.ts"]);
+    expect(result.generated).toEqual([
+      "docs.ts",
+      "faq.ts",
+      "docs.json",
+      "faq.json",
+      "index.ts",
+      "manifest.json",
+    ]);
 
     const docsOutput = await fs.readFile(
       path.join(cwd, "generated", "content", "docs.ts"),

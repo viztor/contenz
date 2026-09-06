@@ -79,7 +79,6 @@ project-root/
 ├── content/
 │   ├── faq/
 │   │   ├── schema.ts          # Collection schema
-│   │   ├── config.ts          # Optional collection overrides
 │   │   ├── hello.mdx          # Content file (no i18n)
 │   │   ├── moq.en.mdx         # Content file (i18n: English)
 │   │   └── moq.zh.mdx         # Content file (i18n: Chinese)
@@ -90,8 +89,17 @@ project-root/
     └── content/               # Generated output (by `contenz build`)
         ├── index.ts
         ├── faq.ts
-        └── blog.ts
+        ├── faq.json           # JSON mirror of faq.ts data (same content, no types)
+        ├── blog.ts
+        ├── blog.json
+        └── manifest.json      # { version, builtAt, collections: { name: { file, hash } } }
 ```
+
+Every collection emits a TypeScript module **and** a JSON mirror with identical
+data (built by shared code, so they cannot drift). The JSON files plus
+`manifest.json` are the edge-safe read path: serve the directory statically and
+read it with `createReader` from `@contenz/core/reader` (no filesystem needed).
+See [Core API](./API.md).
 
 ### Filename patterns
 
@@ -463,7 +471,7 @@ See [[API|API reference]] for the complete list of exports and types.
 | `adapters`     | `FormatAdapter[]`                       | `[]`                    | Format adapters for content parsing. Register `@contenz/adapter-mdx` for MD/MDX support. JSON is built-in. |
 | `collections`  | `Record<string, CollectionDeclaration>` | `undefined`             | Inline collection declarations with schemas. See [[CONFIGURATION#centralized-collections                   | Configuration – Centralized collections]]. |
 
-### Collection config (`content/<collection>/config.ts`)
+### Per-collection overrides (`collections.<name>.config`)
 
 | Option        | Type                         | Description                     |
 | ------------- | ---------------------------- | ------------------------------- |
@@ -472,6 +480,10 @@ See [[API|API reference]] for the complete list of exports and types.
 | `i18n`        | `boolean \| I18nConfigShape` | Override project i18n           |
 | `extensions`  | `string[]`                   | Override allowed extensions     |
 | `ignore`      | `string[]`                   | Override ignore patterns        |
+
+Overrides live inline in the central `contenz.config.ts` — collection
+directories never carry their own `config.ts`. See
+[[CONFIGURATION#per-collection-overrides-central|Configuration – Per-collection overrides]].
 
 ### i18n configuration
 

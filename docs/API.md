@@ -13,22 +13,22 @@ This page summarizes the programmatic API from `@contenz/core/api`. Use it when 
 
 - `@contenz/core` — schema helpers (`defineCollection`, types) for `schema.ts` / config
 - `@contenz/core/api` — full programmatic pipelines (build, lint, content ops, workspace)
+- `@contenz/core/reader` — edge-safe reader (`createReader`, storage backends). Zero `node:` imports (enforced by `check-edge` in CI); runs on Workers, edge, browsers, and Node.
 
-Apps that only need published content import the modules produced by `contenz build` (e.g. `generated/content`) and resolve locales in application code.
+Apps that only need published content import the modules produced by `contenz build` (e.g. `generated/content`) and resolve locales in application code. On edge runtimes without a filesystem, use `@contenz/core/reader` over the generated `.json` mirrors (see [Reader](#reader)).
 
 ## Config and discovery
 
-| Export                                            | Description                                                                                  |
-| ------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `loadProjectConfig(cwd)`                          | Load root config from `contenz.config.ts` (or `.mjs`/`.js`). Returns `ContenzConfig`.        |
-| `loadCollectionConfig(collectionPath)`            | Load collection config from `config.ts` in the given path. Returns `CollectionConfig`.       |
-| `resolveConfig(projectConfig, collectionConfig?)` | Merge project and optional collection config into a `ResolvedConfig`.                        |
-| `resolveSourcePatterns(projectConfig)`            | Resolve `sources` (or legacy `contentDir`) to a list of glob patterns.                       |
-| `discoverCollections(cwd, sources)`               | Discover collection roots. Returns `{ collections: DiscoveredCollection[] }`.                |
-| `loadSchemaModule(collectionPath)`                | Load the schema module (`schema.ts`) for a collection. Returns `SchemaModule \| null`.       |
-| `getSchemaForType(schemaModule, contentType)`     | Get the Zod schema for a content type (for multi-type: `term`, `topic`, etc.; else default). |
-| `getContentType(filename, config)`                | Infer content type from filename using collection `types` patterns.                          |
-| `extractRelations(schemaModule)`                  | Get relations map from the schema module.                                                    |
+| Export                                            | Description                                                                                   |
+| ------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `loadProjectConfig(cwd)`                          | Load root config from `contenz.config.ts` (or `.mjs`/`.js`). Returns `ContenzConfig`.         |
+| `resolveConfig(projectConfig, collectionConfig?)` | Merge project defaults with optional inline per-collection overrides into a `ResolvedConfig`. |
+| `resolveSourcePatterns(projectConfig)`            | Resolve `sources` (or legacy `contentDir`) to a list of glob patterns.                        |
+| `discoverCollections(cwd, sources)`               | Discover collection roots. Returns `{ collections: DiscoveredCollection[] }`.                 |
+| `loadSchemaModule(collectionPath)`                | Load the schema module (`schema.ts`) for a collection. Returns `SchemaModule \| null`.        |
+| `getSchemaForType(schemaModule, contentType)`     | Get the Zod schema for a content type (for multi-type: `term`, `topic`, etc.; else default).  |
+| `getContentType(filename, config)`                | Infer content type from filename using collection `types` patterns.                           |
+| `extractRelations(schemaModule)`                  | Get relations map from the schema module.                                                     |
 
 **Types**: `ContenzConfig`, `CollectionConfig`, `ResolvedConfig`, `ResolvedI18nConfig`, `DiscoveredCollection`, `SchemaModule` (from `@contenz/core` or `@contenz/core/api`).
 
@@ -117,27 +117,76 @@ Note: `mdxAdapter` handles both `.md` and `.mdx` files with dual syntax support 
 
 These APIs mirror the AI-native CLI commands. They accept clean options objects and return structured `ContentOpResult<T>` results—never call `console.log` or `process.exit`.
 
-| Export            | Description                                                                                |
-| ----------------- | ------------------------------------------------------------------------------------------ |
-| `runList(opts)`   | List collections (no `collection`) or items in a collection.                               |
-| `runView(opts)`   | Read a single content item by collection, slug, and optional locale.                       |
-| `runCreate(opts)` | Create a new content item. Fills schema defaults, validates, writes file.                  |
-| `runUpdate(opts)` | Surgically update fields (`--set`, `--unset`) on an existing item. Validates merged state. |
-| `runSearch(opts)` | Search items by slug substring and/or field-value filters.                                 |
-| `runSchema(opts)` | Introspect a collection's schema. Returns field metadata, types, and relations.            |
+| Export            | Description                                                                                       |
+| ----------------- | ------------------------------------------------------------------------------------------------- |
+| `runList(opts)`   | List collections and singles (no `collection`) or items in a collection/single.                   |
+| `runView(opts)`   | Read a single content item by collection, slug, and optional locale (slug omittable for singles). |
+| `runCreate(opts)` | Create a new content item. Fills schema defaults, validates, writes file. Rejected for singles.   |
+| `runUpdate(opts)` | Surgically update fields (`--set`, `--unset`) on an existing item. Validates merged state.        |
+| `runSearch(opts)` | Search items by slug substring and/or field-value filters.                                        |
+| `runSchema(opts)` | Introspect a collection's schema. Returns field metadata, types, and relations.                   |
 
 **ContentOpResult\<T\>**: `{ success: boolean, data?: T, error?: string, diagnostics?: Array<{ field?, message }> }`.
 
 ### Options and result types
 
-| Function    | Options type                                                                     | Result data type                                                               |
-| ----------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| `runList`   | `ListOptions` (`cwd`, `collection?`)                                             | `{ collections: CollectionInfo[] }` or `{ collection, items: ListItemInfo[] }` |
-| `runView`   | `ViewOptions` (`cwd`, `collection`, `slug`, `locale?`)                           | `ViewResult` (`slug`, `locale`, `file`, `meta`, `body?`)                       |
-| `runCreate` | `CreateOptions` (`cwd`, `collection`, `slug`, `meta`, `locale?`, `contentType?`) | `CreateResult` (`slug`, `collection`, `file`, `meta`)                          |
-| `runUpdate` | `UpdateOptions` (`cwd`, `collection`, `slug`, `set?`, `unset?`, `locale?`)       | `UpdateResult` (`slug`, `collection`, `file`, `meta`)                          |
-| `runSearch` | `SearchOptions` (`cwd`, `collection`, `query?`, `fields?`, `locale?`, `limit?`)  | `SearchResultData` (`collection`, `query`, `filters`, `total`, `items`)        |
-| `runSchema` | `SchemaOptions` (`cwd`, `collection`, `contentType?`)                            | `SchemaResultData` (`collection`, `contentType`, `schema`, `relations`)        |
+| Function    | Options type                                                                     | Result data type                                                                                          |
+| ----------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `runList`   | `ListOptions` (`cwd`, `collection?`)                                             | `{ collections: CollectionInfo[], singles: CollectionInfo[] }` or `{ collection, items: ListItemInfo[] }` |
+| `runView`   | `ViewOptions` (`cwd`, `collection`, `slug?`, `locale?`)                          | `ViewResult` (`slug`, `locale`, `file`, `meta`, `body?`)                                                  |
+| `runCreate` | `CreateOptions` (`cwd`, `collection`, `slug`, `meta`, `locale?`, `contentType?`) | `CreateResult` (`slug`, `collection`, `file`, `meta`)                                                     |
+| `runUpdate` | `UpdateOptions` (`cwd`, `collection`, `slug`, `set?`, `unset?`, `locale?`)       | `UpdateResult` (`slug`, `collection`, `file`, `meta`)                                                     |
+| `runSearch` | `SearchOptions` (`cwd`, `collection`, `query?`, `fields?`, `locale?`, `limit?`)  | `SearchResultData` (`collection`, `query`, `filters`, `total`, `items`)                                   |
+| `runSchema` | `SchemaOptions` (`cwd`, `collection`, `contentType?`)                            | `SchemaResultData` (`collection`, `contentType`, `schema`, `relations`)                                   |
+
+## Reader (edge-safe)
+
+`@contenz/core/reader` provides `createReader(options, storage)` for runtimes
+without a filesystem. Reading mirrors CLI lookup semantics; locale fallback
+chains apply on `read` by default (consumption semantics, like generated
+output) and can be disabled per call.
+
+| Export                                        | Description                                                                                                                                                                                                                         |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `createReader(options, storage)`              | Build a reader over explicit collections (`{ name, dir, schema?, extensions?, ignore?, slugPattern? }`), singles (`{ name, path, schema? }`), `i18n`, `adapters`, and optional `manifest`. Unknown collection/single access throws. |
+| `memoryStorage(files)`                        | In-memory backend (bundled edge/SSG, tests).                                                                                                                                                                                        |
+| `fetchStorage({ baseUrl, headers?, cache? })` | HTTP backend (`${baseUrl}/${path}`); 404 → null, other errors throw; `listdir` reads build-emitted `.listing.json`. Headers are caller-supplied and server-side only.                                                               |
+| `tieredStorage(stores)`                       | First-hit-wins reads, merged listings (e.g. KV → R2).                                                                                                                                                                               |
+| `nodeStorage({ root })`                       | Filesystem backend. Exported from `@contenz/core/api` only — never from `/reader`.                                                                                                                                                  |
+| `parseContent(source, fileName, options)`     | Pure source parsing (no fs); `parseContentFile` in `./api` wraps it with a read.                                                                                                                                                    |
+| `joinStoragePath`, `isSafeStoragePath`        | POSIX path helpers; traversal (`..`, `\`, absents) resolves to null/empty, never throws.                                                                                                                                            |
+
+Collection surface: `list()` (sorted, deduplicated slugs; served from `manifest` without I/O when provided), `read(slug, locale?)`,
+`readOrThrow(slug, locale?)`, `all(locale?)`. Single surface: `read(locale?)`, `readOrThrow(locale?)` — no slug, no listing.
+Reads probe `slug.locale.ext` candidates directly (no listing round-trip); `list()` enumerates the directory
+(top-level, extension- and ignore-filtered). Invalid meta with a schema throws a
+named error (Keystatic-style); pass `validate: false` to skip.
+
+`manifest.json` (emitted by `contenz build` next to the collection JSON files)
+carries `{ version, builtAt, collections: { name: { file, hash, slugs, locales? } } }`.
+Pass it as `createReader({ ..., manifest })` to serve `list()` without storage I/O.
+
+```ts
+import { createReader, fetchStorage } from "@contenz/core/reader";
+
+const reader = createReader(
+  { collections: [{ name: "faq", dir: "content/faq" }], i18n: true },
+  fetchStorage({ baseUrl: "https://cdn.example.com/content" })
+);
+
+const slugs = await reader.collections.faq.list();
+const entry = await reader.collections.faq.read("moq", "zh-TW"); // fallback-resolved
+
+const siteReader = createReader(
+  {
+    collections: [],
+    singles: [{ name: "site", path: "data/site.en.json" }],
+    i18n: true,
+  },
+  fetchStorage({ baseUrl: "https://cdn.example.com/content" })
+);
+const site = await siteReader.singles.site.read("zh");
+```
 
 ## Diagnostics
 

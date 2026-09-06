@@ -109,7 +109,7 @@ async function firstPassOneCollection(
   >();
   const validationResults: ValidationResult[] = [];
 
-  if (!schemaModule) {
+  if (!schemaModule && ctx.kind !== "single") {
     diagnostics.push(schemaLoadFailed("lint", collectionName));
     return {
       collectionName,
@@ -123,8 +123,8 @@ async function firstPassOneCollection(
     };
   }
 
-  const rawSchema = schemaModule.meta;
-  if (!rawSchema) {
+  const rawSchema = schemaModule?.meta;
+  if (!rawSchema && ctx.kind !== "single") {
     diagnostics.push(schemaExportMissing("lint", collectionName));
     return {
       collectionName,
@@ -137,17 +137,27 @@ async function firstPassOneCollection(
       validationResults: [],
     };
   }
+  if (ctx.kind === "single" && !rawSchema) {
+    diagnostics.push({
+      code: "SINGLE_UNVALIDATED",
+      severity: "info",
+      category: "schema",
+      message: `Single "${collectionName}" has no schema; meta is unchecked.`,
+      source: "lint",
+      collection: collectionName,
+    });
+  }
   const defaultSchema = rawSchema;
 
   const effectiveConfig = {
     ...config,
-    types: config.types?.length ? config.types : schemaModule.types,
+    types: config.types?.length ? config.types : schemaModule?.types,
   };
 
   let relations: Relations;
-  if (schemaModule.relations) {
+  if (schemaModule?.relations) {
     relations = schemaModule.relations;
-  } else {
+  } else if (schemaModule) {
     relations = extractRelations(schemaModule, availableCollections);
     if (Object.keys(relations).length > 0) {
       diagnostics.push({
@@ -162,6 +172,8 @@ async function firstPassOneCollection(
         collection: collectionName,
       });
     }
+  } else {
+    relations = {};
   }
 
   for (const file of contentFiles) {
@@ -181,10 +193,15 @@ async function firstPassOneCollection(
     try {
       const result = await parseContentFile(filePath, effectiveConfig);
       const contentType = getContentType(file, effectiveConfig);
-      const schema = contentType
-        ? (getSchemaForType(schemaModule, contentType) ?? defaultSchema)
-        : defaultSchema;
-      const validation = validateMeta(result.meta, schema, file);
+      const schema =
+        contentType && schemaModule
+          ? (getSchemaForType(schemaModule, contentType) ?? defaultSchema)
+          : defaultSchema;
+      // Schemaless singles skip validation but still count for coverage and
+      // relation tracking below.
+      const validation: ValidationResult = schema
+        ? validateMeta(result.meta, schema, file)
+        : { valid: true, errors: [], warnings: [] };
       validationResults.push(validation);
       if (effectiveConfig.i18n && parsed.locale) {
         if (!slugLocales.has(parsed.slug))
@@ -568,7 +585,14 @@ export async function runLint(options: LintOptions): Promise<LintResult> {
     };
   }
 
-  const { resolvedConfig: baseConfig, sources, collections } = workspace;
+  const {
+    resolvedConfig: baseConfig,
+    sources,
+    collections,
+    singles,
+  } = workspace;
+  // Singles lint through the same passes (one-slug contexts).
+  const allContexts = [...collections, ...singles];
 
   if (workspace.discoveryErrors.length > 0) {
     for (const error of workspace.discoveryErrors) {
@@ -587,7 +611,7 @@ export async function runLint(options: LintOptions): Promise<LintResult> {
     };
   }
 
-  if (collections.length === 0) {
+  if (allContexts.length === 0) {
     // If filtering by collection and no match, it's an error
     if (options.collection) {
       diagnostics.push({
@@ -614,7 +638,7 @@ export async function runLint(options: LintOptions): Promise<LintResult> {
       code: "DISCOVERY_NO_COLLECTIONS",
       severity: "warning",
       category: "discovery",
-      message: "No schema.ts files found in the configured sources.",
+      message: "No collections or singles found in the configured sources.",
       source: "lint",
     });
     return {
@@ -631,10 +655,10 @@ export async function runLint(options: LintOptions): Promise<LintResult> {
     };
   }
 
-  const availableCollections = collections.map((c) => c.name);
+  const availableCollections = allContexts.map((c) => c.name);
 
   const firstPassResults = await pMap(
-    collections,
+    allContexts,
     async (ctx) =>
       firstPassOneCollection(
         ctx,
@@ -664,7 +688,7 @@ export async function runLint(options: LintOptions): Promise<LintResult> {
   }
 
   const secondPassResults = await pMap(
-    collections,
+    allContexts,
     async (ctx) =>
       secondPassOneCollection(ctx, collectionSlugs, availableCollections),
     { concurrency: LINT_CONCURRENCY }

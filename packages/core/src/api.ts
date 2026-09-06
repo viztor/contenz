@@ -6,7 +6,6 @@ export {
   extractRelations,
   getContentType,
   getSchemaForType,
-  loadCollectionConfig,
   loadProjectConfig,
   loadSchemaModule,
   resolveConfig,
@@ -69,15 +68,39 @@ export {
   type ViewResult,
 } from "./ops/index.js";
 export {
+  buildFlatDataObject,
+  buildI18nDataObject,
+  buildMultiTypeDataObject,
+  buildRawI18nDataObject,
+} from "./generator.js";
+export {
   extractBodyFromSource,
+  parseContent,
   parseContentFile,
   parseFileName,
+  type ParseContentOptions,
   serializeContentFile,
 } from "./parser.js";
-export type { BuildOptions, BuildResult } from "./run-build.js";
+export type {
+  BuildOptions,
+  BuildResult,
+  ContentManifest,
+} from "./run-build.js";
 export { runBuild } from "./run-build.js";
 export type { LintOptions, LintResult } from "./run-lint.js";
 export { runLint } from "./run-lint.js";
+export {
+  type CollectionReader,
+  createReader,
+  type Reader,
+  type ReaderCollectionConfig,
+  type ReaderEntry,
+  type ReaderManifest,
+  type ReaderOptions,
+  type ReaderReadOptions,
+  type ReaderSingleConfig,
+  type SingleReader,
+} from "./reader.js";
 export {
   runSchema,
   type SchemaOptions,
@@ -115,6 +138,18 @@ export {
   type SearchIndexQuery,
   saveSearchIndex,
 } from "./search-index.js";
+export {
+  fetchStorage,
+  type FetchStorageOptions,
+  isSafeStoragePath,
+  joinStoragePath,
+  memoryStorage,
+  type Storage,
+  type StorageEntry,
+  type StorageStreamRange,
+  tieredStorage,
+} from "./storage.js";
+export { nodeStorage, type NodeStorageOptions } from "./storage-node.js";
 export type { DiscoveredCollection } from "./sources.js";
 export {
   discoverCollections,
@@ -125,6 +160,7 @@ export type {
   ContenzConfig,
   ResolvedI18nConfig,
   SchemaModule,
+  SingleDeclaration,
 } from "./types.js";
 export type { ValidationError, ValidationResult } from "./validator.js";
 export { validateMeta } from "./validator.js";

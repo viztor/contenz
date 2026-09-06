@@ -20,7 +20,7 @@ async function view(
   this: ContenzContext,
   flags: ViewFlags,
   collection: string,
-  slug: string
+  slug?: string
 ): Promise<void> {
   const result = await runView({
     cwd: flags.cwd,
@@ -43,9 +43,10 @@ export const viewCommandDef = buildCommand({
           placeholder: "collection",
         },
         {
-          brief: "Content slug",
+          brief: "Content slug (omit for singles)",
           parse: String,
           placeholder: "slug",
+          optional: true,
         },
       ],
     },
@@ -56,6 +57,7 @@ export const viewCommandDef = buildCommand({
     },
   },
   docs: {
-    brief: "View a content item by collection and slug",
+    brief:
+      "View a content item by collection and slug (slug optional for singles)",
   },
 });

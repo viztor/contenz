@@ -34,7 +34,8 @@ export async function runSchema(
       cwd: opts.cwd,
       collection: opts.collection,
     });
-    const col = ws.getCollection(opts.collection);
+    const col =
+      ws.getCollection(opts.collection) ?? ws.getSingle(opts.collection);
 
     if (!col) {
       return {

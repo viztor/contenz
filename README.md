@@ -154,16 +154,25 @@ Supported `sources` patterns are intentionally narrow:
 
 The default when `sources` is omitted is `["content/*"]`. Legacy `contentDir` is still accepted as a compatibility alias for `["<contentDir>/*"]`.
 
-Use `content/<collection>/config.ts` only when a collection needs overrides:
+Use inline `collections.<name>.config` when a collection needs overrides
+(multi-type routing, custom slug pattern, per-collection i18n). Shared
+fragments compose through explicit imports plus `mergeContenzConfig`:
 
 ```ts
-import type { CollectionConfig } from "@contenz/core";
+import type { ContenzConfig } from "@contenz/core";
 
-export const config: CollectionConfig = {
-  types: [
-    { name: "topic", pattern: /^topic-/ },
-    { name: "term", pattern: /.*/ },
-  ],
+export const config: ContenzConfig = {
+  collections: {
+    terms: {
+      path: "content/terms",
+      config: {
+        types: [
+          { name: "topic", pattern: /^topic-/ },
+          { name: "term", pattern: /.*/ },
+        ],
+      },
+    },
+  },
 };
 ```
 
@@ -185,8 +194,15 @@ project-root/
     └── content/
         ├── index.ts
         ├── faq.ts
-        └── terms.ts
+        ├── faq.json
+        ├── terms.ts
+        ├── terms.json
+        └── manifest.json
 ```
+
+Each collection emits a `.ts` module and a `.json` mirror with identical data;
+`manifest.json` lists every collection with its content hash. The JSON outputs
+are the edge-safe read path (see `createReader` in [Core API](./docs/API.md)).
 
 Alternative root-level collections:
 

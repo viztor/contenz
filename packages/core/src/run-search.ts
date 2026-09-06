@@ -50,7 +50,8 @@ async function searchBruteForce(
     cwd: opts.cwd,
     collection: opts.collection,
   });
-  const col = ws.getCollection(opts.collection);
+  const col =
+    ws.getCollection(opts.collection) ?? ws.getSingle(opts.collection);
 
   if (!col) {
     throw new Error(`Collection not found: ${opts.collection}`);
@@ -112,7 +113,8 @@ export async function runSearch(
 
     // Validate the collection exists before searching
     const ws = await createWorkspace({ cwd, collection: opts.collection });
-    const col = ws.getCollection(opts.collection);
+    const col =
+      ws.getCollection(opts.collection) ?? ws.getSingle(opts.collection);
     if (!col) {
       return {
         success: false,

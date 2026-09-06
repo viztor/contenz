@@ -70,7 +70,7 @@ export async function resolveContentFile(
   locale?: string
 ): Promise<ContentLocation | null> {
   const ws = await createWorkspace({ cwd, collection: collectionName });
-  const col = ws.getCollection(collectionName);
+  const col = ws.getCollection(collectionName) ?? ws.getSingle(collectionName);
   if (!col) {
     throw new Error(`Collection not found: ${collectionName}`);
   }
@@ -88,7 +88,7 @@ export async function readContent(
   locale?: string
 ): Promise<ParsedContent | null> {
   const ws = await createWorkspace({ cwd, collection: collectionName });
-  const col = ws.getCollection(collectionName);
+  const col = ws.getCollection(collectionName) ?? ws.getSingle(collectionName);
   if (!col) return null;
 
   const location = findContentFile(col, slug, locale);
@@ -118,7 +118,9 @@ export async function writeContent(
     cwd: options.cwd,
     collection: options.collectionName,
   });
-  const col = ws.getCollection(options.collectionName);
+  const col =
+    ws.getCollection(options.collectionName) ??
+    ws.getSingle(options.collectionName);
   if (!col) {
     throw new Error(`Collection not found: ${options.collectionName}`);
   }
@@ -166,7 +168,7 @@ export async function updateContent(
   locale?: string
 ): Promise<ParsedContent | null> {
   const ws = await createWorkspace({ cwd, collection: collectionName });
-  const col = ws.getCollection(collectionName);
+  const col = ws.getCollection(collectionName) ?? ws.getSingle(collectionName);
   if (!col) return null;
 
   const location = findContentFile(col, slug, locale);

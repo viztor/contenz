@@ -151,6 +151,34 @@ export function defineCollection(
 }
 
 /**
+ * Define a single (key-addressed single content value, e.g. site settings).
+ * Returns the same module shape as a single-type collection so workspace,
+ * build, and lint pipelines handle singles uniformly.
+ */
+export interface DefineSingleOptions {
+  /** Zod schema for meta validation */
+  schema: ZodSchema;
+  /**
+   * Override the generated meta interface name.
+   * Default: PascalCase single name + "Meta" (e.g. `site` → `SiteMeta`).
+   */
+  metaTypeName?: string;
+  /** Cross-collection relations: field name → target collection (or single) name */
+  relations?: Relations;
+  /** Computed fields derived from raw content or metadata */
+  computed?: ComputedFields;
+}
+
+export function defineSingle(options: DefineSingleOptions): SchemaModule & {
+  meta: ZodSchema;
+  relations?: Relations;
+  computed?: ComputedFields;
+  metaTypeName?: string;
+} {
+  return defineCollection(options);
+}
+
+/**
  * Define a multi-type content collection (alias for defineCollection with schemas).
  * Use this when you have multiple content types in one collection to avoid overload ambiguity.
  */

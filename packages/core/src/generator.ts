@@ -201,6 +201,118 @@ export function calculateFlatStats(
 }
 
 /**
+ * Build the per-slug data object for an i18n collection.
+ * Shared by the TypeScript emitter and the JSON emitter so both outputs
+ * always carry identical data (fallback-resolved per declared locale).
+ */
+export function buildI18nDataObject(
+  items: I18nCollectionData[],
+  locales: string[],
+  i18nConfig?: Pick<
+    ResolvedI18nConfig,
+    "fallbackChains" | "defaultFallbackChain" | "includeFallbackMetadata"
+  >
+): Record<string, unknown> {
+  const includeFallback = i18nConfig?.includeFallbackMetadata === true;
+  const dataObj: Record<string, unknown> = {};
+  for (const item of items) {
+    const itemData: Record<string, unknown> = {
+      slug: item.slug,
+      locales: {},
+    };
+
+    for (const locale of locales) {
+      const resolved = resolveI18nEntry(
+        item.locales,
+        locale,
+        i18nConfig ?? {
+          fallbackChains: {},
+          defaultFallbackChain: [],
+        }
+      );
+      if (resolved) {
+        (itemData.locales as Record<string, unknown>)[locale] = {
+          slug: item.slug,
+          file: resolved.file,
+          ...resolved.meta,
+          ...(includeFallback && resolved._fallback != null
+            ? { _fallback: resolved._fallback }
+            : {}),
+        };
+      }
+    }
+
+    dataObj[item.slug] = itemData;
+  }
+  return dataObj;
+}
+
+/**
+ * Build the per-slug data object for a flat (non-i18n) collection.
+ * Shared by the TypeScript emitter and the JSON emitter.
+ */
+export function buildFlatDataObject(
+  items: FlatCollectionData[]
+): Record<string, unknown> {
+  const dataObj: Record<string, unknown> = {};
+  for (const item of items) {
+    dataObj[item.slug] = {
+      slug: item.slug,
+      file: item.file,
+      ...item.meta,
+    };
+  }
+  return dataObj;
+}
+
+/**
+ * Build the per-slug data object for an i18n collection WITHOUT fallback
+ * resolution (raw detected locales only). This is the multi-type emitter's
+ * historical behavior, preserved verbatim for output parity.
+ */
+export function buildRawI18nDataObject(
+  items: I18nCollectionData[]
+): Record<string, unknown> {
+  const dataObj: Record<string, unknown> = {};
+  for (const item of items) {
+    const itemData: Record<string, unknown> = {
+      slug: item.slug,
+      locales: {},
+    };
+    for (const [locale, entry] of Object.entries(item.locales)) {
+      (itemData.locales as Record<string, unknown>)[locale] = {
+        slug: item.slug,
+        file: entry.file,
+        ...entry.meta,
+      };
+    }
+    dataObj[item.slug] = itemData;
+  }
+  return dataObj;
+}
+
+/**
+ * Build the per-type data maps for a multi-type collection, keyed exactly as
+ * the TypeScript emitter names them (`<type>s`).
+ */
+export function buildMultiTypeDataObject(
+  typeGroups: Map<string, Map<string, I18nCollectionData | FlatCollectionData>>,
+  i18n: boolean
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [typeName, itemsMap] of typeGroups) {
+    if (typeName === "default") continue;
+    const items = Array.from(itemsMap.values()).sort((a, b) =>
+      a.slug.localeCompare(b.slug)
+    );
+    out[`${typeName}s`] = i18n
+      ? buildRawI18nDataObject(items as I18nCollectionData[])
+      : buildFlatDataObject(items as FlatCollectionData[]);
+  }
+  return out;
+}
+
+/**
  * Generate {collection}.ts file for a collection with i18n support.
  * Output goes to generated/content/{collection}.ts
  * When resolvedI18n.includeFallbackMetadata is true, entries may include _fallback when content was resolved from another locale.
@@ -256,36 +368,7 @@ ${locales.map((l) => `    ${l}?: ${entryTypeName};`).join("\n")}
 
 export const ${collectionName}: Record<string, ${itemTypeName}> = `;
 
-  const dataObj: Record<string, unknown> = {};
-  for (const item of items) {
-    const itemData: Record<string, unknown> = {
-      slug: item.slug,
-      locales: {},
-    };
-
-    for (const locale of locales) {
-      const resolved = resolveI18nEntry(
-        item.locales,
-        locale,
-        i18nConfig ?? {
-          fallbackChains: {},
-          defaultFallbackChain: [],
-        }
-      );
-      if (resolved) {
-        (itemData.locales as Record<string, unknown>)[locale] = {
-          slug: item.slug,
-          file: resolved.file,
-          ...resolved.meta,
-          ...(includeFallback && resolved._fallback != null
-            ? { _fallback: resolved._fallback }
-            : {}),
-        };
-      }
-    }
-
-    dataObj[item.slug] = itemData;
-  }
+  const dataObj = buildI18nDataObject(items, locales, i18nConfig);
 
   output += JSON.stringify(dataObj, null, 2);
   output += ";\n\n";
@@ -335,14 +418,7 @@ export interface ${entryTypeName} extends ${metaTypeName} {
 
 export const ${collectionName}: Record<string, ${entryTypeName}> = `;
 
-  const dataObj: Record<string, unknown> = {};
-  for (const item of items) {
-    dataObj[item.slug] = {
-      slug: item.slug,
-      file: item.file,
-      ...item.meta,
-    };
-  }
+  const dataObj = buildFlatDataObject(items);
 
   output += JSON.stringify(dataObj, null, 2);
   output += ";\n\n";

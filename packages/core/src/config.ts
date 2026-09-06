@@ -8,7 +8,6 @@ import { getZodShape, isZodObject } from "./introspect.js";
 import { resolveSourcePatterns } from "./sources.js";
 import type {
   CollectionConfig,
-  ConfigModule,
   ContenzConfig,
   Relations,
   ResolvedConfig,
@@ -18,7 +17,7 @@ import type {
 const BUILT_IN_DEFAULTS: Required<
   Omit<
     ContenzConfig,
-    "coveragePath" | "outputDir" | "contentDir" | "collections"
+    "coveragePath" | "outputDir" | "contentDir" | "collections" | "singles"
   >
 > & {
   coveragePath: string;
@@ -88,25 +87,6 @@ export async function readProjectConfigFileRaw(
     }
   }
   return null;
-}
-
-/**
- * Load collection config from the configured content directory.
- */
-export async function loadCollectionConfig(
-  collectionPath: string
-): Promise<CollectionConfig | undefined> {
-  const configPath = path.join(collectionPath, "config.ts");
-  try {
-    const imported: ConfigModule = await import(pathToFileURL(configPath).href);
-    return imported.config;
-  } catch (err) {
-    if (isModuleNotFoundError(err, configPath)) return undefined;
-    throw new Error(
-      `Failed to load collection config "${configPath}": ${err instanceof Error ? err.message : err}`,
-      { cause: err }
-    );
-  }
 }
 
 /**

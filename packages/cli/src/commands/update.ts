@@ -25,7 +25,7 @@ async function update(
   this: ContenzContext,
   flags: UpdateFlags,
   collection: string,
-  slug: string
+  slug?: string
 ): Promise<void> {
   const setFields = parseSetPairs(flags.set);
   const unsetFields = flags.unset ? [...flags.unset] : [];
@@ -53,9 +53,10 @@ export const updateCommandDef = buildCommand({
           placeholder: "collection",
         },
         {
-          brief: "Content slug",
+          brief: "Content slug (omit for singles)",
           parse: String,
           placeholder: "slug",
+          optional: true,
         },
       ],
     },

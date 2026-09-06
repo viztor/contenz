@@ -32,6 +32,12 @@ export async function runCreate(
     const col = ws.getCollection(opts.collection);
 
     if (!col) {
+      if (ws.getSingle(opts.collection)) {
+        return {
+          success: false,
+          error: `Cannot create entries in single "${opts.collection}": singles are key-fixed; edit the file directly.`,
+        };
+      }
       return {
         success: false,
         error: `Collection not found: ${opts.collection}`,

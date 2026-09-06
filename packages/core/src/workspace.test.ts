@@ -104,4 +104,22 @@ describe("createWorkspace", () => {
       /Slug collision detected in collection "faq": Files .* resolve to the same slug \("hello"\)/
     );
   });
+
+  it("reports leftover per-collection config.ts files as migration errors", async () => {
+    const cwd = await prepareFixture("minimal");
+    const fs = await import("node:fs/promises");
+    const path = await import("node:path");
+
+    await fs.writeFile(
+      path.join(cwd, "content", "faq", "config.ts"),
+      "export const config = {};\n"
+    );
+
+    const ws = await createWorkspace({ cwd });
+    expect(
+      ws.discoveryErrors.some(
+        (e) => e.includes('Collection "faq"') && e.includes("no longer loaded")
+      )
+    ).toBe(true);
+  });
 });

@@ -191,12 +191,8 @@ contenz.config.ts (project root)
   ├── strict: boolean            — fail on warnings
   ├── adapters: FormatAdapter[]  — external format adapters
   ├── collections: Record<string, CollectionDeclaration>  — inline collection definitions
+  ├── singles: Record<string, SingleDeclaration>  — inline single definitions
   └── coveragePath: string       — coverage report path
-
-content/{collection}/config.ts (collection override)
-  ├── types: ContentType[]       — multi-type filename patterns
-  ├── slugPattern: RegExp        — custom slug extraction
-  ├── i18n, extensions, ignore   — override project defaults
 
 content/{collection}/schema.ts (collection schema)
   ├── meta: ZodSchema            — default schema (single-type)
@@ -207,7 +203,7 @@ content/{collection}/schema.ts (collection schema)
 
 ### Config Resolution Order
 
-`BUILT_IN_DEFAULTS` → `contenz.config.ts` → `{collection}/config.ts`
+`BUILT_IN_DEFAULTS` → `contenz.config.ts` (the only config file; shared fragments compose via explicit imports + `mergeContenzConfig`)
 
 Inline `collections` definitions in `contenz.config.ts` are merged with filesystem-discovered collections. Inline definitions take precedence for collections with the same name.
 

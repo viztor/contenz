@@ -55,6 +55,31 @@ export interface CollectionDeclaration {
 }
 
 /**
+ * Inline single declaration for centralized config.
+ * A single is a key-addressed single content value: no slug axis, no listing.
+ * The single's name acts as its slug for i18n filename conventions
+ * (`site.en.yml` alongside the canonical `site.yml`).
+ */
+export interface SingleDeclaration {
+  /** Explicit file path of the canonical file (relative to project root) */
+  path: string;
+  /** Inline Zod schema. If omitted, meta is unchecked (info diagnostic). */
+  schema?: ZodSchema;
+  /** Inline relations mapping for this single */
+  relations?: Relations;
+  /** Computed fields derived from raw content or metadata */
+  computed?: Record<
+    string,
+    (item: ParsedContent) => unknown | Promise<unknown>
+  >;
+  /**
+   * Narrow collection-level overrides (extensions, i18n).
+   * `types` and `slugPattern` are meaningless for singles and rejected at load.
+   */
+  config?: CollectionConfig;
+}
+
+/**
  * Rich i18n configuration (v2).
  * When i18n is enabled, optional fallback, coverage, and staleness options apply.
  */
@@ -150,6 +175,21 @@ export interface ContenzConfig {
    */
   collections?: Record<string, CollectionDeclaration>;
   /**
+   * Inline single declarations (key-addressed single values, e.g. site settings).
+   * Singles are explicit only — no filesystem discovery.
+   *
+   * @example
+   * ```ts
+   * singles: {
+   *   site: {
+   *     path: "data/site.yml",
+   *     schema: z.object({ title: z.string() }),
+   *   }
+   * }
+   * ```
+   */
+  singles?: Record<string, SingleDeclaration>;
+  /**
    * Extension hooks for tapping into the build lifecycle.
    */
   hooks?: {
@@ -167,8 +207,9 @@ export interface ContenzConfig {
 }
 
 /**
- * Collection-level configuration at a collection root, such as
- * `content/{collection}/config.ts` or `docs/config.ts`.
+ * Per-collection overrides, declared inline in the central `contenz.config.ts`
+ * (`collections.<name>.config`). There is exactly one config file per project;
+ * collection directories no longer carry their own `config.ts`.
  * These settings override project defaults for a specific collection.
  */
 export interface CollectionConfig {
@@ -248,13 +289,6 @@ export interface SchemaModule {
    * Set via `defineCollection({ schema, metaTypeName: "Post" })`.
    */
   metaTypeName?: string;
-}
-
-/**
- * Config module exports expected from config.ts files.
- */
-export interface ConfigModule {
-  config?: CollectionConfig;
 }
 
 /**

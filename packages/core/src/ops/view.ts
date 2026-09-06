@@ -1,10 +1,12 @@
 import { readContent } from "../content-io.js";
+import { createWorkspace } from "../workspace.js";
 import type { ContentOpResult } from "./shared.js";
 
 export interface ViewOptions {
   cwd: string;
   collection: string;
-  slug: string;
+  /** Omit only for singles (defaults to the single name) */
+  slug?: string;
   locale?: string;
 }
 
@@ -20,17 +22,33 @@ export async function runView(
   opts: ViewOptions
 ): Promise<ContentOpResult<ViewResult>> {
   try {
+    let slug = opts.slug;
+    if (!slug) {
+      // Slugless view addresses a single by name.
+      const ws = await createWorkspace({
+        cwd: opts.cwd,
+        collection: opts.collection,
+      });
+      const single = ws.getSingle(opts.collection);
+      if (!single) {
+        return {
+          success: false,
+          error: `Slug is required (omit only for singles): ${opts.collection}`,
+        };
+      }
+      slug = single.name;
+    }
     const result = await readContent(
       opts.cwd,
       opts.collection,
-      opts.slug,
+      slug,
       opts.locale
     );
 
     if (!result) {
       return {
         success: false,
-        error: `Content not found: ${opts.collection}/${opts.slug}`,
+        error: `Content not found: ${opts.collection}/${slug}`,
       };
     }
 

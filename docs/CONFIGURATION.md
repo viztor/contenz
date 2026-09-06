@@ -156,24 +156,74 @@ Each entry in `collections` is a `CollectionDeclaration`:
 - You can mix both: use `sources` for auto-discovered collections and `collections` for others.
 - If neither `sources` nor `collections` is set, the default `sources: ["content/*"]` applies.
 
-## Collection config
+### Singles
 
-Use `content/<collection>/config.ts` only when a collection needs overrides. For example, multi-type collections or a custom slug pattern.
+Singles are key-addressed single content values (site settings, a motto, a
+landing page): no slug axis, no listing, update-in-place. The single's name
+acts as its slug.
 
 ```ts
-import type { CollectionConfig } from "@contenz/core";
+import { z } from "zod";
+import type { ContenzConfig } from "@contenz/core";
 
-export const config: CollectionConfig = {
-  types: [
-    { name: "topic", pattern: /^topic-/ },
-    { name: "term", pattern: /.*/ },
-  ],
-  slugPattern: /^(.+)\.(\w+)\.(mdx?)$/, // optional
-  i18n: true, // override project i18n for this collection
-  extensions: ["mdx"],
-  ignore: ["_drafts/*"],
+export const config: ContenzConfig = {
+  singles: {
+    site: {
+      path: "data/site.en.json",
+      schema: z.object({
+        title: z.string(),
+        description: z.string().optional(),
+      }),
+    },
+  },
 };
 ```
+
+| Field       | Type               | Required | Description                                                                                                                                            |
+| ----------- | ------------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `path`      | `string`           | ✅       | Explicit file path of the canonical file, relative to root. In i18n mode it carries the default locale (`site.en.json`); otherwise plain (`site.yml`). |
+| `schema`    | `ZodSchema`        | ❌       | Inline Zod schema. If omitted, meta is unchecked (`SINGLE_UNVALIDATED` info diagnostic).                                                               |
+| `relations` | `Relations`        | ❌       | Relation mapping; collections may also target singles by name.                                                                                         |
+| `config`    | `CollectionConfig` | ❌       | Narrow overrides (`extensions`, `i18n`). `types`/`slugPattern` are rejected for singles.                                                               |
+
+Rules:
+
+- Explicit only — no filesystem discovery. A missing or misnamed file is a
+  discovery error (fails build, reported by lint).
+- Locale variants live alongside the canonical file (`site.en.json`,
+  `site.zh.json`) and resolve through the same fallback chains as collections.
+- Prefer `defineSingle({ schema, relations? })` in a shared module and reference
+  it, mirroring `defineCollection` usage.
+
+## Per-collection overrides (central)
+
+There is exactly one config file per project. Collection directories never
+carry their own `config.ts` — overrides live in the central `contenz.config.ts`
+as `collections.<name>.config`:
+
+```ts
+import type { ContenzConfig } from "@contenz/core";
+
+export const config: ContenzConfig = {
+  collections: {
+    terms: {
+      path: "content/terms",
+      config: {
+        types: [
+          { name: "topic", pattern: /^topic-/ },
+          { name: "term", pattern: /.*/ },
+        ],
+        i18n: true, // override project i18n for this collection
+        extensions: ["mdx"],
+        ignore: ["_drafts/*"],
+      },
+    },
+  },
+};
+```
+
+A leftover `content/<collection>/config.ts` is a loud migration error (build
+fails, lint reports it) — move its contents inline.
 
 ### Options
 
@@ -184,6 +234,43 @@ export const config: CollectionConfig = {
 | `i18n`        | `boolean \| I18nConfigShape` | Override i18n for this collection.                                                                                                                                                   |
 | `extensions`  | `string[]`                   | Override allowed extensions.                                                                                                                                                         |
 | `ignore`      | `string[]`                   | Override ignore patterns.                                                                                                                                                            |
+
+### Composition: explicit imports + merge
+
+Split shared fragments across files with normal imports — nothing is
+auto-loaded. `mergeContenzConfig` combines partial configs (monorepo bases,
+preset bundles):
+
+```ts
+// contenz.base.ts
+import { mdxAdapter } from "@contenz/adapter-mdx";
+import type { ContenzConfig } from "@contenz/core";
+
+export const base: ContenzConfig = {
+  i18n: { enabled: true, defaultLocale: "en" },
+  adapters: [mdxAdapter],
+};
+
+// contenz.config.ts
+import { mergeContenzConfig } from "@contenz/core";
+import { z } from "zod";
+import { base } from "./contenz.base.js";
+
+export const config = mergeContenzConfig(base, {
+  collections: {
+    faq: {
+      path: "content/faq",
+      schema: z.object({ question: z.string() }),
+    },
+  },
+});
+```
+
+Merge rules: plain objects deep-merge (so `collections`/`singles` combine per
+name); arrays concatenate and dedupe (`sources`, `ignore`, `adapters`);
+schemas, regexps, functions, and hooks last-win by reference; `undefined`
+never overwrites. Falsy partials are skipped, so conditional spreads stay
+ergonomic.
 
 ## Schema authoring
 
@@ -253,22 +340,29 @@ Filenames are matched against `pattern` in order (object key order); first match
 - `schemas` is empty (no content types declared), or
 - two types declare the same pattern source — the second type could never match since first match wins.
 
-**Option B – Patterns in collection config**  
-Use plain schemas and set `config.types` in `content/<collection>/config.ts`:
+**Option B – Patterns in the central config**
+Use plain schemas and set `config.types` inline in `contenz.config.ts`:
 
 ```ts
-// schema.ts
+// content/terms/schema.ts
 export const { termMeta, topicMeta, meta, relations } =
   defineMultiTypeCollection({
     schemas: { term: termSchema, topic: topicSchema },
   });
 
-// config.ts
-export const config: CollectionConfig = {
-  types: [
-    { name: "topic", pattern: /^topic-/ },
-    { name: "term", pattern: /.*/ },
-  ],
+// contenz.config.ts
+export const config: ContenzConfig = {
+  collections: {
+    terms: {
+      path: "content/terms",
+      config: {
+        types: [
+          { name: "topic", pattern: /^topic-/ },
+          { name: "term", pattern: /.*/ },
+        ],
+      },
+    },
+  },
 };
 ```
 
@@ -302,13 +396,13 @@ See [[CONTENT-MODEL#relation-validation|Content model – Relations]] for valida
 
 ## Loading order
 
-1. Project config: `contenz.config.ts` (or `.mjs` / `.js`).
+1. Project config: `contenz.config.ts` (or `.mjs` / `.js`) — the only config file.
 2. Inline collections from `config.collections` are pre-declared (schema provided directly).
 3. Filesystem discovery via `sources` patterns finds `schema.ts` files.
 4. If a collection exists in both `collections` and filesystem, the inline declaration wins.
-5. Collection config: `content/<collection>/config.ts` (if present) is merged.
-6. Resolved config merges project and collection; collection overrides project for the fields it defines.
-7. Schema: `schema.ts` or inline `schema` is loaded when validating or building.
+5. Resolved config merges project defaults with per-collection inline overrides (`collections.<name>.config`); collection overrides win for the fields they define.
+6. Schema: `schema.ts` or inline `schema` is loaded when validating or building.
+7. A leftover `content/<collection>/config.ts` is a migration error, not a config source.
 
 ## Format adapters
 

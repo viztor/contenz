@@ -6,7 +6,8 @@ import type { ContentOpResult } from "./shared.js";
 export interface UpdateOptions {
   cwd: string;
   collection: string;
-  slug: string;
+  /** Omit only for singles (defaults to the single name) */
+  slug?: string;
   set?: Record<string, unknown>;
   unset?: string[];
   locale?: string;
@@ -34,16 +35,31 @@ export async function runUpdate(
     }
 
     // Read current content (workspace loaded + adapters registered internally)
+    let slug = opts.slug;
+    if (!slug) {
+      const ws = await createWorkspace({
+        cwd: opts.cwd,
+        collection: opts.collection,
+      });
+      const single = ws.getSingle(opts.collection);
+      if (!single) {
+        return {
+          success: false,
+          error: `Slug is required (omit only for singles): ${opts.collection}`,
+        };
+      }
+      slug = single.name;
+    }
     const current = await readContent(
       opts.cwd,
       opts.collection,
-      opts.slug,
+      slug,
       opts.locale
     );
     if (!current) {
       return {
         success: false,
-        error: `Content not found: ${opts.collection}/${opts.slug}`,
+        error: `Content not found: ${opts.collection}/${slug}`,
       };
     }
 
@@ -65,12 +81,13 @@ export async function runUpdate(
       cwd: opts.cwd,
       collection: opts.collection,
     });
-    const col = ws.getCollection(opts.collection);
+    const col =
+      ws.getCollection(opts.collection) ?? ws.getSingle(opts.collection);
     if (col?.schema?.meta) {
       const validation = validateMeta(
         mergedMeta,
         col.schema.meta,
-        `${opts.collection}/${opts.slug}`
+        `${opts.collection}/${slug}`
       );
       if (!validation.valid) {
         return {
@@ -88,7 +105,7 @@ export async function runUpdate(
     const result = await updateContent(
       opts.cwd,
       opts.collection,
-      opts.slug,
+      slug,
       { set: opts.set ?? {}, unset: opts.unset ?? [] },
       opts.locale
     );
@@ -96,7 +113,7 @@ export async function runUpdate(
     if (!result) {
       return {
         success: false,
-        error: `Content not found: ${opts.collection}/${opts.slug}`,
+        error: `Content not found: ${opts.collection}/${slug}`,
       };
     }
 
