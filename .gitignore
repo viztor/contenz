@@ -27,6 +27,9 @@ coverage/
 Plan.md
 Roadmap.optimized.md
 
+# Local reference checkouts (e.g. dev/keystatic) — never commit
+dev/
+
 # Environment variables (keep .env.example tracked)
 .env
 .env.*
