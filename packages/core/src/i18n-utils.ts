@@ -191,15 +191,17 @@ export function negotiateLocale(
     // Prefix match: "zh-TW" → try "zh"
     const prefix = pref.locale.split("-")[0];
     if (prefix !== pref.locale) {
-       const prefixMatch = available.find((l) => l.toLowerCase() === prefix);
-       if (prefixMatch) {
-         return prefixMatch;
-       }
+      const prefixMatch = available.find((l) => l.toLowerCase() === prefix);
+      if (prefixMatch) {
+        return prefixMatch;
+      }
     }
 
     // Reverse prefix: available "zh-Hant" matches request for "zh"
     const targetPrefix = `${pref.locale}-`;
-    const reversePrefixMatch = available.find((l) => l.toLowerCase().startsWith(targetPrefix));
+    const reversePrefixMatch = available.find((l) =>
+      l.toLowerCase().startsWith(targetPrefix)
+    );
     if (reversePrefixMatch) {
       return reversePrefixMatch;
     }
