@@ -142,6 +142,7 @@ export {
 } from "./run-watch.js";
 export {
   createSearchIndex,
+  createSearchRouteHandler,
   DEFAULT_SEARCH_EXCERPT_LENGTH,
   loadSearchIndex,
   persistIndexToJson,
@@ -150,6 +151,7 @@ export {
   type SearchDocument,
   type SearchIndexHit,
   type SearchIndexQuery,
+  type SearchRouteOptions,
   saveSearchIndex,
 } from "./search-index.js";
 export {

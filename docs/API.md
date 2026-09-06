@@ -15,7 +15,7 @@ This page summarizes the programmatic API from `@contenz/core/api`. Use it when 
 - `@contenz/core/api` — full programmatic pipelines (build, lint, content ops, workspace)
 - `@contenz/core/reader` — edge-safe reader (`createReader`, storage backends). Zero `node:` imports (enforced by `check-edge` in CI); runs on Workers, edge, browsers, and Node.
 - `@contenz/core/writer` — edge-safe writer (`createWriter`, plans + apply). Same purity guarantees as the reader; `nodeWritableStorage` stays in `./api`.
-- `@contenz/core/search` — edge-safe index build/query (`createSearchIndex`, `querySearchIndex`, `persistIndexToJson`/`restoreIndexFromJson`). Filesystem load/save stay in `./api`.
+- `@contenz/core/search` — edge-safe index build/query (`createSearchIndex`, `querySearchIndex`, `persistIndexToJson`/`restoreIndexFromJson`, `createSearchRouteHandler`). Filesystem load/save stay in `./api`.
 
 Apps that only need published content import the modules produced by `contenz build` (e.g. `generated/content`) and resolve locales in application code. On edge runtimes without a filesystem, use `@contenz/core/reader` over the generated `.json` mirrors (see [Reader](#reader)).
 
@@ -219,6 +219,59 @@ const siteReader = createReader(
   fetchStorage({ baseUrl: "https://cdn.example.com/content" })
 );
 const site = await siteReader.singles.site.read("zh");
+```
+
+## Search (edge-safe)
+
+`@contenz/core/search` builds, persists, restores, and queries the Orama
+index without touching the filesystem. The edge round-trip is: build persists
+→ JSON artifact is served statically → route restores once per isolate →
+every request queries memory.
+
+| Export                                                                                                  | Description                                                                                                                                                                  |
+| ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `createSearchIndex(metaFields?)`                                                                        | Fresh empty index.                                                                                                                                                           |
+| `buildSearchDocument(...)`                                                                              | One indexable doc (body excerpted per `searchExcerptLength`).                                                                                                                |
+| `querySearchIndex(index, { query?, collection?, locale?, fields?, limit? })`                            | Ranked hits with meta rehydrated.                                                                                                                                            |
+| `persistIndexToJson(index)` / `restoreIndexFromJson(json)`                                              | Pure serialize round-trip (no fs).                                                                                                                                           |
+| `createSearchRouteHandler({ indexUrl?, index?, collection?, defaultLimit?, maxLimit?, cacheControl? })` | Web-standard `(req: Request) => Response`. Lazy isolate-cached load with retry; `?q=&collection=&locale=&limit=`; 400 on missing `q`, 405 off-GET, 502 on unavailable index. |
+
+```ts
+// Next.js: app/api/search/route.ts
+import { createSearchRouteHandler } from "@contenz/core/search";
+
+export const runtime = "edge";
+
+const handler = createSearchRouteHandler({
+  indexUrl: "https://cdn.example.com/content/search-index.json",
+});
+
+export const GET = handler;
+```
+
+```ts
+// Astro: src/pages/api/search.ts
+import type { APIRoute } from "astro";
+import { createSearchRouteHandler } from "@contenz/core/search";
+
+const handler = createSearchRouteHandler({
+  indexUrl: `${import.meta.env.SITE}content/search-index.json`,
+});
+
+export const GET: APIRoute = ({ request }) => handler(request);
+```
+
+```ts
+// Static params from the build manifest (any framework)
+import { expandStaticParams } from "@contenz/core/reader";
+import manifest from "@/generated/content/manifest.json";
+
+export function generateStaticParams() {
+  return expandStaticParams(manifest).map(({ slug, locale }) => ({
+    slug,
+    locale,
+  }));
+}
 ```
 
 ## Diagnostics

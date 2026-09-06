@@ -92,6 +92,151 @@ export async function restoreIndexFromJson(
   return restore<ContenzSearchIndex>("json", json);
 }
 
+// ── Edge route handler ──────────────────────────────────────────────────────
+
+export interface SearchRouteOptions {
+  /** Fetch the persisted index JSON from here (cached per handler/isolate) */
+  indexUrl?: string;
+  /** Pre-restored or bundled index (alternative to `indexUrl`) */
+  index?: ContenzSearchIndex;
+  /** Lock all queries to one collection (query param ignored when set) */
+  collection?: string;
+  /** Default/max page size behavior */
+  defaultLimit?: number;
+  maxLimit?: number;
+  /** Cache-Control response header for hit responses */
+  cacheControl?: string;
+}
+
+const DEFAULT_ROUTE_LIMIT = 10;
+const MAX_ROUTE_LIMIT = 100;
+const DEFAULT_ROUTE_CACHE_CONTROL =
+  "public, s-maxage=60, stale-while-revalidate=300";
+
+function jsonResponse(
+  body: unknown,
+  init: { status?: number; cacheControl?: string } = {}
+): Response {
+  const headers = new Headers();
+  if (init.cacheControl) headers.set("Cache-Control", init.cacheControl);
+  return Response.json(body, {
+    status: init.status ?? 200,
+    headers,
+  });
+}
+
+/**
+ * Framework-agnostic search route handler (Web Request → Response). Mount it
+ * in a Next.js route handler (`runtime = "edge"`), an Astro endpoint, a
+ * Remix loader-adjacent route, or a bare Worker:
+ *
+ * ```ts
+ * // Next.js: app/api/search/route.ts
+ * import { createSearchRouteHandler } from "@contenz/core/search";
+ * export const runtime = "edge";
+ * const handler = createSearchRouteHandler({ indexUrl: "https://cdn.example.com/content/search-index/faq.en.json" });
+ * export const GET = handler;
+ * ```
+ *
+ * Query params: `q` (or `query`), `collection`, `locale`, `limit`.
+ * The index loads lazily once per handler instance (per isolate on edge).
+ */
+export function createSearchRouteHandler(
+  options: SearchRouteOptions
+): (req: Request) => Promise<Response> {
+  if (!options.index && !options.indexUrl) {
+    throw new Error("createSearchRouteHandler requires `index` or `indexUrl`.");
+  }
+  const defaultLimit = options.defaultLimit ?? DEFAULT_ROUTE_LIMIT;
+  const maxLimit = options.maxLimit ?? MAX_ROUTE_LIMIT;
+  const cacheControl = options.cacheControl ?? DEFAULT_ROUTE_CACHE_CONTROL;
+  let cached: Promise<ContenzSearchIndex> | null = options.index
+    ? Promise.resolve(options.index)
+    : null;
+
+  async function fetchIndex(): Promise<ContenzSearchIndex> {
+    const res = await fetch(options.indexUrl!);
+    if (!res.ok) {
+      throw new Error(
+        `Search index fetch failed for "${options.indexUrl}": ${res.status}`
+      );
+    }
+    return restoreIndexFromJson(await res.text());
+  }
+
+  async function loadIndex(): Promise<ContenzSearchIndex> {
+    if (!cached) {
+      try {
+        cached = fetchIndex();
+        return await cached;
+      } catch (error) {
+        // A failed load must not poison later requests: allow retry.
+        cached = null;
+        throw error;
+      }
+    }
+    return cached;
+  }
+
+  return async function searchRouteHandler(req: Request): Promise<Response> {
+    if (req.method !== "GET") {
+      return jsonResponse(
+        { error: "Method not allowed (use GET)." },
+        { status: 405 }
+      );
+    }
+    let index: ContenzSearchIndex;
+    try {
+      index = await loadIndex();
+    } catch (error) {
+      return jsonResponse(
+        {
+          error: `Search index unavailable: ${error instanceof Error ? error.message : String(error)}`,
+        },
+        { status: 502 }
+      );
+    }
+    const url = new URL(req.url);
+    const params = url.searchParams;
+    const query = params.get("q") ?? params.get("query") ?? "";
+    const collection =
+      options.collection ?? params.get("collection") ?? undefined;
+    const locale = params.get("locale") ?? undefined;
+    const rawLimit = Number(params.get("limit") ?? "");
+    const limit = Number.isFinite(rawLimit)
+      ? Math.min(Math.max(1, Math.floor(rawLimit)), maxLimit)
+      : defaultLimit;
+    if (query.length === 0) {
+      return jsonResponse(
+        { error: 'Missing query parameter "q".' },
+        { status: 400 }
+      );
+    }
+    const hits = await querySearchIndex(index, {
+      query,
+      collection,
+      locale,
+      limit,
+    });
+    return jsonResponse(
+      {
+        query,
+        collection: collection ?? null,
+        locale: locale ?? null,
+        total: hits.length,
+        hits: hits.map((hit) => ({
+          slug: hit.slug,
+          locale: hit.locale,
+          file: hit.file,
+          meta: hit.meta,
+          score: hit.score,
+        })),
+      },
+      { cacheControl }
+    );
+  };
+}
+
 // ── Document operations ─────────────────────────────────────────────────────
 
 /**

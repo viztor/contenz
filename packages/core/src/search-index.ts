@@ -22,6 +22,7 @@ export {
   buildSearchDocument,
   collectMetaFieldNames,
   createSearchIndex,
+  createSearchRouteHandler,
   type ContenzSearchIndex,
   DEFAULT_SEARCH_EXCERPT_LENGTH,
   discardDocuments,
@@ -31,6 +32,7 @@ export {
   type SearchDocument,
   type SearchIndexHit,
   type SearchIndexQuery,
+  type SearchRouteOptions,
 } from "./search.js";
 
 const CONTENZ_DIR = ".contenz";
