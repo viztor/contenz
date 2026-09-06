@@ -12,6 +12,7 @@
     "@contenz/adapter-mdx": "workspace:*",
     "@contenz/cli": "workspace:*",
     "@contenz/core": "workspace:*",
+    "@modelcontextprotocol/sdk": "catalog:",
     "@types/node": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"

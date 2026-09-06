@@ -5,6 +5,8 @@ export default defineConfig({
     index: "src/index.ts",
     api: "src/api.ts",
     reader: "src/reader.ts",
+    writer: "src/writer.ts",
+    search: "src/search.ts",
   },
   format: ["esm"],
   target: "node24",

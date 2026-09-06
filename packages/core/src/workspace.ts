@@ -161,8 +161,9 @@ export async function createWorkspace(
   // Merge inline declared collections (from config.collections)
   const inlineEntries = projectConfig.collections ?? {};
   const inlineContexts: CollectionContext[] = await Promise.all(
-    Object.entries(inlineEntries).map(
-      async ([name, decl]: [string, CollectionDeclaration]) => {
+    Object.entries(inlineEntries)
+      .filter(([name]) => !options.collection || options.collection === name)
+      .map(async ([name, decl]: [string, CollectionDeclaration]) => {
         const collectionPath = path.resolve(cwd, decl.path);
         // Overrides come only from the central config (explicit imports by
         // the user when shared). No per-directory config.ts loading.
@@ -198,8 +199,7 @@ export async function createWorkspace(
           schema,
           contentFiles,
         };
-      }
-    )
+      })
   );
 
   // Merge: inline declarations override filesystem-discovered collections

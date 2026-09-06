@@ -14,6 +14,8 @@ This page summarizes the programmatic API from `@contenz/core/api`. Use it when 
 - `@contenz/core` — schema helpers (`defineCollection`, types) for `schema.ts` / config
 - `@contenz/core/api` — full programmatic pipelines (build, lint, content ops, workspace)
 - `@contenz/core/reader` — edge-safe reader (`createReader`, storage backends). Zero `node:` imports (enforced by `check-edge` in CI); runs on Workers, edge, browsers, and Node.
+- `@contenz/core/writer` — edge-safe writer (`createWriter`, plans + apply). Same purity guarantees as the reader; `nodeWritableStorage` stays in `./api`.
+- `@contenz/core/search` — edge-safe index build/query (`createSearchIndex`, `querySearchIndex`, `persistIndexToJson`/`restoreIndexFromJson`). Filesystem load/save stay in `./api`.
 
 Apps that only need published content import the modules produced by `contenz build` (e.g. `generated/content`) and resolve locales in application code. On edge runtimes without a filesystem, use `@contenz/core/reader` over the generated `.json` mirrors (see [Reader](#reader)).
 
@@ -153,6 +155,8 @@ output) and can be disabled per call.
 | `fetchStorage({ baseUrl, headers?, cache? })` | HTTP backend (`${baseUrl}/${path}`); 404 → null, other errors throw; `listdir` reads build-emitted `.listing.json`. Headers are caller-supplied and server-side only.                                                               |
 | `tieredStorage(stores)`                       | First-hit-wins reads, merged listings (e.g. KV → R2).                                                                                                                                                                               |
 | `nodeStorage({ root })`                       | Filesystem backend. Exported from `@contenz/core/api` only — never from `/reader`.                                                                                                                                                  |
+| `store.stat(path)`                            | Metadata probe without the body (`{ size \| null, mtimeMs?, etag? }`); null = missing (or unknown without reading, for stat-less backends). Memory/fs/fetch(tiered-delegated) implement it.                                         |
+| `openFile(store, path)`                       | File handle: snapshot metadata plus `stream(range?)`, `read(range?)`, `text(range?)`, `json()`. Ranges are native (fs/R2/206) or sliced after read; 416 maps to empty, never missing. Null paths/traversal/misses → null handle.    |
 | `parseContent(source, fileName, options)`     | Pure source parsing (no fs); `parseContentFile` in `./api` wraps it with a read.                                                                                                                                                    |
 | `joinStoragePath`, `isSafeStoragePath`        | POSIX path helpers; traversal (`..`, `\`, absents) resolves to null/empty, never throws.                                                                                                                                            |
 
@@ -163,8 +167,37 @@ Reads probe `slug.locale.ext` candidates directly (no listing round-trip); `list
 named error (Keystatic-style); pass `validate: false` to skip.
 
 `manifest.json` (emitted by `contenz build` next to the collection JSON files)
-carries `{ version, builtAt, collections: { name: { file, hash, slugs, locales? } } }`.
+carries `{ version, builtAt, collections: { name: { file, hash, slugs, locales?, size } } }`
+(`size` = emitted JSON bytes; 0 only when unknown, e.g. dry runs).
 Pass it as `createReader({ ..., manifest })` to serve `list()` without storage I/O.
+
+Layering contract: entries stay few (`.`, `./api`, `./reader`, `./writer`, plus `./search`
+for the Orama-backed index) rather than proliferating subpaths. Tree-shaking
+comes from ESM + `"sideEffects": false`, not from entry splitting. Two guards
+enforce the boundary: `check-boundary` (source imports, runs in `pnpm lint`)
+and `check-edge` (built bundle graph, runs in `pnpm build`). Pure modules may
+only import pure siblings plus `zod`/`p-map`; `nodeStorage` stays in `./api` so
+Node-SSR bundlers shake it down without dragging the pipeline.
+
+## Writer (edge-safe)
+
+`@contenz/core/writer` provides `createWriter(options, store)` over any
+`WritableStorage` (`memoryStorage` and tiered write; `nodeWritableStorage` from
+`./api`; R2/KV/GitHub adapters plug in outside core). Options mirror the reader
+(collections, singles, `i18n` — resolved configs pass through untouched).
+
+Every write is a plan first: `planCreate`/`planUpdate` return `{ kind, file,
+before, after, meta, valid, diagnostics, exists }` without touching storage;
+`apply(plan)` performs the mkdir + write. `create`/`update` conveniences throw
+`ValidationFailedError` (carrying diagnostics) on invalid plans. Misuse throws
+with the same strings as the CLI ops (`Collection not found`, `Cannot create
+entries in single …`, `Invalid slug`, `Locale is required when i18n is
+enabled`, `Content not found`, `No mutations specified`); data problems yield
+`valid: false` instead. Updates always target the exact locale file (no
+fallback reads); custom `slugPattern` layouts resolve via enumerate-and-match
+exactly like the CLI. `runCreate`/`runUpdate`/`writeContent`/`updateContent`
+delegate to the writer — one code path for planning, validation, and
+serialization.
 
 ```ts
 import { createReader, fetchStorage } from "@contenz/core/reader";

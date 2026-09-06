@@ -102,6 +102,17 @@ export {
   type SingleReader,
 } from "./reader.js";
 export {
+  collectEntryUnits,
+  escapeXml,
+  type ExportFormat,
+  type ExportOptions,
+  type ExportResult,
+  type ExportUnit,
+  flattenToStrings,
+  runExport,
+  unitId,
+} from "./run-export.js";
+export {
   runSchema,
   type SchemaOptions,
   type SchemaResultData,
@@ -131,8 +142,11 @@ export {
 } from "./run-watch.js";
 export {
   createSearchIndex,
+  DEFAULT_SEARCH_EXCERPT_LENGTH,
   loadSearchIndex,
+  persistIndexToJson,
   querySearchIndex,
+  restoreIndexFromJson,
   type SearchDocument,
   type SearchIndexHit,
   type SearchIndexQuery,
@@ -141,15 +155,23 @@ export {
 export {
   fetchStorage,
   type FetchStorageOptions,
+  type FileHandle,
+  type FileStat,
   isSafeStoragePath,
   joinStoragePath,
   memoryStorage,
+  openFile,
   type Storage,
   type StorageEntry,
   type StorageStreamRange,
   tieredStorage,
+  type WritableStorage,
 } from "./storage.js";
-export { nodeStorage, type NodeStorageOptions } from "./storage-node.js";
+export {
+  nodeStorage,
+  nodeWritableStorage,
+  type NodeStorageOptions,
+} from "./storage-node.js";
 export type { DiscoveredCollection } from "./sources.js";
 export {
   discoverCollections,
@@ -170,3 +192,14 @@ export {
   createWorkspace,
   type Workspace,
 } from "./workspace.js";
+export {
+  type PlanCreateOptions,
+  type PlanDiagnostic,
+  type PlanUpdateMutations,
+  ValidationFailedError,
+  type WritePlan,
+  type WriteReceipt,
+  type Writer,
+  type WriterOptions,
+  createWriter,
+} from "./writer.js";

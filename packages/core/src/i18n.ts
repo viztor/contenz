@@ -41,6 +41,26 @@ export function isI18nEnabled(
  * - `fallback: { "zh-TW": ["zh", "en"] }` — per-locale chains in declaration order
  * - `fallback: { "zh-Hant": "zh" }` — record shorthand for single-step chains
  */
+
+/**
+ * Accept raw or already-resolved i18n config. Resolved configs (recognized by
+ * their computed chains) pass through untouched — no re-normalization, so
+ * `ResolvedConfig.resolvedI18n` can flow straight into reader/writer options.
+ */
+export function ensureResolvedI18nConfig(
+  raw: boolean | I18nConfigShape | ResolvedI18nConfig | undefined
+): ResolvedI18nConfig {
+  if (
+    typeof raw === "object" &&
+    raw !== null &&
+    "fallbackChains" in raw &&
+    "defaultFallbackChain" in raw
+  ) {
+    return raw;
+  }
+  return normalizeI18nConfig(raw);
+}
+
 export function normalizeI18nConfig(
   raw: boolean | I18nConfigShape | undefined
 ): ResolvedI18nConfig {
