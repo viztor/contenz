@@ -48,6 +48,7 @@ export function joinStoragePath(...parts: string[]): string {
 /** True when a storage path is safe to resolve (no traversal, no absolutes). */
 export function isSafeStoragePath(path: string): boolean {
   if (path.length === 0) return false;
+  if (/^[a-zA-Z]:/.test(path)) return false;
   const segments = path.split("/");
   for (const seg of segments) {
     if (seg === "" || seg === "." || seg === "..") return false;

@@ -23,6 +23,8 @@ describe("joinStoragePath / isSafeStoragePath", () => {
     expect(isSafeStoragePath("a/../b")).toBe(false);
     expect(isSafeStoragePath("a/./b")).toBe(false);
     expect(isSafeStoragePath("a\\b")).toBe(false);
+    expect(isSafeStoragePath("C:/etc/passwd")).toBe(false);
+    expect(isSafeStoragePath("c:\\etc\\passwd")).toBe(false);
   });
 });
 
