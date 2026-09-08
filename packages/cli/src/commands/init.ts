@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 import { buildCommand } from "@stricli/core";
+import pc from "picocolors";
 
 import type { ContenzContext } from "../context.js";
 import { fail, log } from "../output.js";
@@ -312,7 +313,7 @@ async function init(this: ContenzContext, flags: InitFlags): Promise<void> {
 
   const installCommand = await detectInstallCommand(cwd);
 
-  log(this, `Initialized contenz in ${cwd}`);
+  log(this, pc.green(`Initialized contenz in ${cwd}`));
   log(this, "");
   log(this, "Created:");
   for (const file of files) {

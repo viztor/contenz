@@ -7,6 +7,7 @@
  */
 
 import type { ContentOpResult } from "@contenz/core/api";
+import pc from "picocolors";
 
 import type { ContenzContext } from "./context.js";
 import type { OutputFormat } from "./shared.js";
@@ -24,11 +25,13 @@ export function printResult(
   } else if (result.success && result.data !== undefined) {
     prettyPrint(ctx, result.data);
   } else {
-    ctx.process.stderr.write(`Error: ${result.error ?? "Unknown error"}\n`);
+    ctx.process.stderr.write(
+      pc.red(`Error: ${result.error ?? "Unknown error"}\n`)
+    );
     if (result.diagnostics?.length) {
       for (const d of result.diagnostics) {
         ctx.process.stderr.write(
-          `  ${d.field ? `${d.field}: ` : ""}${d.message}\n`
+          pc.red(`  ${d.field ? `${d.field}: ` : ""}${d.message}\n`)
         );
       }
     }
@@ -82,11 +85,11 @@ export function log(ctx: ContenzContext, message: string): void {
 
 /** Write a line to stderr */
 export function logError(ctx: ContenzContext, message: string): void {
-  ctx.process.stderr.write(`${message}\n`);
+  ctx.process.stderr.write(pc.red(`${message}\n`));
 }
 
 /** Fail the command with a message and exit code 1 */
 export function fail(ctx: ContenzContext, message: string): void {
-  ctx.process.stderr.write(`${message}\n`);
+  ctx.process.stderr.write(pc.red(`${message}\n`));
   ctx.process.exitCode = 1;
 }
