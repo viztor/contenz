@@ -43,6 +43,7 @@
     "@contenz/core": "workspace:*",
     "@stricli/auto-complete": "catalog:",
     "@stricli/core": "catalog:",
+    "picocolors": "catalog:",
     "tsx": "catalog:"
   },
   "devDependencies": {
