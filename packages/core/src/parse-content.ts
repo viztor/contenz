@@ -33,6 +33,40 @@ function extAlternation(extensions?: string[]): string {
   return exts.map((e) => e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
 }
 
+// ⚡ Bolt: Cache compiled RegExps using a WeakMap keyed by the extensions array reference.
+// This prevents redundant string allocations and regular expression recompilations
+// during workspace scanning (a hot path), significantly improving performance.
+const regexCache = new WeakMap<string[], { i18n: RegExp; standard: RegExp }>();
+let defaultRegexes: { i18n: RegExp; standard: RegExp } | undefined;
+
+function getRegexes(extensions?: string[]): { i18n: RegExp; standard: RegExp } {
+  const exts = extensions?.length ? extensions : DEFAULT_EXTENSIONS;
+
+  if (exts === DEFAULT_EXTENSIONS) {
+    if (!defaultRegexes) {
+      const alt = extAlternation(exts);
+      const localePattern = "[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?";
+      defaultRegexes = {
+        i18n: new RegExp(`^(.+)\\.(${localePattern})\\.(${alt})$`),
+        standard: new RegExp(`^(.+)\\.(${alt})$`),
+      };
+    }
+    return defaultRegexes;
+  }
+
+  let cached = regexCache.get(exts);
+  if (!cached) {
+    const alt = extAlternation(exts);
+    const localePattern = "[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?";
+    cached = {
+      i18n: new RegExp(`^(.+)\\.(${localePattern})\\.(${alt})$`),
+      standard: new RegExp(`^(.+)\\.(${alt})$`),
+    };
+    regexCache.set(exts, cached);
+  }
+  return cached;
+}
+
 /**
  * Parse filename to extract slug and optional locale.
  *
@@ -57,14 +91,11 @@ export function parseFileName(
     };
   }
 
-  const alt = extAlternation(extensions);
+  const regexes = getRegexes(extensions);
 
   if (i18nEnabled) {
     // BCP 47 locale: xx, xxx, xx-XX, xx-Xxxx, xx-Xxxx-XX, etc.
-    const localePattern = "[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?";
-    const match = new RegExp(`^(.+)\\.(${localePattern})\\.(${alt})$`).exec(
-      fileName
-    );
+    const match = regexes.i18n.exec(fileName);
     if (!match) return null;
     return {
       slug: match[1],
@@ -73,7 +104,7 @@ export function parseFileName(
     };
   }
 
-  const match = new RegExp(`^(.+)\\.(${alt})$`).exec(fileName);
+  const match = regexes.standard.exec(fileName);
   if (!match) return null;
   return {
     slug: match[1],
