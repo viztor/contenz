@@ -69,10 +69,6 @@ export function parseLocaleFromURL(
     queryParam = "lang",
   } = options;
 
-  // Normalize locales to lowercase for comparison
-  const localeSet = new Set(locales.map((l) => l.toLowerCase()));
-  const localeMap = new Map(locales.map((l) => [l.toLowerCase(), l]));
-
   let parsedUrl: URL;
   try {
     parsedUrl =
@@ -87,12 +83,18 @@ export function parseLocaleFromURL(
 
   if (strategy === "query") {
     const paramValue = parsedUrl.searchParams.get(queryParam);
-    if (paramValue && localeSet.has(paramValue.toLowerCase())) {
-      return {
-        locale: localeMap.get(paramValue.toLowerCase()) ?? defaultLocale,
-        pathname: parsedUrl.pathname,
-        explicit: true,
-      };
+    if (paramValue) {
+      // ⚡ Bolt: Hoisted target string lowercase conversion outside the loop to avoid redundant processing
+      const target = paramValue.toLowerCase();
+      // ⚡ Bolt: Replaced Set/Map instantiation with Array.prototype.find() to eliminate memory allocation overhead on hot paths
+      const match = locales.find((l) => l.toLowerCase() === target);
+      if (match) {
+        return {
+          locale: match,
+          pathname: parsedUrl.pathname,
+          explicit: true,
+        };
+      }
     }
     return {
       locale: defaultLocale,
@@ -107,11 +109,14 @@ export function parseLocaleFromURL(
     return { locale: defaultLocale, pathname: "/", explicit: false };
   }
 
+  // ⚡ Bolt: Hoisted target string lowercase conversion outside the loop to avoid redundant processing
   const firstSegment = segments[0].toLowerCase();
-  if (localeSet.has(firstSegment)) {
+  // ⚡ Bolt: Replaced Set/Map instantiation with Array.prototype.find() to eliminate memory allocation overhead on hot paths
+  const match = locales.find((l) => l.toLowerCase() === firstSegment);
+  if (match) {
     const remaining = `/${segments.slice(1).join("/")}`;
     return {
-      locale: localeMap.get(firstSegment) ?? defaultLocale,
+      locale: match,
       pathname: remaining,
       explicit: true,
     };
@@ -172,7 +177,7 @@ export function negotiateLocale(
     .filter((p) => p.quality > 0)
     .sort((a, b) => b.quality - a.quality);
 
-  // Build lowercase lookup
+  // ⚡ Bolt: Re-introduce Map to avoid redundant array iterations and string allocations within the loop
   const availableMap = new Map(available.map((l) => [l.toLowerCase(), l]));
 
   for (const pref of preferences) {
