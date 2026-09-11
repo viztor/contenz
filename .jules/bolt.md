@@ -1,0 +1,4 @@
+## 2025-02-12 - Replaced Set/Map instantiations with Array.prototype.find() for locale negotiation
+
+**Learning:** Instantiating `Set` and `Map` inside hot paths for locale negotiation causes unnecessary memory allocation overhead for small array collections. `Array.prototype.find()` provides functionally equivalent searches while avoiding object creation penalties. However, in scenarios like header preference parsing (`negotiateLocale`) where there is an outer loop traversing multiple entries, moving to array traversal inside the loop converts the complexity to O(N * M) and performs redundant string allocations.
+**Action:** Use array methods like `find()` to avoid `Set`/`Map` instantiations ONLY on simple, single-lookup code paths. When executing lookups within loops, retain the pre-computed `Map` to prevent redundant computations and nested array traversal. Always precompute invariant string manipulation (like case conversions) outside loops.
