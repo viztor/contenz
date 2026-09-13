@@ -33,6 +33,32 @@ function extAlternation(extensions?: string[]): string {
   return exts.map((e) => e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
 }
 
+// ⚡ Bolt: Cache derived RegExp objects in a WeakMap based on the stable array reference
+// to avoid expensive recompilation overhead during high-volume directory traversals.
+const regexCache = new WeakMap<
+  readonly string[] | string[],
+  { i18n: RegExp; base: RegExp }
+>();
+// BCP 47 locale: xx, xxx, xx-XX, xx-Xxxx, xx-Xxxx-XX, etc.
+const LOCALE_PATTERN = "[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?";
+
+function getCachedRegex(
+  extensions: string[] | undefined,
+  i18nEnabled: boolean
+): RegExp {
+  const key = extensions || DEFAULT_EXTENSIONS;
+  let cacheMap = regexCache.get(key);
+  if (!cacheMap) {
+    const alt = extAlternation(key as string[]);
+    cacheMap = {
+      i18n: new RegExp(`^(.+)\\.(${LOCALE_PATTERN})\\.(${alt})$`),
+      base: new RegExp(`^(.+)\\.(${alt})$`),
+    };
+    regexCache.set(key, cacheMap);
+  }
+  return i18nEnabled ? cacheMap.i18n : cacheMap.base;
+}
+
 /**
  * Parse filename to extract slug and optional locale.
  *
@@ -57,15 +83,11 @@ export function parseFileName(
     };
   }
 
-  const alt = extAlternation(extensions);
+  const regex = getCachedRegex(extensions, i18nEnabled);
+  const match = regex.exec(fileName);
+  if (!match) return null;
 
   if (i18nEnabled) {
-    // BCP 47 locale: xx, xxx, xx-XX, xx-Xxxx, xx-Xxxx-XX, etc.
-    const localePattern = "[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?";
-    const match = new RegExp(`^(.+)\\.(${localePattern})\\.(${alt})$`).exec(
-      fileName
-    );
-    if (!match) return null;
     return {
       slug: match[1],
       locale: match[2],
@@ -73,8 +95,6 @@ export function parseFileName(
     };
   }
 
-  const match = new RegExp(`^(.+)\\.(${alt})$`).exec(fileName);
-  if (!match) return null;
   return {
     slug: match[1],
     ext: match[2],
