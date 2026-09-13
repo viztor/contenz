@@ -35,18 +35,24 @@ function extAlternation(extensions?: string[]): string {
 
 // ⚡ Bolt: Cache derived RegExp objects in a WeakMap based on the stable array reference
 // to avoid expensive recompilation overhead during high-volume directory traversals.
-const regexCache = new WeakMap<string[], { i18n: RegExp; base: RegExp }>();
+const regexCache = new WeakMap<
+  readonly string[] | string[],
+  { i18n: RegExp; base: RegExp }
+>();
 // BCP 47 locale: xx, xxx, xx-XX, xx-Xxxx, xx-Xxxx-XX, etc.
 const LOCALE_PATTERN = "[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?";
 
-function getCachedRegex(extensions: string[] | undefined, i18nEnabled: boolean): RegExp {
-  const key = extensions?.length ? extensions : DEFAULT_EXTENSIONS;
+function getCachedRegex(
+  extensions: string[] | undefined,
+  i18nEnabled: boolean
+): RegExp {
+  const key = extensions || DEFAULT_EXTENSIONS;
   let cacheMap = regexCache.get(key);
   if (!cacheMap) {
-    const alt = extAlternation(key);
+    const alt = extAlternation(key as string[]);
     cacheMap = {
       i18n: new RegExp(`^(.+)\\.(${LOCALE_PATTERN})\\.(${alt})$`),
-      base: new RegExp(`^(.+)\\.(${alt})$`)
+      base: new RegExp(`^(.+)\\.(${alt})$`),
     };
     regexCache.set(key, cacheMap);
   }
