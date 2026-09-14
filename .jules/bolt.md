@@ -1,0 +1,4 @@
+## 2025-02-18 - Avoid Set/Map allocations for small array lookups in hot paths
+
+**Learning:** Instantiating `Set` and `Map` on every function call for small array lookups introduces unnecessary memory allocation and garbage collection overhead. In hot paths like URL parsing (`parseLocaleFromURL`), this micro-optimization is significant. Array.prototype.find() is much faster for a small number of items (like a list of locales) as it avoids any intermediate allocations. It's also important to hoist the string manipulation (like `.toLowerCase()`) out of the `find` callback so it's not repeated for every item.
+**Action:** When working on performance optimizations in hot paths processing small lists (e.g. fewer than 10-20 items), use `Array.prototype.find()` or standard loops instead of converting arrays to Sets/Maps. Always remember to hoist invariant operations out of iteration callbacks.
