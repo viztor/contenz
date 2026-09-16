@@ -33,6 +33,36 @@ function extAlternation(extensions?: string[]): string {
   return exts.map((e) => e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
 }
 
+// Optimization: Cache compiled RegExps based on stable references (like the `extensions` array via WeakMap) to minimize redundant string manipulations and regex compilations.
+const extCache = new WeakMap<string[], { i18n: RegExp; basic: RegExp }>();
+let defaultRegexes: { i18n: RegExp; basic: RegExp } | undefined;
+
+function getRegexes(extensions?: string[]) {
+  if (!extensions || extensions.length === 0) {
+    if (!defaultRegexes) {
+      const alt = extAlternation(DEFAULT_EXTENSIONS);
+      const localePattern = "[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?";
+      defaultRegexes = {
+        i18n: new RegExp(`^(.+)\\.(${localePattern})\\.(${alt})$`),
+        basic: new RegExp(`^(.+)\\.(${alt})$`),
+      };
+    }
+    return defaultRegexes;
+  }
+
+  let cached = extCache.get(extensions);
+  if (!cached) {
+    const alt = extAlternation(extensions);
+    const localePattern = "[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?";
+    cached = {
+      i18n: new RegExp(`^(.+)\\.(${localePattern})\\.(${alt})$`),
+      basic: new RegExp(`^(.+)\\.(${alt})$`),
+    };
+    extCache.set(extensions, cached);
+  }
+  return cached;
+}
+
 /**
  * Parse filename to extract slug and optional locale.
  *
@@ -57,14 +87,10 @@ export function parseFileName(
     };
   }
 
-  const alt = extAlternation(extensions);
+  const { i18n, basic } = getRegexes(extensions);
 
   if (i18nEnabled) {
-    // BCP 47 locale: xx, xxx, xx-XX, xx-Xxxx, xx-Xxxx-XX, etc.
-    const localePattern = "[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?";
-    const match = new RegExp(`^(.+)\\.(${localePattern})\\.(${alt})$`).exec(
-      fileName
-    );
+    const match = i18n.exec(fileName);
     if (!match) return null;
     return {
       slug: match[1],
@@ -73,7 +99,7 @@ export function parseFileName(
     };
   }
 
-  const match = new RegExp(`^(.+)\\.(${alt})$`).exec(fileName);
+  const match = basic.exec(fileName);
   if (!match) return null;
   return {
     slug: match[1],
