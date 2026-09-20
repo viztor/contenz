@@ -52,7 +52,6 @@ import { isZodObject } from "./introspect.js";
 import {
   computeCollectionInputHash,
   computeConfigHash,
-  getCachedInputHash,
   loadManifest,
   type ManifestCollectionEntry,
   mergeManifest,
@@ -750,7 +749,28 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
   // shape is invisible to computeConfigHash, so hash the file itself too.
   const projectConfigRaw = await readProjectConfigFileRaw(cwd);
   const configHashInputs = projectConfigRaw != null ? [projectConfigRaw] : [];
-  const manifest = !force && !dryRun ? await loadManifest(cwd) : null;
+  let manifest = !force && !dryRun ? await loadManifest(cwd) : null;
+
+  // ⚡ Bolt: Check global manifest invalidation factors before the loop
+  // to avoid redundant string allocations like sources.join(",") inside getCachedInputHash
+  if (manifest) {
+    if (manifest.cwd !== cwd || manifest.outputDir !== baseConfig.outputDir) {
+      manifest = null;
+    } else if (sources.join(",") !== manifest.sources.join(",")) {
+      manifest = null;
+    } else if (
+      projectConfigHash &&
+      manifest.configHash &&
+      manifest.configHash !== projectConfigHash
+    ) {
+      manifest = null;
+    }
+  }
+
+  // ⚡ Bolt: Cache manifest entries by name to prevent O(N*M) lookups inside the collection processing loop
+  const manifestCollectionsMap = new Map(
+    manifest?.collections.map((c) => [c.name, c])
+  );
 
   /** Collections we can skip (cached hash matches, output exists) */
   const skipped: {
@@ -777,14 +797,10 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
     let skippedSlugs: string[] | undefined;
     let skippedLocales: string[] | undefined;
     if (!force && !dryRun && manifest) {
-      const cachedHash = getCachedInputHash(
-        manifest,
-        cwd,
-        baseConfig.outputDir,
-        sources,
-        ctx.name,
-        projectConfigHash
-      );
+      // ⚡ Bolt: Look up cached hash directly using O(1) Map instead of calling getCachedInputHash which uses Array.prototype.find
+      const entry = manifestCollectionsMap.get(ctx.name);
+      const cachedHash = entry?.inputHash ?? null;
+
       const outputPath = path.join(outputDir, `${ctx.name}.ts`);
       const jsonPath = path.join(outputDir, `${ctx.name}.json`);
       try {
@@ -793,7 +809,6 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
         if (cachedHash === inputHash) {
           skip = true;
           // Reuse the previously emitted JSON for manifest slugs/locales.
-          const entry = manifest?.collections.find((c) => c.name === ctx.name);
           const emitted = await readEmittedJsonIndex(
             outputDir,
             `${ctx.name}.json`,
@@ -807,7 +822,7 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
       }
     }
     if (skip) {
-      const entry = manifest?.collections.find((c) => c.name === ctx.name);
+      const entry = manifestCollectionsMap.get(ctx.name);
       const indexMeta = entry?.indexMeta ?? {
         name: ctx.name,
         hasI18n: ctx.config.i18n,
