@@ -691,7 +691,7 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
 
   const results = await pMap(
     toBuild,
-     async ({ ctx }) =>
+    async ({ ctx }) =>
       processOneCollection(
         ctx,
         outputDir,
