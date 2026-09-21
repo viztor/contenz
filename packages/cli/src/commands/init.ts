@@ -15,13 +15,21 @@ interface ScaffoldFile {
   content: string;
 }
 
+function isAbsoluteLikePath(value: string): boolean {
+  return path.posix.isAbsolute(value) || /^[a-zA-Z]:\//.test(value);
+}
+
 function isRelativeProjectPath(value: string): boolean {
-  if (value.length === 0 || path.isAbsolute(value)) {
+  if (value.length === 0) {
     return false;
   }
 
-  const normalized = path.normalize(value);
-  return normalized !== ".." && !normalized.startsWith(`..${path.sep}`);
+  const normalized = path.posix.normalize(value.replaceAll("\\", "/"));
+  return (
+    normalized !== ".." &&
+    !normalized.startsWith("../") &&
+    !isAbsoluteLikePath(normalized)
+  );
 }
 
 function toPascalCase(value: string): string {
