@@ -38,6 +38,30 @@ export interface ParsedLocaleURL {
   explicit: boolean;
 }
 
+// ── Cache ───────────────────────────────────────────────────────────────────
+
+// WeakMap caches to avoid recreating Set/Map on every call for stable array references
+const localeSetCache = new WeakMap<string[], Set<string>>();
+const localeMapCache = new WeakMap<string[], Map<string, string>>();
+
+function getLocaleSetMap(locales: string[]): {
+  localeSet: Set<string>;
+  localeMap: Map<string, string>;
+} {
+  let localeSet = localeSetCache.get(locales);
+  let localeMap = localeMapCache.get(locales);
+
+  if (!localeSet || !localeMap) {
+    localeSet = new Set(locales.map((l) => l.toLowerCase()));
+    localeMap = new Map(locales.map((l) => [l.toLowerCase(), l]));
+    // Optimization: Cache derived objects based on array reference
+    localeSetCache.set(locales, localeSet);
+    localeMapCache.set(locales, localeMap);
+  }
+
+  return { localeSet, localeMap };
+}
+
 // ── parseLocaleFromURL ──────────────────────────────────────────────────────
 
 /**
@@ -70,8 +94,7 @@ export function parseLocaleFromURL(
   } = options;
 
   // Normalize locales to lowercase for comparison
-  const localeSet = new Set(locales.map((l) => l.toLowerCase()));
-  const localeMap = new Map(locales.map((l) => [l.toLowerCase(), l]));
+  const { localeSet, localeMap } = getLocaleSetMap(locales);
 
   let parsedUrl: URL;
   try {
@@ -173,7 +196,7 @@ export function negotiateLocale(
     .sort((a, b) => b.quality - a.quality);
 
   // Build lowercase lookup
-  const availableMap = new Map(available.map((l) => [l.toLowerCase(), l]));
+  const { localeMap: availableMap } = getLocaleSetMap(available);
 
   for (const pref of preferences) {
     // Exact match
