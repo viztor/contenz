@@ -18,7 +18,7 @@ afterEach(async () => {
   await Promise.all(
     tempDirs
       .splice(0)
-      .map( async (dir) => fs.rm(dir, { recursive: true, force: true }))
+      .map(async (dir) => fs.rm(dir, { recursive: true, force: true }))
   );
 });
 
@@ -248,11 +248,7 @@ describe("extractRelations", () => {
         seeAlso: "faq",
       },
     };
-    const result = extractRelations(module, [
-      "glossary",
-      "team",
-      "faq",
-    ]);
+    const result = extractRelations(module, ["glossary", "team", "faq"]);
     expect(result).toEqual({
       glossaryLinks: "glossary",
       authorRef: "team",

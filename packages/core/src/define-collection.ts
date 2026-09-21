@@ -104,11 +104,11 @@ export function defineCollection(
   for (const [name, value] of Object.entries(schemas)) {
     const schema =
       typeof value === "object" && value !== null && "schema" in value
-        ? (value).schema
-        : (value);
+        ? value.schema
+        : value;
     const pattern =
       typeof value === "object" && value !== null && "pattern" in value
-        ? (value).pattern
+        ? value.pattern
         : undefined;
 
     const exportKey = `${name}Meta`;

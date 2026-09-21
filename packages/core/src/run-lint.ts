@@ -642,7 +642,7 @@ export async function runLint(options: LintOptions): Promise<LintResult> {
 
   const firstPassResults = await pMap(
     collections,
-     async (ctx) =>
+    async (ctx) =>
       firstPassOneCollection(
         ctx,
         availableCollections,
@@ -672,7 +672,7 @@ export async function runLint(options: LintOptions): Promise<LintResult> {
 
   const secondPassResults = await pMap(
     collections,
-     async (ctx) =>
+    async (ctx) =>
       secondPassOneCollection(ctx, collectionSlugs, availableCollections),
     { concurrency: LINT_CONCURRENCY }
   );

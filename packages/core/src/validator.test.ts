@@ -10,11 +10,7 @@ import {
 describe("validateMeta", () => {
   it("returns valid when meta matches schema", () => {
     const schema = z.object({ title: z.string(), count: z.number() });
-    const result = validateMeta(
-      { title: "Hi", count: 1 },
-      schema,
-      "test.mdx"
-    );
+    const result = validateMeta({ title: "Hi", count: 1 }, schema, "test.mdx");
     expect(result.valid).toBe(true);
     expect(result.errors).toHaveLength(0);
   });
