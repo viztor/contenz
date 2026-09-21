@@ -5,6 +5,7 @@ import {
   isSafeStoragePath,
   joinStoragePath,
   memoryStorage,
+  openFile,
   tieredStorage,
 } from "./storage.js";
 
@@ -153,5 +154,141 @@ describe("tieredStorage", () => {
       { name: "only-b.mdx", kind: "file" },
       { name: "x.mdx", kind: "file" },
     ]);
+  });
+
+  it("delegates stat to the first backend that knows", async () => {
+    const a = memoryStorage({ "d/x.mdx": "ax" });
+    const b = memoryStorage({ "d/y.mdx": "by" });
+    const tiered = tieredStorage([a, b]);
+    expect(await tiered.stat!("d/x.mdx")).toMatchObject({ size: 2 });
+    expect(await tiered.stat!("d/y.mdx")).toMatchObject({ size: 2 });
+    expect(await tiered.stat!("d/nope.mdx")).toBeNull();
+  });
+});
+
+describe("stat", () => {
+  it("memory reports byte sizes", async () => {
+    const store = memoryStorage({ "f.mdx": "héllo" });
+    expect(await store.stat!("f.mdx")).toMatchObject({ size: 6 });
+    expect(await store.stat!("missing")).toBeNull();
+    expect(await store.stat!("../escape")).toBeNull();
+  });
+
+  it("fetch stats via HEAD", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if ((init?.method ?? "GET") === "HEAD") {
+          if (String(url).endsWith("missing.mdx")) {
+            return new Response("x", { status: 404 });
+          }
+          return new Response(null, {
+            status: 200,
+            headers: {
+              "content-length": "42",
+              "last-modified": "Thu, 01 Jan 2026 00:00:00 GMT",
+              etag: '"abc"',
+            },
+          });
+        }
+        return new Response("x", { status: 404 });
+      })
+    );
+    try {
+      const store = fetchStorage({ baseUrl: "https://x.example" });
+      expect(await store.stat!("f.mdx")).toMatchObject({
+        size: 42,
+        mtimeMs: Date.parse("Thu, 01 Jan 2026 00:00:00 GMT"),
+        etag: '"abc"',
+      });
+      expect(await store.stat!("missing.mdx")).toBeNull();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
+
+describe("openFile", () => {
+  it("reads, ranges, decodes, and stats over memory", async () => {
+    const store = memoryStorage({ "d/f.json": '{"a":1}extra' });
+    const handle = await openFile(store, "d/f.json");
+    expect(handle).not.toBeNull();
+    expect(handle!.size).toBe(12);
+    expect(handle!.seekable).toBe(true);
+    expect(await handle!.stat()).toMatchObject({ size: 12 });
+    expect(await handle!.text()).toBe('{"a":1}extra');
+    expect(await handle!.read({ offset: 0, length: 7 })).toEqual(
+      new TextEncoder().encode('{"a":1}')
+    );
+    expect(new TextDecoder().decode((await handle!.read())!)).toBe(
+      '{"a":1}extra'
+    );
+  });
+
+  it("parses JSON bodies", async () => {
+    const store = memoryStorage({ "d/f.json": '{"a":1}' });
+    const handle = await openFile(store, "d/f.json");
+    expect(await handle!.json()).toEqual({ a: 1 });
+    // Memory stat is authoritative: missing files yield no handle.
+    expect(await openFile(store, "missing")).toBeNull();
+  });
+
+  it("rejects unsafe paths", async () => {
+    const store = memoryStorage({ f: "x" });
+    expect(await openFile(store, "../escape")).toBeNull();
+    expect(await openFile(store, "")).toBeNull();
+  });
+
+  it("streams ranges over node fs without buffering wholes", async () => {
+    const fs = await import("node:fs/promises");
+    const os = await import("node:os");
+    const path = await import("node:path");
+    const { nodeStorage } = await import("./storage-node.js");
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "contenz-openfile-"));
+    try {
+      await fs.writeFile(path.join(dir, "big.bin"), "0123456789abcdef");
+      const store = nodeStorage({ root: dir });
+      const handle = await openFile(store, "big.bin");
+      expect(await handle!.stat()).toMatchObject({ size: 16 });
+      expect(
+        new TextDecoder().decode(
+          (await handle!.read({ offset: 4, length: 4 }))!
+        )
+      ).toBe("4567");
+      expect(await handle!.stat()).toMatchObject({
+        mtimeMs: expect.any(Number),
+      });
+    } finally {
+      await fs.rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("maps fetch 416 to empty (not missing)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if ((init?.method ?? "GET") === "HEAD") {
+          return new Response(null, {
+            status: 200,
+            headers: { "content-length": "10" },
+          });
+        }
+        const range = new Headers(init?.headers).get("Range");
+        if (range === "bytes=100-109") {
+          return new Response("x", { status: 416 });
+        }
+        return new Response("0123456789");
+      })
+    );
+    try {
+      const store = fetchStorage({ baseUrl: "https://x.example" });
+      const handle = await openFile(store, "f.bin");
+      expect(handle!.size).toBe(10);
+      const bytes = await handle!.read({ offset: 100, length: 10 });
+      expect(bytes).not.toBeNull();
+      expect(bytes!.length).toBe(0);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

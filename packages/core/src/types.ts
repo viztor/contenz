@@ -1,6 +1,8 @@
 import type { ZodSchema } from "zod";
 
 import type { FormatAdapter } from "./format-adapter.js";
+import type { BuildResult } from "./run-build.js";
+import type { Workspace } from "./workspace.js";
 
 /**
  * Content type definition for multi-type collections.
@@ -147,6 +149,12 @@ export interface ContenzConfig {
   /** Whether to build the client-side search index (default: true) */
   buildSearchIndex?: boolean;
   /**
+   * Indexed body excerpt length in chars (default: 2000). Bodies dominate
+   * index weight; excerpting trades deep-content recall for edge-friendly
+   * size. `null` keeps full bodies. Per-collection override available.
+   */
+  searchExcerptLength?: number | null;
+  /**
    * Format adapters for content file parsing and serialization.
    * Register adapters for file formats beyond JSON (which is built-in).
    *
@@ -193,16 +201,12 @@ export interface ContenzConfig {
    * Extension hooks for tapping into the build lifecycle.
    */
   hooks?: {
-    beforeBuild?: (
-      workspace: import("./workspace.js").Workspace
-    ) => void | Promise<void>;
+    beforeBuild?: (workspace: Workspace) => void | Promise<void>;
     transformItem?: (
       item: ParsedContent,
       collectionName: string
     ) => void | Promise<void>;
-    afterBuild?: (
-      result: import("./run-build.js").BuildResult
-    ) => void | Promise<void>;
+    afterBuild?: (result: BuildResult) => void | Promise<void>;
   };
 }
 
@@ -223,6 +227,11 @@ export interface CollectionConfig {
   extensions?: string[];
   /** Override: glob patterns to ignore */
   ignore?: string[];
+  /**
+   * Override: indexed body excerpt length (chars). `null` keeps full bodies.
+   * Absent inherits the project setting.
+   */
+  searchExcerptLength?: number | null;
 }
 
 /**
@@ -263,6 +272,8 @@ export interface ResolvedConfig {
   extensions: string[];
   ignore: string[];
   buildSearchIndex: boolean;
+  /** Resolved indexed body excerpt length (`null` = full bodies) */
+  searchExcerptLength: number | null;
   types?: ContentType[];
   slugPattern?: RegExp;
 }

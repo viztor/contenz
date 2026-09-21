@@ -41,9 +41,11 @@
   },
   "dependencies": {
     "@contenz/core": "workspace:*",
+    "@modelcontextprotocol/sdk": "catalog:",
     "@stricli/auto-complete": "catalog:",
     "@stricli/core": "catalog:",
-    "tsx": "catalog:"
+    "tsx": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",

@@ -80,7 +80,14 @@ export interface ContentManifest {
   builtAt: string;
   collections: Record<
     string,
-    { file: string; hash: string; slugs: string[]; locales?: string[] }
+    {
+      file: string;
+      hash: string;
+      slugs: string[];
+      locales?: string[];
+      /** Emitted JSON bytes (0 when unknown, e.g. dry runs) */
+      size: number;
+    }
   >;
 }
 
@@ -426,7 +433,8 @@ async function processOneCollection(
           parsed.locale,
           file,
           result.meta,
-          result.body
+          result.body,
+          effectiveConfig.searchExcerptLength
         )
       );
     } catch (error) {
@@ -1050,20 +1058,37 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
   // keep their previously emitted JSON.
   if (failedCount === 0 && (skipped.length > 0 || succeeded.length > 0)) {
     const manifestCollections: ContentManifest["collections"] = {};
-    for (const s of skipped) {
-      manifestCollections[s.name] = {
-        file: s.jsonName,
+    const entries = [
+      ...skipped.map((s) => ({
+        name: s.name,
+        jsonName: s.jsonName,
         hash: s.inputHash,
         slugs: s.slugs,
-        ...(s.locales?.length ? { locales: s.locales } : {}),
-      };
-    }
-    for (const r of succeeded) {
-      manifestCollections[r.indexMeta.name] = {
-        file: r.jsonName,
+        locales: s.locales,
+      })),
+      ...succeeded.map((r) => ({
+        name: r.indexMeta.name,
+        jsonName: r.jsonName,
         hash: r.inputHash,
         slugs: r.slugs,
-        ...(r.locales?.length ? { locales: r.locales } : {}),
+        locales: r.locales,
+      })),
+    ];
+    for (const entry of entries) {
+      let size = 0;
+      if (!dryRun) {
+        try {
+          size = (await fs.stat(path.join(outputDir, entry.jsonName))).size;
+        } catch {
+          // Missing output (should not happen on clean builds) reads as 0.
+        }
+      }
+      manifestCollections[entry.name] = {
+        file: entry.jsonName,
+        hash: entry.hash,
+        slugs: entry.slugs,
+        ...(entry.locales?.length ? { locales: entry.locales } : {}),
+        size,
       };
     }
     const contentManifest: ContentManifest = {

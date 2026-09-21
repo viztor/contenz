@@ -37,6 +37,25 @@ describe("resolveConfig", () => {
     expect(resolved.i18n).toBe(false);
     expect(resolved.extensions).toEqual(["md", "mdx", "json"]);
     expect(resolved.ignore).toEqual(["README.md", "_*"]);
+    expect(resolved.searchExcerptLength).toBe(2000);
+  });
+
+  it("resolves searchExcerptLength with null passthrough", () => {
+    expect(resolveConfig({}).searchExcerptLength).toBe(2000);
+    expect(
+      resolveConfig({ searchExcerptLength: 500 }).searchExcerptLength
+    ).toBe(500);
+    // Explicit null (full bodies) must survive ??-style fallthrough.
+    expect(
+      resolveConfig({ searchExcerptLength: null }).searchExcerptLength
+    ).toBeNull();
+    expect(
+      resolveConfig({ searchExcerptLength: 500 }, { searchExcerptLength: null })
+        .searchExcerptLength
+    ).toBeNull();
+    expect(
+      resolveConfig({}, { searchExcerptLength: 100 }).searchExcerptLength
+    ).toBe(100);
   });
 
   it("normalizes project source overrides", () => {

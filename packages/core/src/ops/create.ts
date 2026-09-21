@@ -1,8 +1,8 @@
-import { writeContent } from "../content-io.js";
-import { introspectSchema } from "../introspect.js";
-import type { ContentExtension } from "../parser.js";
-import { validateMeta } from "../validator.js";
+import path from "node:path";
+
+import { nodeWritableStorage } from "../storage-node.js";
 import { createWorkspace } from "../workspace.js";
+import { createWriter } from "../writer.js";
 import type { ContentOpResult } from "./shared.js";
 
 export interface CreateOptions {
@@ -51,48 +51,48 @@ export async function runCreate(
       };
     }
 
-    // Fill defaults from schema introspection
-    const meta = { ...opts.meta };
-    const introspected = introspectSchema(col.schema.meta);
-    for (const [fieldName, field] of Object.entries(introspected.fields)) {
-      if (meta[fieldName] === undefined && field.default !== undefined) {
-        meta[fieldName] = field.default;
-      }
-    }
-
-    // Validate against schema
-    const validation = validateMeta(
-      meta,
-      col.schema.meta,
-      `${opts.collection}/${opts.slug}`
+    // Plan + apply through the writer (single code path for defaults,
+    // validation, naming, and serialization).
+    const writer = createWriter(
+      {
+        collections: [
+          {
+            name: col.name,
+            dir: "",
+            schema: col.schema.meta,
+            extensions: col.config.extensions,
+          },
+        ],
+        i18n: col.config.resolvedI18n,
+        adapters: ws.projectConfig.adapters,
+      },
+      nodeWritableStorage({ root: col.collectionPath })
     );
-    if (!validation.valid) {
+    const plan = await writer.planCreate(col.name, opts.slug, opts.meta, {
+      // No ext: the writer defaults to the first extension with a registered
+      // adapter (rather than blindly taking extensions[0], which may be
+      // unparseable in adapter-less projects).
+      locale: opts.locale,
+    });
+    if (!plan.valid) {
       return {
         success: false,
         error: "Validation failed",
-        diagnostics: validation.errors.map((e) => ({
+        diagnostics: plan.diagnostics.map((e) => ({
           field: e.field,
           message: e.message,
         })),
       };
     }
-
-    const location = await writeContent({
-      cwd: opts.cwd,
-      collectionName: opts.collection,
-      slug: opts.slug,
-      locale: opts.locale,
-      meta,
-      ext: col.config.extensions[0] ?? "mdx",
-    });
+    const receipt = await writer.apply(plan);
 
     return {
       success: true,
       data: {
         slug: opts.slug,
         collection: opts.collection,
-        file: location.filePath,
-        meta,
+        file: path.join(col.collectionPath, receipt.file),
+        meta: plan.meta,
       },
     };
   } catch (error) {
