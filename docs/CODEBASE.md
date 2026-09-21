@@ -122,9 +122,11 @@ contenz.config.ts (user)
    │  discoverCollections()
    │    │
    │  For each collection:
-   │    ├── loadCollectionConfig()
    │    ├── loadSchemaModule()
    │    └── globContentFiles()
+   │  (Single central config: no per-collection config.ts loading.
+   │   A leftover one is a migration error. Overrides come from
+   │   `collections.<name>.config` via explicit imports + mergeContenzConfig.)
    │
    └─── Workspace { collections[], resolvedConfig }
              │

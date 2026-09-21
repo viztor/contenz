@@ -19,14 +19,53 @@ import {
   type FormatAdapter,
   getAdapterForExtension,
 } from "./format-adapter.js";
-import { getFallbackChain, normalizeI18nConfig } from "./i18n.js";
+import {
+  ensureResolvedI18nConfig,
+  getFallbackChain,
+  type ResolvedI18nConfig,
+} from "./i18n.js";
 import { parseFileName } from "./parse-content.js";
-import { joinStoragePath, type Storage } from "./storage.js";
+import {
+  dirnameOf,
+  fetchStorage,
+  type FetchStorageOptions,
+  type FileHandle,
+  type FileStat,
+  isSafeStoragePath,
+  joinStoragePath,
+  memoryStorage,
+  openFile,
+  type Storage,
+  type StorageEntry,
+  type StorageStreamRange,
+  tieredStorage,
+  type WritableStorage,
+} from "./storage.js";
 import type { I18nConfigShape } from "./types.js";
 import { validateMeta } from "./validator.js";
 
-const DEFAULT_EXTENSIONS = ["md", "mdx", "json"];
-const DEFAULT_IGNORE = ["README.md", "_*"];
+// Storage backends re-exported so `@contenz/core/reader` is self-sufficient
+// on edge runtimes (no `./api` import needed for memory/fetch/tiered).
+export {
+  dirnameOf,
+  fetchStorage,
+  type FetchStorageOptions,
+  type FileHandle,
+  type FileStat,
+  isSafeStoragePath,
+  joinStoragePath,
+  memoryStorage,
+  openFile,
+  type Storage,
+  type StorageEntry,
+  type StorageStreamRange,
+  tieredStorage,
+  type WritableStorage,
+};
+
+export const DEFAULT_READER_EXTENSIONS = ["md", "mdx", "json"];
+export const DEFAULT_READER_IGNORE = ["README.md", "_*"];
+const DEFAULT_IGNORE = DEFAULT_READER_IGNORE;
 const READ_CONCURRENCY = 8;
 
 export interface ReaderCollectionConfig {
@@ -65,15 +104,51 @@ export interface ReaderSingleConfig {
 
 /** Enumeration fast-path (e.g. from the build `manifest.json`). */
 export interface ReaderManifest {
-  collections: Record<string, { slugs: string[] }>;
+  collections: Record<string, { slugs: string[]; locales?: string[] }>;
+}
+
+/**
+ * Expand a manifest into static params for SSG (`generateStaticParams`,
+ * Astro `getStaticPaths`, SvelteKit `entries`). One entry per
+ * collection × slug × locale (locale null when unlisted). Deterministic order.
+ */
+export function expandStaticParams(
+  manifest: ReaderManifest
+): Array<{ collection: string; slug: string; locale: string | null }> {
+  const params: Array<{
+    collection: string;
+    slug: string;
+    locale: string | null;
+  }> = [];
+  const names = Object.keys(manifest.collections).sort((a, b) =>
+    a < b ? -1 : a > b ? 1 : 0
+  );
+  for (const name of names) {
+    const entry = manifest.collections[name];
+    const slugs = [...entry.slugs].sort((a, b) => a.localeCompare(b));
+    const entryLocales = entry.locales ?? [];
+    const locales =
+      entryLocales.length > 0
+        ? [...entryLocales].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))
+        : [null];
+    for (const slug of slugs) {
+      for (const locale of locales) {
+        params.push({ collection: name, slug, locale });
+      }
+    }
+  }
+  return params;
 }
 
 export interface ReaderOptions {
   collections: ReaderCollectionConfig[];
   /** Singles (key-addressed values, no listing) */
   singles?: ReaderSingleConfig[];
-  /** Boolean or rich i18n shape (same as project config) */
-  i18n?: boolean | I18nConfigShape;
+  /**
+   * Boolean, rich shape, or an already-resolved config (passes through
+   * untouched — `ResolvedConfig.resolvedI18n` flows straight in).
+   */
+  i18n?: boolean | I18nConfigShape | ResolvedI18nConfig;
   /** Format adapters (MDX etc.). JSON is always registered. */
   adapters?: FormatAdapter[];
   /**
@@ -143,21 +218,28 @@ function normalizeReadArgs(localeOrOpts?: string | ReaderReadOptions): {
   };
 }
 
+// ⚡ Bolt: Cache compiled RegExp patterns to avoid repetitive allocation in the hot path.
+const ignoreRegexCache = new Map<string, RegExp>();
+
 /** Minimal glob subset for ignore patterns: `*` (any run) and `?` (one char). */
-function matchIgnore(basename: string, patterns: string[]): boolean {
+export function matchIgnore(basename: string, patterns: string[]): boolean {
   for (const pattern of patterns) {
-    const regex = new RegExp(
-      `^${pattern
-        .split("")
-        .map((ch) =>
-          ch === "*"
-            ? ".*"
-            : ch === "?"
-              ? "."
-              : ch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-        )
-        .join("")}$`
-    );
+    let regex = ignoreRegexCache.get(pattern);
+    if (!regex) {
+      regex = new RegExp(
+        `^${pattern
+          .split("")
+          .map((ch) =>
+            ch === "*"
+              ? ".*"
+              : ch === "?"
+                ? "."
+                : ch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+          )
+          .join("")}$`
+      );
+      ignoreRegexCache.set(pattern, regex);
+    }
     if (regex.test(basename)) return true;
   }
   return false;
@@ -193,7 +275,7 @@ function failFast<T extends object>(
 }
 
 export function createReader(options: ReaderOptions, storage: Storage): Reader {
-  const i18n = normalizeI18nConfig(options.i18n);
+  const i18n = ensureResolvedI18nConfig(options.i18n);
   const adapters = buildAdapterList(options.adapters ?? []);
   const collections = new Map<string, ReaderCollectionConfig>();
   for (const collection of options.collections) {
@@ -224,7 +306,7 @@ export function createReader(options: ReaderOptions, storage: Storage): Reader {
   function extensionsFor(collection: ReaderCollectionConfig): string[] {
     return collection.extensions?.length
       ? collection.extensions
-      : DEFAULT_EXTENSIONS;
+      : DEFAULT_READER_EXTENSIONS;
   }
 
   function ignoreFor(collection: ReaderCollectionConfig): string[] {
@@ -361,7 +443,7 @@ export function createReader(options: ReaderOptions, storage: Storage): Reader {
     const single = getSingle(name);
     const extensions = single.extensions?.length
       ? single.extensions
-      : DEFAULT_EXTENSIONS;
+      : DEFAULT_READER_EXTENSIONS;
 
     async function read(
       localeOrOpts?: string | ReaderReadOptions
@@ -451,7 +533,7 @@ export function createReader(options: ReaderOptions, storage: Storage): Reader {
   };
 }
 
-async function parseEntryBytes(args: {
+export async function parseEntryBytes(args: {
   file: string;
   ext: string;
   slug: string;

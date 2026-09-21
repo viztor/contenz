@@ -24,6 +24,7 @@
     "dist"
   ],
   "type": "module",
+  "sideEffects": false,
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -41,19 +42,29 @@
       "types": "./dist/reader.d.ts",
       "import": "./dist/reader.js",
       "default": "./dist/reader.js"
+    },
+    "./writer": {
+      "types": "./dist/writer.d.ts",
+      "import": "./dist/writer.js",
+      "default": "./dist/writer.js"
+    },
+    "./search": {
+      "types": "./dist/search.d.ts",
+      "import": "./dist/search.js",
+      "default": "./dist/search.js"
     }
   },
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "build": "tsup && tsc --emitDeclarationOnly --declarationMap && node scripts/check-edge.mjs",
+    "build": "tsup && tsc --emitDeclarationOnly --declarationMap && node scripts/check-edge.mjs && node scripts/check-edge.mjs writer.js && node scripts/check-edge.mjs search.js",
     "dev": "tsup --watch",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
-    "lint": "oxlint src",
+    "lint": "oxlint src && node scripts/check-boundary.mjs",
     "lint:fix": "oxlint --fix src",
     "format": "oxfmt --write src",
     "check": "oxlint src",
@@ -65,7 +76,6 @@
     "fast-glob": "catalog:",
     "p-map": "catalog:",
     "picocolors": "catalog:",
-    "tsx": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

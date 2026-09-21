@@ -1,6 +1,8 @@
-import { readContent, updateContent } from "../content-io.js";
-import { validateMeta } from "../validator.js";
+import path from "node:path";
+
+import { nodeWritableStorage } from "../storage-node.js";
 import { createWorkspace } from "../workspace.js";
+import { createWriter } from "../writer.js";
 import type { ContentOpResult } from "./shared.js";
 
 export interface UpdateOptions {
@@ -34,13 +36,15 @@ export async function runUpdate(
       };
     }
 
-    // Read current content (workspace loaded + adapters registered internally)
+    // Resolve the slug (singles default to their name) and load config once.
+    // Everything registers as a dir-rooted writer collection: constructed
+    // names are identical for collections and singles, so no special case.
     let slug = opts.slug;
+    const ws = await createWorkspace({
+      cwd: opts.cwd,
+      collection: opts.collection,
+    });
     if (!slug) {
-      const ws = await createWorkspace({
-        cwd: opts.cwd,
-        collection: opts.collection,
-      });
       const single = ws.getSingle(opts.collection);
       if (!single) {
         return {
@@ -50,80 +54,71 @@ export async function runUpdate(
       }
       slug = single.name;
     }
-    const current = await readContent(
-      opts.cwd,
-      opts.collection,
-      slug,
-      opts.locale
-    );
-    if (!current) {
-      return {
-        success: false,
-        error: `Content not found: ${opts.collection}/${slug}`,
-      };
-    }
-
-    // Compute the merged meta after mutations
-    const mergedMeta = { ...current.meta };
-    if (opts.set) {
-      for (const [key, value] of Object.entries(opts.set)) {
-        mergedMeta[key] = value;
-      }
-    }
-    if (opts.unset) {
-      for (const key of opts.unset) {
-        delete mergedMeta[key];
-      }
-    }
-
-    // Validate the merged meta against the schema (reuses cached workspace)
-    const ws = await createWorkspace({
-      cwd: opts.cwd,
-      collection: opts.collection,
-    });
     const col =
       ws.getCollection(opts.collection) ?? ws.getSingle(opts.collection);
-    if (col?.schema?.meta) {
-      const validation = validateMeta(
-        mergedMeta,
-        col.schema.meta,
-        `${opts.collection}/${slug}`
-      );
-      if (!validation.valid) {
-        return {
-          success: false,
-          error: "Validation failed",
-          diagnostics: validation.errors.map((e) => ({
-            field: e.field,
-            message: e.message,
-          })),
-        };
-      }
-    }
-
-    // Validation passed — apply the update
-    const result = await updateContent(
-      opts.cwd,
-      opts.collection,
-      slug,
-      { set: opts.set ?? {}, unset: opts.unset ?? [] },
-      opts.locale
-    );
-
-    if (!result) {
+    if (!col) {
       return {
         success: false,
         error: `Content not found: ${opts.collection}/${slug}`,
       };
     }
+
+    // Plan + apply through the writer (single code path for merge,
+    // validation, serialization, and exact-locale targeting).
+    const writer = createWriter(
+      {
+        collections: [
+          {
+            name: col.name,
+            dir: "",
+            schema: col.schema?.meta,
+            extensions: col.config.extensions,
+          },
+        ],
+        i18n: col.config.resolvedI18n,
+        adapters: ws.projectConfig.adapters,
+      },
+      nodeWritableStorage({ root: col.collectionPath })
+    );
+    let plan;
+    try {
+      plan = await writer.planUpdate(
+        col.name,
+        slug,
+        {
+          set: opts.set,
+          unset: opts.unset,
+        },
+        opts.locale
+      );
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message.startsWith("Content not found:")
+      ) {
+        return { success: false, error: error.message };
+      }
+      throw error;
+    }
+    if (!plan.valid) {
+      return {
+        success: false,
+        error: "Validation failed",
+        diagnostics: plan.diagnostics.map((e) => ({
+          field: e.field,
+          message: e.message,
+        })),
+      };
+    }
+    const receipt = await writer.apply(plan);
 
     return {
       success: true,
       data: {
-        slug: result.slug,
+        slug: receipt.slug,
         collection: opts.collection,
-        file: result.filePath,
-        meta: result.meta,
+        file: path.join(col.collectionPath, receipt.file),
+        meta: receipt.meta,
       },
     };
   } catch (error) {

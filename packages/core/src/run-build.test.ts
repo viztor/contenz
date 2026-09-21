@@ -98,6 +98,8 @@ describe("runBuild", () => {
       file: "faq.json",
       hash: expect.any(String),
     });
+    expect(typeof manifest.collections.faq.size).toBe("number");
+    expect(manifest.collections.faq.size).toBeGreaterThan(0);
     expect(indexOutput).toContain(
       'export { faq, faqSlugs, faqStats } from "./faq.js";'
     );

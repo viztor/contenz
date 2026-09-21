@@ -17,7 +17,11 @@ export {
   type SchemaWithPattern,
 } from "./define-collection.js";
 export type { FormatAdapter } from "./format-adapter.js";
-export { type ResolvedLocaleEntry, resolveI18nEntry } from "./i18n.js";
+export {
+  ensureResolvedI18nConfig,
+  type ResolvedLocaleEntry,
+  resolveI18nEntry,
+} from "./i18n.js";
 export { mergeContenzConfig } from "./merge-config.js";
 export { presets } from "./presets.js";
 export type {
