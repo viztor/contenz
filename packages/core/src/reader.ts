@@ -218,21 +218,28 @@ function normalizeReadArgs(localeOrOpts?: string | ReaderReadOptions): {
   };
 }
 
+// ⚡ Bolt: Cache compiled RegExp patterns to avoid repetitive allocation in the hot path.
+const ignoreRegexCache = new Map<string, RegExp>();
+
 /** Minimal glob subset for ignore patterns: `*` (any run) and `?` (one char). */
 export function matchIgnore(basename: string, patterns: string[]): boolean {
   for (const pattern of patterns) {
-    const regex = new RegExp(
-      `^${pattern
-        .split("")
-        .map((ch) =>
-          ch === "*"
-            ? ".*"
-            : ch === "?"
-              ? "."
-              : ch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-        )
-        .join("")}$`
-    );
+    let regex = ignoreRegexCache.get(pattern);
+    if (!regex) {
+      regex = new RegExp(
+        `^${pattern
+          .split("")
+          .map((ch) =>
+            ch === "*"
+              ? ".*"
+              : ch === "?"
+                ? "."
+                : ch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+          )
+          .join("")}$`
+      );
+      ignoreRegexCache.set(pattern, regex);
+    }
     if (regex.test(basename)) return true;
   }
   return false;
