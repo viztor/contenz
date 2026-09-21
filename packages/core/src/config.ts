@@ -33,6 +33,7 @@ const BUILT_IN_DEFAULTS: Required<
   adapters: [],
   hooks: {},
   buildSearchIndex: true,
+  searchExcerptLength: 2000,
 };
 
 const CONFIG_FILENAMES = [
@@ -136,6 +137,15 @@ export function resolveConfig(
   const rawI18n = collection?.i18n ?? project.i18n ?? BUILT_IN_DEFAULTS.i18n;
   const resolvedI18n = normalizeI18nConfig(rawI18n);
 
+  // Explicit undefined-checks (not ??): null is meaningful here (full bodies).
+  let searchExcerptLength = BUILT_IN_DEFAULTS.searchExcerptLength;
+  if (project.searchExcerptLength !== undefined) {
+    searchExcerptLength = project.searchExcerptLength;
+  }
+  if (collection?.searchExcerptLength !== undefined) {
+    searchExcerptLength = collection.searchExcerptLength;
+  }
+
   return {
     sources: resolveSourcePatterns(project),
     outputDir,
@@ -151,6 +161,7 @@ export function resolveConfig(
     ignore: collection?.ignore ?? project.ignore ?? BUILT_IN_DEFAULTS.ignore,
     buildSearchIndex:
       project.buildSearchIndex ?? BUILT_IN_DEFAULTS.buildSearchIndex,
+    searchExcerptLength,
     types: collection?.types,
     slugPattern: collection?.slugPattern,
   };

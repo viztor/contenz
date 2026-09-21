@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import type { FormatAdapter } from "./format-adapter.js";
-import { createReader } from "./reader.js";
+import { createReader, expandStaticParams } from "./reader.js";
 import { memoryStorage } from "./storage.js";
 
 const faqSchema = z.object({
@@ -231,5 +231,24 @@ describe("reader (i18n)", () => {
   it("all() resolves each slug with fallback", async () => {
     const all = await reader.collections.faq.all("zh-TW");
     expect(all.map((e) => [e.slug, e.locale])).toEqual([["moq", "zh"]]);
+  });
+});
+
+describe("expandStaticParams", () => {
+  it("expands collection x slug x locale deterministically", () => {
+    expect(
+      expandStaticParams({
+        collections: {
+          faq: { slugs: ["b", "a"], locales: ["zh", "en"] },
+          site: { slugs: ["site"] },
+        },
+      })
+    ).toEqual([
+      { collection: "faq", slug: "a", locale: "en" },
+      { collection: "faq", slug: "a", locale: "zh" },
+      { collection: "faq", slug: "b", locale: "en" },
+      { collection: "faq", slug: "b", locale: "zh" },
+      { collection: "site", slug: "site", locale: null },
+    ]);
   });
 });

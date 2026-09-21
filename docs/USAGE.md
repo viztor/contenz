@@ -459,17 +459,18 @@ See [[API|API reference]] for the complete list of exports and types.
 
 ### Project config (`contenz.config.ts`)
 
-| Option         | Type                                    | Default                 | Description                                                                                                |
-| -------------- | --------------------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `sources`      | `string[]`                              | `["content/*"]`         | Source patterns for collection discovery                                                                   |
-| `outputDir`    | `string`                                | `"generated/content"`   | Generated output directory                                                                                 |
-| `i18n`         | `boolean \| I18nConfigShape`            | `false`                 | Enable locale detection                                                                                    |
-| `extensions`   | `string[]`                              | `["md", "mdx", "json"]` | Allowed file extensions                                                                                    |
-| `ignore`       | `string[]`                              | `["README.md", "_*"]`   | Patterns to ignore                                                                                         |
-| `strict`       | `boolean`                               | `false`                 | Fail on warnings                                                                                           |
-| `coveragePath` | `string`                                | `"contenz.coverage.md"` | Coverage report path                                                                                       |
-| `adapters`     | `FormatAdapter[]`                       | `[]`                    | Format adapters for content parsing. Register `@contenz/adapter-mdx` for MD/MDX support. JSON is built-in. |
-| `collections`  | `Record<string, CollectionDeclaration>` | `undefined`             | Inline collection declarations with schemas. See [[CONFIGURATION#centralized-collections                   | Configuration – Centralized collections]]. |
+| Option                | Type                                    | Default                 | Description                                                                                                |
+| --------------------- | --------------------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `sources`             | `string[]`                              | `["content/*"]`         | Source patterns for collection discovery                                                                   |
+| `outputDir`           | `string`                                | `"generated/content"`   | Generated output directory                                                                                 |
+| `i18n`                | `boolean \| I18nConfigShape`            | `false`                 | Enable locale detection                                                                                    |
+| `extensions`          | `string[]`                              | `["md", "mdx", "json"]` | Allowed file extensions                                                                                    |
+| `ignore`              | `string[]`                              | `["README.md", "_*"]`   | Patterns to ignore                                                                                         |
+| `strict`              | `boolean`                               | `false`                 | Fail on warnings                                                                                           |
+| `coveragePath`        | `string`                                | `"contenz.coverage.md"` | Coverage report path                                                                                       |
+| `searchExcerptLength` | `number \| null`                        | `2000`                  | Indexed body excerpt chars (`null` = full bodies; see Configuration)                                       |
+| `adapters`            | `FormatAdapter[]`                       | `[]`                    | Format adapters for content parsing. Register `@contenz/adapter-mdx` for MD/MDX support. JSON is built-in. |
+| `collections`         | `Record<string, CollectionDeclaration>` | `undefined`             | Inline collection declarations with schemas. See [[CONFIGURATION#centralized-collections                   | Configuration – Centralized collections]]. |
 
 ### Per-collection overrides (`collections.<name>.config`)
 

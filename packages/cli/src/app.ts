@@ -8,9 +8,11 @@ import { buildApplication, buildRouteMap } from "@stricli/core";
 
 import { buildCommandDef } from "./commands/build.js";
 import { createCommandDef } from "./commands/create.js";
+import { exportCommandDef } from "./commands/export.js";
 import { initCommandDef } from "./commands/init.js";
 import { lintCommandDef } from "./commands/lint.js";
 import { listCommandDef } from "./commands/list.js";
+import { mcpCommandDef } from "./commands/mcp.js";
 import { schemaCommandDef } from "./commands/schema.js";
 import { searchCommandDef } from "./commands/search.js";
 import { skillCommandDef } from "./commands/skill.js";
@@ -46,7 +48,9 @@ const routes = buildRouteMap({
     status: statusCommandDef,
     view: viewCommandDef,
     list: listCommandDef,
+    mcp: mcpCommandDef,
     create: createCommandDef,
+    export: exportCommandDef,
     update: updateCommandDef,
     search: searchCommandDef,
     // Shell completion installers (hidden from default help)

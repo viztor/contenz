@@ -227,13 +227,23 @@ fails, lint reports it) — move its contents inline.
 
 ### Options
 
-| Option        | Type                         | Description                                                                                                                                                                          |
-| ------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `types`       | `ContentType[]`              | Multi-type collection: `{ name, pattern }`. First matching pattern wins. **Optional** when the schema exports `types` (see [Schema authoring – Multi-type](#multi-type-collection)). |
-| `slugPattern` | `RegExp`                     | Custom regex to extract slug (and optionally locale) from filename.                                                                                                                  |
-| `i18n`        | `boolean \| I18nConfigShape` | Override i18n for this collection.                                                                                                                                                   |
-| `extensions`  | `string[]`                   | Override allowed extensions.                                                                                                                                                         |
-| `ignore`      | `string[]`                   | Override ignore patterns.                                                                                                                                                            |
+| Option                | Type                         | Description                                                                                                                                                                          |
+| --------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `types`               | `ContentType[]`              | Multi-type collection: `{ name, pattern }`. First matching pattern wins. **Optional** when the schema exports `types` (see [Schema authoring – Multi-type](#multi-type-collection)). |
+| `slugPattern`         | `RegExp`                     | Custom regex to extract slug (and optionally locale) from filename.                                                                                                                  |
+| `i18n`                | `boolean \| I18nConfigShape` | Override i18n for this collection.                                                                                                                                                   |
+| `extensions`          | `string[]`                   | Override allowed extensions.                                                                                                                                                         |
+| `ignore`              | `string[]`                   | Override ignore patterns.                                                                                                                                                            |
+| `searchExcerptLength` | `number \| null`             | Override indexed body excerpt length (`null` = full bodies).                                                                                                                         |
+
+### Search index weight
+
+Bodies dominate index size (typically ~99% of a document). At build time,
+`buildSearchDocument` stores the first `searchExcerptLength` chars
+(project default `2000`, per-collection override, `null` disables). Excerpting
+trades deep-content recall for edge-friendly weight — discriminative terms
+usually sit in titles and intros, but exact-phrase matches deep in long bodies
+will miss. Set `null` for small corpora where full recall matters.
 
 ### Composition: explicit imports + merge
 

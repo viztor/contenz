@@ -461,3 +461,70 @@ With `--format json`, output matches `RunSkillResult`:
 ```
 
 The generated skill describes each collection, its fields, relations, and the CLI commands agents should use (`create`, `update`, `view`, `list`, etc.) instead of hand-editing content files.
+
+## mcp
+
+Serve the Contenz MCP server over stdio for AI agents (Claude Code, Cursor, opencode, …).
+
+```bash
+contenz mcp --cwd .                  # read-only tools
+contenz mcp --cwd . --allow-write    # + create/update/build
+```
+
+| Option          | Default | Description                               |
+| --------------- | ------- | ----------------------------------------- |
+| `--cwd`         | `.`     | Project root.                             |
+| `--allow-write` | `false` | Enable write tools (create/update/build). |
+
+Read tools (`contenz_list`, `contenz_view`, `contenz_search`, `contenz_schema`,
+`contenz_lint`, `contenz_status`) are always available. Write tools
+(`contenz_create`, `contenz_update`, `contenz_build`) refuse without
+`--allow-write`. Also serves `contenz://config` and `contenz://collections`
+resources plus `new_entry` and `translate_missing` prompts. Nothing but the MCP
+protocol is written to stdout.
+
+Configure in `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "contenz": {
+      "command": "contenz",
+      "args": ["mcp", "--cwd", "."]
+    }
+  }
+}
+```
+
+---
+
+## export
+
+Export translations for TMS and i18n-library workflows. Flattens meta leaf
+strings (dotted paths, arrays indexed) plus bodies into translator units.
+
+```bash
+contenz export                                   # messages/en.json, messages/zh.json, …
+contenz export --format xliff                    # xliff/<target>.xlf per target locale
+contenz export --collection faq --locale zh      # scope down
+contenz export --format messages --out-dir i18n  # custom output dir
+```
+
+| Option         | Default                 | Description                                                                                    |
+| -------------- | ----------------------- | ---------------------------------------------------------------------------------------------- |
+| `--format`     | `messages`              | `messages` (per-locale JSON for next-intl/Paraglide) or `xliff` (XLIFF 1.2 per target locale). |
+| `--collection` | —                       | Only export this collection or single.                                                         |
+| `--locale`     | —                       | Only export this locale (one messages file / one XLIFF target).                                |
+| `--out-dir`    | `./messages`, `./xliff` | Output directory.                                                                              |
+| `--cwd`        | `.`                     | Project root.                                                                                  |
+| `--output`     | `pretty`                | Envelope format: `json` or `pretty`.                                                           |
+
+Message keys are `{collection}.{slug}.{field}` (`body` for content bodies).
+XLIFF pairs each target locale against the default-locale source, with the
+content file recorded in `<note>`. Files without a locale segment resolve
+through `defaultLocale`, then `"en"` with a warning. Export only — importing
+translations back is not supported yet.
+
+```
+
+```

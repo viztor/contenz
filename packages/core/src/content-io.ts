@@ -1,14 +1,14 @@
-import fs from "node:fs/promises";
 import path from "node:path";
 
 import {
   type ContentExtension,
   parseContentFile,
   parseFileName,
-  serializeContentFile,
 } from "./parser.js";
+import { nodeWritableStorage } from "./storage-node.js";
 import type { ParsedContent } from "./types.js";
 import { type CollectionContext, createWorkspace } from "./workspace.js";
+import { createWriter } from "./writer.js";
 
 export interface ContentLocation {
   collectionName: string;
@@ -109,7 +109,8 @@ export interface WriteContentOptions {
 
 /**
  * Writes a new content item or overwrites an existing one completely.
- * Loads workspace once — adapters are registered automatically.
+ * Delegates to the writer (single code path for planning + serialization);
+ * this shell maps workspace config to writer options and absolute paths.
  */
 export async function writeContent(
   options: WriteContentOptions
@@ -125,40 +126,47 @@ export async function writeContent(
     throw new Error(`Collection not found: ${options.collectionName}`);
   }
 
-  const ext = options.ext ?? col.config.extensions[0] ?? "mdx";
-  let fileName = `${options.slug}.${ext}`;
-  if (col.config.i18n) {
-    const localeToUse = options.locale ?? col.config.resolvedI18n.defaultLocale;
-    if (!localeToUse) {
-      throw new Error("Locale is required when i18n is enabled");
-    }
-    fileName = `${options.slug}.${localeToUse}.${ext}`;
-  }
-
-  const filePath = path.join(col.collectionPath, fileName);
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
-
-  const content = serializeContentFile(
-    options.meta,
-    options.body ?? "",
-    ext,
-    col.config.adapters
+  const writer = createWriter(
+    {
+      // dir "" roots the writer at the collection directory; names are
+      // constructed exactly as before. Writes never validate or fill
+      // defaults here (runCreate owns that, mirroring prior behavior).
+      collections: [
+        {
+          name: col.name,
+          dir: "",
+          validate: false,
+          extensions: col.config.extensions,
+        },
+      ],
+      i18n: col.config.resolvedI18n,
+      adapters: ws.projectConfig.adapters,
+    },
+    nodeWritableStorage({ root: col.collectionPath })
   );
-  await fs.writeFile(filePath, content, "utf-8");
+  const plan = await writer.planCreate(col.name, options.slug, options.meta, {
+    locale: options.locale,
+    ext: options.ext,
+    body: options.body,
+    fillDefaults: false,
+  });
+  const receipt = await writer.apply(plan);
 
+  const ext = receipt.file.slice(receipt.file.lastIndexOf(".") + 1);
   return {
     collectionName: options.collectionName,
     collectionPath: col.collectionPath,
     slug: options.slug,
     locale: options.locale,
-    filePath,
+    filePath: path.join(col.collectionPath, receipt.file),
     ext,
   };
 }
 
 /**
  * Surgically updates an existing content item, preserving body and format.
- * Loads workspace once — adapters are registered, no double-loading.
+ * Delegates to the writer (single code path); maps the receipt back to the
+ * historical `ParsedContent` shape.
  */
 export async function updateContent(
   cwd: string,
@@ -171,39 +179,43 @@ export async function updateContent(
   const col = ws.getCollection(collectionName) ?? ws.getSingle(collectionName);
   if (!col) return null;
 
-  const location = findContentFile(col, slug, locale);
-  if (!location) return null;
-
-  const current = await parseContentFile(location.filePath, col.config);
-
-  // Apply mutations
-  const newMeta = { ...current.meta };
-
-  if (mutations.set) {
-    for (const [key, value] of Object.entries(mutations.set)) {
-      newMeta[key] = value;
-    }
-  }
-
-  if (mutations.unset) {
-    for (const key of mutations.unset) {
-      delete newMeta[key];
-    }
-  }
-
-  const newContent = serializeContentFile(
-    newMeta,
-    current.body ?? "",
-    location.ext,
-    col.config.adapters
+  const writer = createWriter(
+    {
+      collections: [
+        {
+          name: col.name,
+          dir: "",
+          validate: false,
+          extensions: col.config.extensions,
+        },
+      ],
+      i18n: col.config.resolvedI18n,
+      adapters: ws.projectConfig.adapters,
+    },
+    nodeWritableStorage({ root: col.collectionPath })
   );
-  await fs.writeFile(location.filePath, newContent, "utf-8");
+
+  let plan;
+  try {
+    plan = await writer.planUpdate(col.name, slug, mutations, locale);
+  } catch (err) {
+    // Missing file (and empty mutations) read as null, as before.
+    if (
+      err instanceof Error &&
+      (err.message.startsWith("Content not found:") ||
+        err.message.startsWith("No mutations specified"))
+    ) {
+      return null;
+    }
+    throw err;
+  }
+  const receipt = await writer.apply(plan);
 
   return {
-    meta: newMeta,
-    filePath: location.filePath,
-    slug: current.slug,
-    locale: current.locale,
-    body: current.body,
+    meta: plan.meta,
+    filePath: path.join(col.collectionPath, receipt.file),
+    slug: plan.slug,
+    locale: plan.locale ?? undefined,
+    body: plan.body,
   };
 }
