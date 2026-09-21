@@ -59,38 +59,50 @@ async function searchBruteForce(
   const limit = opts.limit ?? 50;
   const items: SearchResultItem[] = [];
 
-  for (const file of col.contentFiles.sort()) {
-    const parsed = parseFileName(file, col.config.i18n, col.config.slugPattern);
-    if (!parsed) continue;
-
-    // Locale filter
-    if (opts.locale && parsed.locale && parsed.locale !== opts.locale) continue;
-
-    // Slug substring filter
-    if (opts.query && !parsed.slug.includes(opts.query)) continue;
-
-    // Parse content (needed for meta regardless of field filters)
-    const filePath = path.join(col.collectionPath, file);
-    const content = await parseContentFile(filePath, col.config);
-
-    // Field-value filter
-    if (opts.fields && Object.keys(opts.fields).length > 0) {
-      const matches = Object.entries(opts.fields).every(
-        ([field, expected]) =>
-          content.meta[field] !== undefined &&
-          String(content.meta[field]) === expected
+  const rawResults = await Promise.all(
+    col.contentFiles.sort().map(async (file: string) => {
+      const parsed = parseFileName(
+        file,
+        col.config.i18n,
+        col.config.slugPattern
       );
-      if (!matches) continue;
+      if (!parsed) return null;
+
+      // Locale filter
+      if (opts.locale && parsed.locale && parsed.locale !== opts.locale)
+        return null;
+
+      // Slug substring filter
+      if (opts.query && !parsed.slug.includes(opts.query)) return null;
+
+      // Parse content (needed for meta regardless of field filters)
+      const filePath = path.join(col.collectionPath, file);
+      const content = await parseContentFile(filePath, col.config);
+
+      // Field-value filter
+      if (opts.fields && Object.keys(opts.fields).length > 0) {
+        const matches = Object.entries(opts.fields).every(
+          ([field, expected]) =>
+            content.meta[field] !== undefined &&
+            String(content.meta[field]) === expected
+        );
+        if (!matches) return null;
+      }
+
+      return {
+        slug: parsed.slug,
+        locale: parsed.locale ?? null,
+        file,
+        meta: content.meta,
+      };
+    })
+  );
+
+  for (const r of rawResults) {
+    if (r) {
+      items.push(r);
+      if (items.length >= limit) break;
     }
-
-    items.push({
-      slug: parsed.slug,
-      locale: parsed.locale ?? null,
-      file,
-      meta: content.meta,
-    });
-
-    if (items.length >= limit) break;
   }
 
   return {

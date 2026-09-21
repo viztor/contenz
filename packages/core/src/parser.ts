@@ -15,9 +15,15 @@ export interface ParseFileNameResult {
 
 /** Default extensions used when no config-level extensions are specified. */
 const DEFAULT_EXTENSIONS = ["mdx", "md", "json"];
-const DEFAULT_EXT_SET = new Set(DEFAULT_EXTENSIONS);
 
-const localeRegex = /^[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?$/;
+/**
+ * Build a regex alternation pattern from an array of extensions.
+ * e.g. ["md", "mdx", "json"] → "md|mdx|json"
+ */
+function extAlternation(extensions?: string[]): string {
+  const exts = extensions?.length ? extensions : DEFAULT_EXTENSIONS;
+  return exts.map((e) => e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+}
 
 /**
  * Parse filename to extract slug and optional locale.
@@ -43,29 +49,26 @@ export function parseFileName(
     };
   }
 
-  // ⚡ Bolt: Avoid dynamic regex compilation by using string manipulation and a static regex
-  const extSet = extensions?.length ? new Set(extensions) : DEFAULT_EXT_SET;
-  const lastDotIndex = fileName.lastIndexOf(".");
-
-  if (lastDotIndex <= 0) return null;
-
-  const ext = fileName.substring(lastDotIndex + 1);
-  if (!extSet.has(ext)) return null;
-
-  const base = fileName.substring(0, lastDotIndex);
+  const alt = extAlternation(extensions);
 
   if (i18nEnabled) {
-    const localeDotIndex = base.lastIndexOf(".");
-    if (localeDotIndex <= 0) return null;
-
-    const locale = base.substring(localeDotIndex + 1);
-
-    if (!localeRegex.test(locale)) return null;
-
-    return { slug: base.substring(0, localeDotIndex), locale, ext };
+    // BCP 47 locale: xx, xxx, xx-XX, xx-Xxxx, xx-Xxxx-XX, etc.
+    const localePattern = "[a-z]{2,3}(?:-[A-Za-z]{2,4})*(?:-[A-Z]{2})?";
+    const match = new RegExp(`^(.+)\\.(${localePattern})\\.(${alt})$`).exec(fileName);
+    if (!match) return null;
+    return {
+      slug: match[1],
+      locale: match[2],
+      ext: match[3],
+    };
   }
 
-  return { slug: base, ext };
+  const match = new RegExp(`^(.+)\\.(${alt})$`).exec(fileName);
+  if (!match) return null;
+  return {
+    slug: match[1],
+    ext: match[2],
+  };
 }
 
 /**
@@ -144,7 +147,7 @@ export async function parseContentFile(
   const { meta, body } = adapter.extract(source, filePath);
 
   return {
-    meta: meta ?? {},
+    meta: meta ?? ({}),
     filePath,
     slug: parsed.slug,
     locale: parsed.locale,
