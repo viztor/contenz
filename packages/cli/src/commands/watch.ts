@@ -71,7 +71,7 @@ async function watch(this: ContenzContext, flags: WatchFlags): Promise<void> {
         });
         log(this, result.report);
         if (!result.success) {
-          logError.call(
+          logError(
             this,
             "Build had errors. Watching for further changes."
           );

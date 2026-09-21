@@ -682,7 +682,7 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
       skipped.push({
         name: ctx.name,
         outputName: `${ctx.name}.ts`,
-        indexMeta,
+        indexMeta: indexMeta,
       });
     } else {
       toBuild.push({ ctx, inputHash });
@@ -771,13 +771,10 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
     const includeFallbackMeta =
       baseConfig.resolvedI18n?.includeFallbackMetadata === true;
 
-    // ⚡ Bolt: Cache mapped meta to prevent redundant O(n) array loops and memory allocations
-    const splitMeta = splitCollections.map((c) => c.meta);
-
     // Generate shared types
     await generateSharedTypesFile(
       outputDir,
-      splitMeta
+      splitCollections.map((c) => c.meta)
     );
     generated.push("_types.ts");
 
@@ -798,7 +795,7 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
       await generateLocaleIndexFile(
         outputDir,
         locale,
-        splitMeta
+        splitCollections.map((c) => c.meta)
       );
       generated.push(`${locale}/index.ts`);
     }
@@ -806,7 +803,7 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
     // Generate locale resolver
     await generateLocaleResolverFile(
       outputDir,
-      splitMeta,
+      splitCollections.map((c) => c.meta),
       sortedLocales,
       fallbackMap
     );
@@ -815,7 +812,7 @@ export async function runBuild(options: BuildOptions): Promise<BuildResult> {
     // Generate split root index
     await generateSplitRootIndexFile(
       outputDir,
-      splitMeta
+      splitCollections.map((c) => c.meta)
     );
     generated.push("index.ts");
 
