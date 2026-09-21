@@ -236,7 +236,7 @@ async function processOneCollection(
   let parseErrors = 0;
   const detectedLocales = new Set<string>();
 
-  for (const file of contentFiles) {
+  await Promise.all(contentFiles.map(async (file) => {
     const filePath = path.join(collectionPath, file);
     const parsed = parseFileName(
       file,
@@ -254,7 +254,7 @@ async function processOneCollection(
         collection: collectionName,
         file,
       });
-      continue;
+      return;
     }
     try {
       const result = await parseContentFile(filePath, effectiveConfig);
@@ -266,7 +266,7 @@ async function processOneCollection(
 
       // Compute fields
       if (schemaModule.computed) {
-        for (const [key, computeFn] of Object.entries(schemaModule.computed)) {
+        await Promise.all(Object.entries(schemaModule.computed).map(async ([key, computeFn]) => {
           try {
             result.meta[key] = await computeFn(result);
           } catch (err) {
@@ -281,7 +281,7 @@ async function processOneCollection(
               file,
             });
           }
-        }
+        }));
       }
 
       const contentType =
@@ -305,7 +305,7 @@ async function processOneCollection(
             field: err.field,
           });
         }
-        continue;
+        return;
       }
       if (!typeGroups.has(contentType)) typeGroups.set(contentType, new Map());
       const itemsMap = typeGroups.get(contentType);
@@ -320,7 +320,7 @@ async function processOneCollection(
           collection: collectionName,
           file,
         });
-        continue;
+        return;
       }
       if (effectiveConfig.i18n && parsed.locale) {
         detectedLocales.add(parsed.locale);
@@ -360,7 +360,7 @@ async function processOneCollection(
         file,
       });
     }
-  }
+  }));
 
   if (parseErrors > 0) {
     return { ok: false, diagnostics };
@@ -428,18 +428,18 @@ async function processOneCollection(
 
     if (ri?.detectStale && ri.defaultLocale) {
       const sourceLocale = ri.defaultLocale;
-      for (const item of i18nItems) {
+      await Promise.all(i18nItems.map(async (item) => {
         const sourceEntry = item.locales[sourceLocale];
-        if (!sourceEntry) continue;
+        if (!sourceEntry) return;
         const sourcePath = path.join(collectionPath, sourceEntry.file);
         let sourceMtime: number;
         try {
           sourceMtime = (await fs.stat(sourcePath)).mtimeMs;
         } catch {
-          continue;
+          return;
         }
-        for (const [locale, entry] of Object.entries(item.locales)) {
-          if (locale === sourceLocale) continue;
+        await Promise.all(Object.entries(item.locales).map(async ([locale, entry]) => {
+          if (locale === sourceLocale) return;
           const localePath = path.join(collectionPath, entry.file);
           try {
             const localeMtime = (await fs.stat(localePath)).mtimeMs;

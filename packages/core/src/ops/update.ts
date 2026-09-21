@@ -56,7 +56,7 @@ export async function runUpdate(
     }
     if (opts.unset) {
       for (const key of opts.unset) {
-        delete mergedMeta[key];
+        mergedMeta[key] = undefined;
       }
     }
 

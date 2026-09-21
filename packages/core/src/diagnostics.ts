@@ -109,9 +109,9 @@ function formatPrettyReport(input: DiagnosticReportInput): string {
       const prefix =
         diagnostic.severity === "error"
           ? pc.red("error")
-          : diagnostic.severity === "warning"
+          : (diagnostic.severity === "warning"
             ? pc.yellow("warning")
-            : pc.blue("info");
+            : pc.blue("info"));
       const code = pc.dim(diagnostic.code);
       const category = pc.dim(`[${diagnostic.category}]`);
       const locationLabel = location ? ` ${pc.dim(location)}` : "";
@@ -153,9 +153,9 @@ function formatGithubReport(input: DiagnosticReportInput): string {
     const command =
       diagnostic.severity === "error"
         ? "error"
-        : diagnostic.severity === "warning"
+        : (diagnostic.severity === "warning"
           ? "warning"
-          : "notice";
+          : "notice");
     const metadata: string[] = [];
     if (diagnostic.file)
       metadata.push(`file=${escapeGithubValue(diagnostic.file)}`);

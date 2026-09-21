@@ -1,0 +1,45 @@
+--- packages/core/src/run-build.ts
++++ packages/core/src/run-build.ts
+@@ -428,29 +428,29 @@
+
+     if (ri?.detectStale && ri.defaultLocale) {
+       const sourceLocale = ri.defaultLocale;
+-      for (const item of i18nItems) {
++      await Promise.all(i18nItems.map(async (item) => {
+         const sourceEntry = item.locales[sourceLocale];
+-        if (!sourceEntry) continue;
++        if (!sourceEntry) return;
+         const sourcePath = path.join(collectionPath, sourceEntry.file);
+         let sourceMtime: number;
+         try {
+           sourceMtime = (await fs.stat(sourcePath)).mtimeMs;
+         } catch {
+-          continue;
++          return;
+         }
+-        for (const [locale, entry] of Object.entries(item.locales)) {
+-          if (locale === sourceLocale) continue;
++        await Promise.all(Object.entries(item.locales).map(async ([locale, entry]) => {
++          if (locale === sourceLocale) return;
+           const localePath = path.join(collectionPath, entry.file);
+           try {
+             const localeMtime = (await fs.stat(localePath)).mtimeMs;
+             if (localeMtime < sourceMtime) {
+               diagnostics.push({
+                 code: "I18N_STALE_TRANSLATION",
+                 severity: effectiveConfig.strict ? "error" : "warning",
+                 category: "i18n",
+                 message: `Translation ${entry.file} is older than source ${sourceEntry.file}.`,
+                 source: "build",
+                 collection: collectionName,
+                 file: entry.file,
+               });
+             }
+           } catch {
+             // Ignore
+           }
+-        }
+-      }
++        }));
++      }));
+     }
