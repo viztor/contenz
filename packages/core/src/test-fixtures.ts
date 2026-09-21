@@ -17,35 +17,37 @@ const adapterMdxSourceImport = pathToFileURL(
 async function rewriteFixtureImports(dir: string): Promise<void> {
   const entries = await fs.readdir(dir, { withFileTypes: true });
 
-  for (const entry of entries) {
-    const entryPath = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      await rewriteFixtureImports(entryPath);
-      continue;
-    }
+  await Promise.all(
+    entries.map(async (entry) => {
+      const entryPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        await rewriteFixtureImports(entryPath);
+        return;
+      }
 
-    if (!entry.isFile() || !entry.name.endsWith(".ts")) {
-      continue;
-    }
+      if (!entry.isFile() || !entry.name.endsWith(".ts")) {
+        return;
+      }
 
-    const source = await fs.readFile(entryPath, "utf-8");
-    if (
-      !source.includes("@contenz/core") &&
-      !source.includes("@contenz/adapter-mdx")
-    ) {
-      continue;
-    }
+      const source = await fs.readFile(entryPath, "utf-8");
+      if (
+        !source.includes("@contenz/core") &&
+        !source.includes("@contenz/adapter-mdx")
+      ) {
+        return;
+      }
 
-    let rewritten = source.replaceAll(
-      '"@contenz/core"',
-      `"${coreSourceImport}"`
-    );
-    rewritten = rewritten.replaceAll(
-      '"@contenz/adapter-mdx"',
-      `"${adapterMdxSourceImport}"`
-    );
-    await fs.writeFile(entryPath, rewritten, "utf-8");
-  }
+      let rewritten = source.replaceAll(
+        '"@contenz/core"',
+        `"${coreSourceImport}"`
+      );
+      rewritten = rewritten.replaceAll(
+        '"@contenz/adapter-mdx"',
+        `"${adapterMdxSourceImport}"`
+      );
+      await fs.writeFile(entryPath, rewritten, "utf-8");
+    })
+  );
 }
 
 export async function prepareFixture(name: string): Promise<string> {

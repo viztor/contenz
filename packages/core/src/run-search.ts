@@ -57,22 +57,36 @@ async function searchBruteForce(
   }
 
   const limit = opts.limit ?? 50;
+
+  const parsedFiles = col.contentFiles
+    .sort()
+    .map((file) => {
+      const parsed = parseFileName(
+        file,
+        col.config.i18n,
+        col.config.slugPattern
+      );
+      return { file, parsed };
+    })
+    .filter(({ parsed }) => {
+      if (!parsed) return false;
+      if (opts.locale && parsed.locale && parsed.locale !== opts.locale)
+        return false;
+      if (opts.query && !parsed.slug.includes(opts.query)) return false;
+      return true;
+    });
+
+  const parsedContents = await Promise.all(
+    parsedFiles.map(async ({ file, parsed }) => {
+      const filePath = path.join(col.collectionPath, file);
+      const content = await parseContentFile(filePath, col.config);
+      return { file, parsed: parsed as NonNullable<typeof parsed>, content };
+    })
+  );
+
   const items: SearchResultItem[] = [];
 
-  for (const file of col.contentFiles.sort()) {
-    const parsed = parseFileName(file, col.config.i18n, col.config.slugPattern);
-    if (!parsed) continue;
-
-    // Locale filter
-    if (opts.locale && parsed.locale && parsed.locale !== opts.locale) continue;
-
-    // Slug substring filter
-    if (opts.query && !parsed.slug.includes(opts.query)) continue;
-
-    // Parse content (needed for meta regardless of field filters)
-    const filePath = path.join(col.collectionPath, file);
-    const content = await parseContentFile(filePath, col.config);
-
+  for (const { file, parsed, content } of parsedContents) {
     // Field-value filter
     if (opts.fields && Object.keys(opts.fields).length > 0) {
       const matches = Object.entries(opts.fields).every(

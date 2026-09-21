@@ -73,36 +73,38 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
   const dirty: string[] = [];
   const fresh: string[] = [];
 
-  for (const col of ws.collections) {
-    const inputHash = await computeCollectionInputHash(
-      col.collectionPath,
-      col.contentFiles,
-      col.config.extensions
-    );
+  await Promise.all(
+    ws.collections.map(async (col) => {
+      const inputHash = await computeCollectionInputHash(
+        col.collectionPath,
+        col.contentFiles,
+        col.config.extensions
+      );
 
-    const cachedHash = getCachedInputHash(
-      manifest,
-      cwd,
-      ws.resolvedConfig.outputDir,
-      ws.sources,
-      col.name,
-      projectConfigHash
-    );
-    const outputPath = path.join(outputDir, `${col.name}.ts`);
-    let outputExists = false;
-    try {
-      await fs.access(outputPath);
-      outputExists = true;
-    } catch {
-      // output missing
-    }
+      const cachedHash = getCachedInputHash(
+        manifest,
+        cwd,
+        ws.resolvedConfig.outputDir,
+        ws.sources,
+        col.name,
+        projectConfigHash
+      );
+      const outputPath = path.join(outputDir, `${col.name}.ts`);
+      let outputExists = false;
+      try {
+        await fs.access(outputPath);
+        outputExists = true;
+      } catch {
+        // output missing
+      }
 
-    if (cachedHash === inputHash && outputExists) {
-      fresh.push(col.name);
-    } else {
-      dirty.push(col.name);
-    }
-  }
+      if (cachedHash === inputHash && outputExists) {
+        fresh.push(col.name);
+      } else {
+        dirty.push(col.name);
+      }
+    })
+  );
 
   const status = dirty.length === 0 ? "up-to-date" : "needs-build";
   const message =
