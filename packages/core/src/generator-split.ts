@@ -218,10 +218,12 @@ export async function generateLocaleResolverFile(
     output += `  const fallbackChains: Record<string, string[]> = ${JSON.stringify(i18nConfig.fallbackChains)};\n`;
     output += `  const defaultFallbackChain: string[] = ${JSON.stringify(i18nConfig.defaultFallbackChain)};\n`;
     output += `  const chain = fallbackChains[loc] ?? defaultFallbackChain;\n`;
-    output += `  const visited = new Set<string>([loc]);\n`;
+    output += `  // ⚡ Bolt: Use Array instead of Set for small lookups bounded by MAX_FALLBACK_DEPTH\n`;
+    output += `  // to avoid redundant memory allocations during runtime resolution.\n`;
+    output += `  const visited: string[] = [loc];\n`;
     output += `  for (const fallback of chain) {\n`;
-    output += `    if (visited.has(fallback)) continue;\n`;
-    output += `    visited.add(fallback);\n`;
+    output += `    if (visited.includes(fallback)) continue;\n`;
+    output += `    visited.push(fallback);\n`;
     output += `    try {\n`;
     output += `      const fbData = await locale(fallback);\n`;
     output += `      const fbEntry = fbData[collection][slug];\n`;
