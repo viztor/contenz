@@ -2,3 +2,8 @@
 
 **Learning:** Instantiating new `Set` and `Map` objects on every single function call in hot paths like URL parsing (`parseLocaleFromURL`) and header negotiation (`negotiateLocale`) causes unnecessary memory allocation overhead. Since the input arrays are typically small and static references, caching the derived objects based on array reference avoids this.
 **Action:** Use a `WeakMap` keyed by the input array reference to cache the derived `Set` and `Map` in hot path utility functions.
+
+## 2024-05-19 - Avoid redundant Set allocations for small collections with known depth limits
+
+**Learning:** Instantiating a `Set` object for cycle detection in hot paths (like locale fallback resolution) creates unnecessary memory allocation and GC overhead when the maximum depth is strictly bounded and very small (e.g., 5).
+**Action:** Use an `Array` with `.includes()` and `.push()` instead of `Set` for tracking visited items when the collection size is guaranteed to be minimal, ensuring the optimization is applied both in runtime functions and associated code generators.
