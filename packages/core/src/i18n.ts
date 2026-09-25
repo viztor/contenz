@@ -186,11 +186,13 @@ export function resolveI18nEntry<T>(
 
   const chain = config.fallbackChains[locale] ?? config.defaultFallbackChain;
 
-  const visited = new Set<string>([locale]);
+  // ⚡ Bolt: Track visited locales using an Array instead of a new Set on every call.
+  // With MAX_FALLBACK_DEPTH=5, `.includes()` on a tiny array is much faster and avoids Set allocation/GC overhead.
+  const visited = [locale];
   let depth = 0;
   for (const fallbackLocale of chain) {
-    if (visited.has(fallbackLocale) || depth >= MAX_FALLBACK_DEPTH) break;
-    visited.add(fallbackLocale);
+    if (visited.includes(fallbackLocale) || depth >= MAX_FALLBACK_DEPTH) break;
+    visited.push(fallbackLocale);
     depth += 1;
     const entry = locales[fallbackLocale];
     if (entry !== undefined) {
