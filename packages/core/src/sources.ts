@@ -21,7 +21,6 @@ function isAbsoluteLikePath(value: string): boolean {
 function isProjectRelativePath(value: string): boolean {
   const normalized = path.posix.normalize(value.replaceAll("\\", "/"));
   return (
-    normalized !== "." &&
     normalized !== ".." &&
     !normalized.startsWith("../") &&
     !isAbsoluteLikePath(normalized)
