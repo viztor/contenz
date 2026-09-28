@@ -99,20 +99,20 @@ describe("pure search operations", () => {
   });
 });
 
+async function indexJsonForRouteHandler(): Promise<string> {
+  const index = await createSearchIndex(["question", "category"]);
+  await addDocumentsToIndex(index, sampleDocs());
+  return persistIndexToJson(index);
+}
+
 describe("createSearchRouteHandler", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
 
-  async function indexJson(): Promise<string> {
-    const index = await createSearchIndex(["question", "category"]);
-    await addDocumentsToIndex(index, sampleDocs());
-    return persistIndexToJson(index);
-  }
-
   it("serves a pre-restored index with cache headers", async () => {
     const handler = createSearchRouteHandler({
-      index: await restoreIndexFromJson(await indexJson()),
+      index: await restoreIndexFromJson(await indexJsonForRouteHandler()),
     });
     const res = await handler(
       new Request("https://x.example/api/search?q=minimum")
@@ -131,7 +131,7 @@ describe("createSearchRouteHandler", () => {
   });
 
   it("fetches and caches the index per handler (isolate semantics)", async () => {
-    const json = await indexJson();
+    const json = await indexJsonForRouteHandler();
     const fetchMock = vi.fn(async () => new Response(json));
     vi.stubGlobal("fetch", fetchMock);
     const handler = createSearchRouteHandler({
@@ -148,7 +148,7 @@ describe("createSearchRouteHandler", () => {
 
   it("rejects bad requests and unavailable indexes", async () => {
     const handler = createSearchRouteHandler({
-      index: await restoreIndexFromJson(await indexJson()),
+      index: await restoreIndexFromJson(await indexJsonForRouteHandler()),
     });
     expect((await handler(new Request("https://x.example/s"))).status).toBe(
       400
@@ -177,7 +177,7 @@ describe("createSearchRouteHandler", () => {
 
   it("clamps limits and locks collections", async () => {
     const handler = createSearchRouteHandler({
-      index: await restoreIndexFromJson(await indexJson()),
+      index: await restoreIndexFromJson(await indexJsonForRouteHandler()),
       collection: "faq",
     });
     const limited = (await (
