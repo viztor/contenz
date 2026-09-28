@@ -21,6 +21,9 @@ function isRelativeProjectPath(value: string): boolean {
   }
 
   const normalized = path.normalize(value);
+  if (path.isAbsolute(normalized)) {
+    return false;
+  }
   return normalized !== ".." && !normalized.startsWith(`..${path.sep}`);
 }
 
