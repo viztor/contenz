@@ -6,6 +6,7 @@ import { buildCommand } from "@stricli/core";
 import type { ContenzContext } from "../context.js";
 import { fail, log } from "../output.js";
 import { cwdFlag, forceFlag } from "../shared.js";
+import { resolveUnderCwd } from "./init-path.js";
 
 const DEFAULT_CONTENT_DIR = "content";
 const DEFAULT_PRESET = "minimal";
@@ -13,15 +14,6 @@ const DEFAULT_PRESET = "minimal";
 interface ScaffoldFile {
   filePath: string;
   content: string;
-}
-
-function isRelativeProjectPath(value: string): boolean {
-  if (value.length === 0 || path.isAbsolute(value)) {
-    return false;
-  }
-
-  const normalized = path.normalize(value);
-  return normalized !== ".." && !normalized.startsWith(`..${path.sep}`);
 }
 
 function toPascalCase(value: string): string {
@@ -178,20 +170,22 @@ async function detectInstallCommand(cwd: string): Promise<string> {
 
 function getScaffoldFiles(options: {
   cwd: string;
-  contentDir: string;
+  /** Project-relative content dir for config sources (post-resolve). */
+  contentDirRelative: string;
+  /** Absolute contained content dir used for mkdir/writeFile. */
+  contentDirResolved: string;
   collection: string;
   preset: string;
   i18n: boolean;
 }): ScaffoldFile[] {
   const collectionDir = path.join(
-    options.cwd,
-    options.contentDir,
+    options.contentDirResolved,
     options.collection
   );
   const files: ScaffoldFile[] = [
     {
       filePath: path.join(options.cwd, "contenz.config.ts"),
-      content: renderConfigFile(options.contentDir, options.i18n),
+      content: renderConfigFile(options.contentDirRelative, options.i18n),
     },
     {
       filePath: path.join(collectionDir, "schema.ts"),
@@ -245,7 +239,8 @@ async function init(this: ContenzContext, flags: InitFlags): Promise<void> {
     collection = preset === "blog" ? "blog" : "pages";
   }
 
-  if (!isRelativeProjectPath(contentDir)) {
+  const contained = resolveUnderCwd(cwd, contentDir);
+  if (!contained.ok) {
     fail(
       this,
       `Invalid --dir value: ${JSON.stringify(flags.dir)}. Use a project-relative path like "content" or "src/content".`
@@ -274,9 +269,11 @@ async function init(this: ContenzContext, flags: InitFlags): Promise<void> {
     return;
   }
 
+  const contentDirRelative = contained.relative || ".";
   const files = getScaffoldFiles({
     cwd,
-    contentDir,
+    contentDirRelative,
+    contentDirResolved: contained.resolved,
     collection,
     preset,
     i18n: flags.i18n,
