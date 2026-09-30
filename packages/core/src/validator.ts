@@ -174,12 +174,15 @@ export function detectCircularReferences(
   // Detect circular references
   const visited = new Set<string>();
   const inStack = new Set<string>();
+  // ⚡ Bolt: Cache unique circular references in a Set to avoid O(n) array lookups during cycle deduplication
+  const circularRefsSet = new Set<string>();
 
   function detectCycle(slug: string, path: string[]): void {
     if (inStack.has(slug)) {
       const cycleStart = path.indexOf(slug);
       const cycle = path.slice(cycleStart).join(" ↔ ");
-      if (!circularRefs.includes(cycle)) {
+      if (!circularRefsSet.has(cycle)) {
+        circularRefsSet.add(cycle);
         circularRefs.push(cycle);
       }
       return;
