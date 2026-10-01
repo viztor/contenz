@@ -150,12 +150,13 @@ export function introspectSchema(
   // Unwrap effects/pipe wrappers at the object level
   let baseSchema = schema;
   let typeName = getZodTypeName(baseSchema);
-  const seen = new Set<z.ZodTypeAny>();
+  // ⚡ Bolt: Use an array instead of a Set for cycle detection to avoid repeated memory allocations, as the wrapper depth is typically very small.
+  const seen: z.ZodTypeAny[] = [];
   while (
     isTypeMatch(typeName, "ZodEffects", "effects", "pipe", "ZodPipeline") &&
-    !seen.has(baseSchema)
+    !seen.includes(baseSchema)
   ) {
-    seen.add(baseSchema);
+    seen.push(baseSchema);
     const next = getInnerType(baseSchema);
     if (!next || next === baseSchema) break;
     baseSchema = next;
@@ -187,8 +188,9 @@ export function introspectField(schema: z.ZodTypeAny): IntrospectedField {
   let typeName = getZodTypeName(inner);
 
   // Unwrap Optional / Nullable / Default wrappers
-  const seen = new Set<z.ZodTypeAny>();
-  while (!seen.has(inner)) {
+  // ⚡ Bolt: Use an array instead of a Set for cycle detection to avoid repeated memory allocations, as the wrapper depth is typically very small.
+  const seen: z.ZodTypeAny[] = [];
+  while (!seen.includes(inner)) {
     if (
       isTypeMatch(
         typeName,
@@ -198,7 +200,7 @@ export function introspectField(schema: z.ZodTypeAny): IntrospectedField {
         "nullable"
       )
     ) {
-      seen.add(inner);
+      seen.push(inner);
       isRequired = false;
       if (!description) description = getDescription(inner);
       const next = getInnerType(inner);
@@ -208,7 +210,7 @@ export function introspectField(schema: z.ZodTypeAny): IntrospectedField {
       continue;
     }
     if (isTypeMatch(typeName, "ZodDefault", "default")) {
-      seen.add(inner);
+      seen.push(inner);
       const def = getZodDef(inner);
       const defVal = def.defaultValue;
       defaultValue = typeof defVal === "function" ? defVal() : defVal;
@@ -224,10 +226,10 @@ export function introspectField(schema: z.ZodTypeAny): IntrospectedField {
   }
 
   // Unwrap Effects / Pipe wrappers at field level
-  seen.clear();
-  while (!seen.has(inner)) {
+  seen.length = 0;
+  while (!seen.includes(inner)) {
     if (isTypeMatch(typeName, "ZodEffects", "effects", "pipe", "ZodPipeline")) {
-      seen.add(inner);
+      seen.push(inner);
       if (!description) description = getDescription(inner);
       const next = getInnerType(inner);
       if (!next || next === inner) break;
