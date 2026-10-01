@@ -125,17 +125,21 @@ export function parseLocaleFromURL(
   }
 
   // Prefix strategy
-  const segments = parsedUrl.pathname.split("/").filter(Boolean);
-  if (segments.length === 0) {
+  // Optimization: Use indexOf and slice directly on the pathname to avoid intermediate array allocations (split/join)
+  const pathname = parsedUrl.pathname;
+  if (pathname === "/" || pathname === "") {
     return { locale: defaultLocale, pathname: "/", explicit: false };
   }
 
-  const firstSegment = segments[0].toLowerCase();
-  if (localeSet.has(firstSegment)) {
-    const remaining = `/${segments.slice(1).join("/")}`;
+  const nextSlashIdx = pathname.indexOf("/", 1);
+  const firstSegmentEnd = nextSlashIdx === -1 ? pathname.length : nextSlashIdx;
+  const firstSegment = pathname.slice(1, firstSegmentEnd).toLowerCase();
+
+  if (firstSegment && localeSet.has(firstSegment)) {
+    const remaining = pathname.slice(firstSegmentEnd);
     return {
       locale: localeMap.get(firstSegment) ?? defaultLocale,
-      pathname: remaining,
+      pathname: remaining || "/",
       explicit: true,
     };
   }
