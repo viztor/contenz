@@ -182,22 +182,45 @@ export function negotiateLocale(
 ): string {
   if (!acceptLanguage) return defaultLocale;
 
-  // Parse Accept-Language header
-  const preferences: LanguagePreference[] = acceptLanguage
-    .split(",")
-    .map((part) => {
-      const [locale, ...params] = part.trim().split(";");
-      let quality = 1;
-      for (const param of params) {
-        const match = /^q=(\d+(\.\d+)?)$/.exec(param.trim());
-        if (match) {
-          quality = Number.parseFloat(match[1]);
+  // Optimization: parse header iteratively with indexOf and slice instead of splitting to avoid intermediate array allocations
+  const preferences: LanguagePreference[] = [];
+  let startIdx = 0;
+  while (startIdx < acceptLanguage.length) {
+    const end = acceptLanguage.indexOf(",", startIdx);
+    const partEnd = end === -1 ? acceptLanguage.length : end;
+    const part = acceptLanguage.slice(startIdx, partEnd).trim();
+    startIdx = partEnd + 1;
+
+    if (!part) continue;
+
+    const semiIdx = part.indexOf(";");
+    const localeStr = semiIdx === -1 ? part : part.slice(0, semiIdx);
+    const locale = localeStr.trim().toLowerCase();
+
+    let quality = 1;
+    if (semiIdx !== -1) {
+      let pStart = semiIdx + 1;
+      while (pStart < part.length) {
+        const pEnd = part.indexOf(";", pStart);
+        const paramEnd = pEnd === -1 ? part.length : pEnd;
+        const param = part.slice(pStart, paramEnd).trim();
+        pStart = paramEnd + 1;
+
+        if (param.startsWith("q=")) {
+          const qVal = Number.parseFloat(param.slice(2));
+          if (!Number.isNaN(qVal)) {
+            quality = qVal;
+          }
         }
       }
-      return { locale: locale.trim().toLowerCase(), quality };
-    })
-    .filter((p) => p.quality > 0)
-    .sort((a, b) => b.quality - a.quality);
+    }
+
+    if (quality > 0) {
+      preferences.push({ locale, quality });
+    }
+  }
+
+  preferences.sort((a, b) => b.quality - a.quality);
 
   // Build lowercase lookup
   const { localeMap: availableMap } = getLocaleSetMap(available);
@@ -209,9 +232,13 @@ export function negotiateLocale(
     }
 
     // Prefix match: "zh-TW" → try "zh"
-    const prefix = pref.locale.split("-")[0];
-    if (prefix !== pref.locale && availableMap.has(prefix)) {
-      return availableMap.get(prefix) ?? defaultLocale;
+    // Optimization: use indexOf instead of split to avoid array allocation
+    const dashIdx = pref.locale.indexOf("-");
+    if (dashIdx !== -1) {
+      const prefix = pref.locale.slice(0, dashIdx);
+      if (availableMap.has(prefix)) {
+        return availableMap.get(prefix) ?? defaultLocale;
+      }
     }
 
     // Reverse prefix: available "zh-Hant" matches request for "zh"
