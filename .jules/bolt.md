@@ -7,3 +7,8 @@
 
 **Learning:** Using `Set` for detecting visited nodes or cycles in recursive un-wrapping paths (like Zod schemas or localization fallback chains) is sub-optimal when the depth is consistently small (usually < 5 items). The cost to allocate the `Set` and add items outweighs the $O(1)$ lookup advantage.
 **Action:** When tracking visited items for cycle detection or fallback chains in hot paths with a small, known maximum depth, use an Array with `.includes()` instead of instantiating a new `Set` to avoid repeated memory allocation and garbage collection overhead.
+
+## 2024-05-20 - Avoid chained array allocations in string parsing loops
+
+**Learning:** Chaining array methods like `.split(",")`, `.map()`, and `.filter()` to process strings (like HTTP headers) in hot paths creates multiple short-lived intermediate array allocations, increasing garbage collection overhead.
+**Action:** Replace array chains with imperative `while` loops using direct string manipulation methods like `.indexOf()` and `.slice()` for performance-critical parsing functions.
