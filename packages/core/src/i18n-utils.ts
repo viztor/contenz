@@ -182,22 +182,50 @@ export function negotiateLocale(
 ): string {
   if (!acceptLanguage) return defaultLocale;
 
-  // Parse Accept-Language header
-  const preferences: LanguagePreference[] = acceptLanguage
-    .split(",")
-    .map((part) => {
-      const [locale, ...params] = part.trim().split(";");
+  // Optimization: Avoid intermediate array allocations by using indexOf and slice directly on the acceptLanguage string.
+  const preferences: LanguagePreference[] = [];
+  let startIndex = 0;
+
+  while (startIndex < acceptLanguage.length) {
+    const nextComma = acceptLanguage.indexOf(",", startIndex);
+    const endIndex = nextComma === -1 ? acceptLanguage.length : nextComma;
+    const part = acceptLanguage.slice(startIndex, endIndex).trim();
+
+    if (part) {
+      const semiIndex = part.indexOf(";");
+      let localeStr = part;
       let quality = 1;
-      for (const param of params) {
-        const match = /^q=(\d+(\.\d+)?)$/.exec(param.trim());
-        if (match) {
-          quality = Number.parseFloat(match[1]);
+
+      if (semiIndex !== -1) {
+        localeStr = part.slice(0, semiIndex).trim();
+        // Extract quality if present
+        let paramStart = semiIndex + 1;
+        while (paramStart < part.length) {
+          const nextSemi = part.indexOf(";", paramStart);
+          const paramEnd = nextSemi === -1 ? part.length : nextSemi;
+          const param = part.slice(paramStart, paramEnd).trim();
+
+          if (param.startsWith("q=")) {
+            const qValStr = param.slice(2).trim();
+            const parsed = Number.parseFloat(qValStr);
+            if (!Number.isNaN(parsed)) {
+              quality = parsed;
+            }
+          }
+          paramStart = paramEnd + 1;
         }
       }
-      return { locale: locale.trim().toLowerCase(), quality };
-    })
-    .filter((p) => p.quality > 0)
-    .sort((a, b) => b.quality - a.quality);
+
+      if (quality > 0) {
+        preferences.push({ locale: localeStr.toLowerCase(), quality });
+      }
+    }
+
+    if (nextComma === -1) break;
+    startIndex = nextComma + 1;
+  }
+
+  preferences.sort((a, b) => b.quality - a.quality);
 
   // Build lowercase lookup
   const { localeMap: availableMap } = getLocaleSetMap(available);
